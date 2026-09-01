@@ -198,10 +198,12 @@ Ajuste **obrigatoriamente**:
 
 | Variável | Exemplo |
 |----------|---------|
-| `POSTGRES_PASSWORD` | Senha forte para o banco |
+| `POSTGRES_PASSWORD` | Senha forte para o banco (**não deixe o valor do exemplo**) |
 | `CORS_ORIGIN` | `http://SEU_IP` ou `https://seudominio.com.br` |
 | `PUBLIC_URL` | Mesmo valor acima |
 | `JWT_SECRET` | String longa e aleatória (mín. 32 caracteres) |
+
+> Se aparecer `POSTGRES_PASSWORD is missing`, o arquivo `.env.production` não existe ou a senha não foi definida.
 
 Salvar: `Ctrl+O`, Enter, `Ctrl+X`.
 
@@ -323,7 +325,8 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 | Permission denied (SSH) | Verificar chave pública no VPS e secret `DEPLOY_SSH_KEY` |
 | `Permission denied (publickey)` ao clonar | Use HTTPS: `git clone https://github.com/Davim187/siteParoquial.git /www` |
 | Clone em `/opt/siteParoquial` | O deploy usa `/www`. Remova a pasta errada e clone de novo em `/www` |
-| Branches divergentes no VPS | `cd /www && git fetch origin && git reset --hard origin/master` |
+| `POSTGRES_PASSWORD is missing` | Edite `/www/.env.production` (ou `/var/www/.env.production`) e defina a senha |
+| Erro Prisma `debian-openssl-3.0.x` | Rebuild da API: `docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build api` |
 
 ---
 

@@ -23,11 +23,11 @@ COPY api/package.json ./api/
 RUN npm ci -w api --omit=dev && npm install -w api prisma tsx --no-save
 
 COPY --from=builder /app/api/dist ./api/dist
-COPY --from=builder /app/api/node_modules/.prisma ./api/node_modules/.prisma
-COPY --from=builder /app/api/node_modules/@prisma ./api/node_modules/@prisma
 COPY api/prisma ./api/prisma
 
 WORKDIR /app/api
+
+RUN npx prisma generate
 
 ENV NODE_ENV=production
 EXPOSE 3333
