@@ -17,7 +17,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl ca-certificates \
-    libheif1 libheif-plugin-libde265-0 \
+    libheif1 libheif-examples \
     imagemagick \
   && rm -rf /var/lib/apt/lists/*
 

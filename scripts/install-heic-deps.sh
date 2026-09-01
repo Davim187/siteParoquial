@@ -7,7 +7,6 @@ if command -v apt-get >/dev/null 2>&1; then
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     imagemagick \
     libheif1 \
-    libheif-plugin-libde265-0 \
     libheif-examples
   echo "==> Instalado. Teste: magick -version && heif-convert --version"
 else
