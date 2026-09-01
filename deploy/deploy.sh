@@ -14,7 +14,7 @@ fi
 echo "==> Atualizando código ($BRANCH)..."
 git fetch origin
 git checkout "$BRANCH"
-git pull origin "$BRANCH"
+git reset --hard "origin/$BRANCH"
 
 echo "==> Liberando porta 80..."
 bash deploy/remove-apache.sh

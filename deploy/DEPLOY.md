@@ -148,6 +148,14 @@ git pull origin master
 bash deploy/setup-server.sh
 ```
 
+Se aparecer *branches divergentes*, alinhe o servidor ao GitHub (descarta commits locais no VPS):
+
+```bash
+cd /www
+git fetch origin
+git reset --hard origin/master
+```
+
 Se `/www` **ainda não existe**, clone primeiro:
 
 ```bash
@@ -315,7 +323,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 | Permission denied (SSH) | Verificar chave pública no VPS e secret `DEPLOY_SSH_KEY` |
 | `Permission denied (publickey)` ao clonar | Use HTTPS: `git clone https://github.com/Davim187/siteParoquial.git /www` |
 | Clone em `/opt/siteParoquial` | O deploy usa `/www`. Remova a pasta errada e clone de novo em `/www` |
-| Git pull falha no VPS | `cd /www && git remote set-url origin https://github.com/Davim187/siteParoquial.git` |
+| Branches divergentes no VPS | `cd /www && git fetch origin && git reset --hard origin/master` |
 
 ---
 

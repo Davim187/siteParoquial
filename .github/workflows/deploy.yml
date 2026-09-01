@@ -61,7 +61,7 @@ jobs:
             cd "$APP_DIR"
             git fetch origin
             git checkout ${{ github.ref_name }}
-            git pull origin ${{ github.ref_name }}
+            git reset --hard origin/${{ github.ref_name }}
             if [ ! -f .env.production ]; then
               echo "Arquivo .env.production não encontrado. Copie .env.production.example e configure."
               exit 1
