@@ -68,7 +68,7 @@ export function HomePage() {
         )}
       </section>
 
-      <FeaturedNotice notices={notices.data} />
+      <FeaturedNotice notices={notices.data ?? undefined} />
       <QuickLinks />
 
       <section className="bg-white py-16">
