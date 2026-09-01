@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/opt/siteParoquial}"
+APP_DIR="${APP_DIR:-/www}"
 BRANCH="${DEPLOY_BRANCH:-master}"
 
 cd "$APP_DIR"
@@ -15,6 +15,9 @@ echo "==> Atualizando código ($BRANCH)..."
 git fetch origin
 git checkout "$BRANCH"
 git pull origin "$BRANCH"
+
+echo "==> Liberando porta 80..."
+bash deploy/remove-apache.sh
 
 echo "==> Subindo containers..."
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build

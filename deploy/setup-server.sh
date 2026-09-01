@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/opt/siteParoquial}"
-REPO_URL="${REPO_URL:-git@github.com:Davim187/siteParoquial.git}"
+APP_DIR="${APP_DIR:-/www}"
+# HTTPS: funciona sem chave SSH no VPS. Para SSH: REPO_URL=git@github.com:...
+REPO_URL="${REPO_URL:-https://github.com/Davim187/siteParoquial.git}"
 
 echo "==> Instalando dependências do sistema..."
 export DEBIAN_FRONTEND=noninteractive
@@ -20,6 +21,9 @@ if ! docker compose version >/dev/null 2>&1; then
   echo "Docker Compose plugin não encontrado. Verifique a instalação do Docker."
   exit 1
 fi
+
+echo "==> Removendo Apache/Nginx do sistema (libera porta 80)..."
+bash "$(dirname "$0")/remove-apache.sh"
 
 echo "==> Firewall (portas 22, 80, 443)..."
 ufw allow OpenSSH || true

@@ -133,6 +133,8 @@ O admin tem acesso total. Os demais recebem permissões específicas via seed.
 
 ## Deploy automático (VPS)
 
+**Guia completo:** [`deploy/DEPLOY.md`](deploy/DEPLOY.md)
+
 O projeto inclui Docker + GitHub Actions para publicar no servidor a cada push na branch `main`/`master`.
 
 ### 1. Preparar o servidor (uma vez)
@@ -142,7 +144,7 @@ No VPS (com acesso root/SSH):
 ```bash
 # Envie a chave pública do GitHub/deploy para o servidor antes, se usar clone via SSH
 bash deploy/setup-server.sh
-nano /opt/siteParoquial/.env.production   # senha do Postgres, domínio/IP, JWT
+nano /www/.env.production   # senha do Postgres, domínio/IP, JWT
 bash deploy/deploy.sh
 ```
 
@@ -163,14 +165,14 @@ Em **Settings → Secrets and variables → Actions** do repositório:
 
 ### 3. Repositório
 
-O deploy espera o **monorepo completo** (`web/` + `api/`) em `/opt/siteParoquial`.
+O deploy espera o **monorepo completo** (`web/` + `api/`) em `/www`.
 
 Após cada push em `main`/`master`, o workflow executa `deploy/deploy.sh` no servidor.
 
 ### Comandos úteis no servidor
 
 ```bash
-cd /opt/siteParoquial
+cd /www
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs -f api
 bash deploy/deploy.sh   # deploy manual
