@@ -1,4 +1,4 @@
-import '../src/config/load-env.js'
+import 'dotenv/config'
 import argon2 from 'argon2'
 import {
   PermissionCode,
