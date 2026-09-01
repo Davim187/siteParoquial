@@ -1,0 +1,16 @@
+{
+  "name": "paroquia-nossa-senhora-das-gracas",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["web", "api"],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:web": "npm run dev -w web",
+    "dev:api": "npm run dev -w api",
+    "build": "npm run build -w api && npm run build -w web",
+    "db:up": "docker compose up -d postgres",
+    "db:migrate": "npm run prisma:migrate -w api",
+    "db:seed": "npm run prisma:seed -w api",
+    "db:reset": "npm run prisma:reset -w api"
+  }
+}

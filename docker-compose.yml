@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paroquia-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: paroquia
+      POSTGRES_PASSWORD: paroquia
+      POSTGRES_DB: paroquia
+    ports:
+      - "5433:5432"
+    volumes:
+      - paroquia_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paroquia -d paroquia"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  paroquia_pg:
