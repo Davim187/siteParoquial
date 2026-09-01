@@ -264,6 +264,48 @@ Acompanhe em: **https://github.com/Davim187/siteParoquial/actions**
 
 ---
 
+# Acessar o banco pelo Beekeeper Studio
+
+O Postgres fica exposto **somente em `127.0.0.1:5432` no VPS** (não abre na internet). O Beekeeper conecta via **túnel SSH**.
+
+## 1. No VPS — aplicar a configuração de porta
+
+Depois de atualizar o código:
+
+```bash
+cd /var/www   # ou /www
+git pull origin master   # ou git reset --hard origin/master
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+```
+
+Confirme que a porta está escutando só localmente:
+
+```bash
+ss -tlnp | grep 5432
+```
+
+Deve aparecer `127.0.0.1:5432`.
+
+## 2. No Beekeeper Studio — nova conexão
+
+1. **New Connection** → **PostgreSQL**
+2. Aba **Connection**:
+   - **Host**: `127.0.0.1`
+   - **Port**: `5432`
+   - **User**: `paroquia`
+   - **Password**: valor de `POSTGRES_PASSWORD` no `.env.production` do VPS
+   - **Default Database**: `paroquia`
+3. Aba **SSH Tunnel** (ativar):
+   - **SSH Host**: IP do VPS (ex.: `84.46.251.102`)
+   - **SSH Port**: `22`
+   - **SSH User**: `root`
+   - **Auth**: chave privada (`~/.ssh/deploy_paroquia`) ou senha
+4. **Test** → **Connect**
+
+> Com o túnel SSH, o Beekeeper entra no VPS e acessa o Postgres como se fosse local — sem expor o banco na internet.
+
+---
+
 # Parte 4 — Comandos úteis no servidor
 
 ```bash

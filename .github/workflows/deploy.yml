@@ -52,10 +52,13 @@ jobs:
           command_timeout: 30m
           script: |
             set -e
-            APP_DIR=/www
-            if [ ! -d "$APP_DIR/.git" ]; then
-              echo "Repositório não encontrado em $APP_DIR"
-              echo "Rode no VPS: bash deploy/setup-server.sh"
+            if [ -d /var/www/.git ]; then
+              APP_DIR=/var/www
+            elif [ -d /www/.git ]; then
+              APP_DIR=/www
+            else
+              echo "Repositório não encontrado em /var/www nem /www"
+              echo "Rode no VPS: git clone https://github.com/Davim187/siteParoquial.git /var/www"
               exit 1
             fi
             cd "$APP_DIR"
@@ -64,6 +67,10 @@ jobs:
             git reset --hard origin/${{ github.ref_name }}
             if [ ! -f .env.production ]; then
               echo "Arquivo .env.production não encontrado. Copie .env.production.example e configure."
+              exit 1
+            fi
+            if ! grep -Eq '^POSTGRES_PASSWORD=.+' .env.production; then
+              echo "POSTGRES_PASSWORD não definido em $APP_DIR/.env.production"
               exit 1
             fi
             bash deploy/remove-apache.sh
