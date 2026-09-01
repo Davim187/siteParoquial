@@ -14,7 +14,7 @@ export class LocalStorageService implements StorageService {
   }
 
   getUrl(fileName: string) {
-    return `${env.PUBLIC_URL}/uploads/${fileName}`
+    return `/uploads/${fileName}`
   }
 
   async upload(buffer: Buffer, originalName: string, mimeType: string, folder = 'general'): Promise<StoredObject> {

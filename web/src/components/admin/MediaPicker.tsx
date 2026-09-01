@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { Search, Upload } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
-import { deleteMedia, listMedia, uploadMedia, type MediaItem } from '@/services/mediaService'
+import { type MediaItem } from '@/services/mediaService'
+import { useMediaLibrary } from '@/hooks/useMediaLibrary'
 import { useToast } from '@/components/ui/Toast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { mediaPreviewSrc } from '@/utils/media'
 
 export function MediaPicker({
   open,
@@ -16,41 +18,40 @@ export function MediaPicker({
   onSelect: (media: MediaItem) => void
 }) {
   const toast = useToast()
-  const [items, setItems] = useState<MediaItem[]>([])
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<MediaItem | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
   const [toDelete, setToDelete] = useState<MediaItem | null>(null)
-
-  async function load() {
-    setLoading(true)
-    try {
-      const result = await listMedia({ search })
-      setItems(result.data)
-    } catch (error) {
-      toast.push(error instanceof Error ? error.message : 'Erro ao carregar mídia', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [deleting, setDeleting] = useState(false)
+  const [uploadLabel, setUploadLabel] = useState('Enviando...')
+  const { items, loading, uploading, load, upload, remove } = useMediaLibrary({ enabled: open, search })
 
   useEffect(() => {
-    if (open) void load()
-  }, [open, search])
+    if (!open) {
+      setSelected(null)
+      setSearch('')
+    }
+  }, [open])
 
-  async function onUpload(file: File | null) {
+  async function onUpload(file: File | null, input?: HTMLInputElement | null) {
     if (!file) return
-    setUploading(true)
+    const header = await file.slice(0, 12).arrayBuffer()
+    const brand = String.fromCharCode(...new Uint8Array(header).slice(4, 12)).toLowerCase()
+    const isHeic =
+      /\.heic$/i.test(file.name) ||
+      /\.heif$/i.test(file.name) ||
+      /heic|heif|mif1|hevc/.test(brand)
+
+    setUploadLabel(isHeic ? 'Convertendo HEIC...' : 'Enviando...')
     try {
-      const media = await uploadMedia(file)
-      toast.push('Imagem enviada com sucesso.')
+      const media = await upload(file)
       setSelected(media)
-      await load()
+      setSearch('')
+      await load('')
+      toast.push('Imagem enviada com sucesso.')
     } catch (error) {
       toast.push(error instanceof Error ? error.message : 'Falha no upload', 'error')
     } finally {
-      setUploading(false)
+      if (input) input.value = ''
     }
   }
 
@@ -69,12 +70,13 @@ export function MediaPicker({
           </label>
           <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-marian px-4 py-2 text-sm font-medium text-white">
             <Upload size={16} />
-            {uploading ? 'Enviando...' : 'Enviar imagem'}
+            {uploading ? uploadLabel : 'Enviar imagem'}
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
               className="hidden"
-              onChange={(e) => void onUpload(e.target.files?.[0] ?? null)}
+              disabled={uploading}
+              onChange={(e) => void onUpload(e.target.files?.[0] ?? null, e.target)}
             />
           </label>
         </div>
@@ -95,7 +97,7 @@ export function MediaPicker({
               className={`overflow-hidden rounded-xl border text-left ${selected?.id === item.id ? 'border-marian ring-2 ring-marian/30' : 'border-line'}`}
             >
               <img
-                src={item.thumbnailUrl || item.url}
+                src={mediaPreviewSrc(item)}
                 alt={item.originalName}
                 className="aspect-square w-full object-cover"
                 loading="lazy"
@@ -107,7 +109,7 @@ export function MediaPicker({
         <div className="mt-5 flex flex-wrap justify-between gap-2">
           <Button
             variant="secondary"
-            disabled={!selected}
+            disabled={!selected || deleting}
             onClick={() => selected && setToDelete(selected)}
           >
             Excluir selecionada
@@ -133,14 +135,21 @@ export function MediaPicker({
         open={Boolean(toDelete)}
         title="Excluir imagem?"
         description="Essa ação não poderá ser desfeita. A imagem deixará de estar disponível na biblioteca."
-        onClose={() => setToDelete(null)}
+        loading={deleting}
+        onClose={() => !deleting && setToDelete(null)}
         onConfirm={async () => {
           if (!toDelete) return
-          await deleteMedia(toDelete.id)
-          toast.push('Imagem excluída.')
-          setToDelete(null)
-          setSelected(null)
-          await load()
+          setDeleting(true)
+          try {
+            await remove(toDelete.id)
+            if (selected?.id === toDelete.id) setSelected(null)
+            toast.push('Imagem excluída.')
+            setToDelete(null)
+          } catch (error) {
+            toast.push(error instanceof Error ? error.message : 'Falha ao excluir imagem', 'error')
+          } finally {
+            setDeleting(false)
+          }
         }}
       />
     </>

@@ -1,4 +1,6 @@
 import { apiRequest, mediaUrl, API_URL } from '@/lib/api-client'
+import { mapMediaItem } from '@/utils/media'
+import { prepareUploadImage } from '@/utils/prepareUploadImage'
 
 export type MediaItem = {
   id: string
@@ -12,22 +14,19 @@ export type MediaItem = {
 export async function listMedia(params?: { search?: string; page?: number }) {
   const query = new URLSearchParams({ limit: '24', page: String(params?.page ?? 1) })
   if (params?.search) query.set('search', params.search)
-  const result = await apiRequest<{ data: MediaItem[]; pagination: any }>(`/api/media?${query}`)
+  const result = await apiRequest<{ data: MediaItem[]; pagination: unknown }>(`/api/media?${query}`)
   return {
     ...result,
-    data: result.data.map((item) => ({
-      ...item,
-      url: mediaUrl(item.url),
-      thumbnailUrl: mediaUrl(item.thumbnailUrl),
-    })),
+    data: result.data.map(mapMediaItem),
   }
 }
 
 export async function uploadMedia(file: File, folder = 'general') {
+  const prepared = await prepareUploadImage(file)
   const form = new FormData()
-  form.append('file', file)
+  form.append('file', prepared)
   const token = localStorage.getItem('paroquia_access_token')
-  const response = await fetch(`${API_URL}/api/media/upload?folder=${folder}`, {
+  const response = await fetch(`${API_URL}/api/media/upload?folder=${encodeURIComponent(folder)}`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: form,
@@ -37,9 +36,11 @@ export async function uploadMedia(file: File, folder = 'general') {
     throw new Error(err.message || 'Falha no upload')
   }
   const item = (await response.json()) as MediaItem
-  return { ...item, url: mediaUrl(item.url), thumbnailUrl: mediaUrl(item.thumbnailUrl) }
+  return mapMediaItem(item)
 }
 
 export async function deleteMedia(id: string) {
   await apiRequest(`/api/media/${id}`, { method: 'DELETE' })
 }
+
+export { mediaUrl }

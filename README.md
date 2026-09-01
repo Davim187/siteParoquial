@@ -56,6 +56,25 @@ npm run dev
 
 **Troque essa senha em produção.**
 
+### Banco de produção no dev (automático)
+
+**Setup (uma vez):**
+```bash
+cp api/.env.production.local.example api/.env.production.local
+nano api/.env.production.local   # senha do VPS
+```
+
+**Depois, só isso:**
+```bash
+npm run dev
+```
+
+O túnel SSH abre sozinho e a API conecta no banco de produção.
+
+> Para usar o banco **local**: `npm run dev:local` ou apague `api/.env.production.local`.
+
+> **Não** rode `db:migrate`, `db:seed` nem `db:reset` com produção.
+
 ### Variáveis principais (`api/.env`)
 
 | Variável | Descrição |

@@ -417,7 +417,9 @@ export function AdminPeoplePage() {
                           setUploadingPhoto(true)
                           try {
                             const media = await uploadMedia(file, 'people')
-                            setEditing({ ...editing, photo: media.url, photoId: media.id })
+                            setEditing((current) =>
+                              current ? { ...current, photo: media.url, photoId: media.id } : null,
+                            )
                             toast.push('Foto enviada com sucesso.')
                           } catch (error) {
                             toast.push(

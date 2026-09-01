@@ -5,6 +5,7 @@ import { AppError, paginated, parsePagination } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
 import { createStorageService } from '../../storage/index.js'
 import { authorize, authorizeAny } from '../../middlewares/authorize.js'
+import { serializeMedia } from '../../lib/media-url.js'
 
 const storage = createStorageService()
 
@@ -21,7 +22,7 @@ export async function mediaRoutes(app: FastifyInstance) {
       prisma.media.count({ where }),
       prisma.media.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
     ])
-    return reply.send(paginated(data, total, page, limit))
+    return reply.send(paginated(data.map(serializeMedia), total, page, limit))
   })
 
   app.post('/media/upload', { preHandler: [authorize('MEDIA_MANAGE')] }, async (request, reply) => {
@@ -51,7 +52,7 @@ export async function mediaRoutes(app: FastifyInstance) {
         entity: 'media',
         entityId: media.id,
       })
-      return reply.status(201).send(media)
+      return reply.status(201).send(serializeMedia(media))
     } catch (error) {
       throw new AppError(400, error instanceof Error ? error.message : 'Falha no upload.')
     }
@@ -71,6 +72,6 @@ export async function mediaRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string }
     const body = z.object({ folder: z.string().optional(), originalName: z.string().optional() }).parse(request.body)
     const media = await prisma.media.update({ where: { id }, data: body })
-    return reply.send(media)
+    return reply.send(serializeMedia(media))
   })
 }

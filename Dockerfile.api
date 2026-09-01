@@ -15,7 +15,11 @@ FROM node:20-bookworm-slim AS runner
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl ca-certificates \
+    libheif1 libheif-plugin-libde265-0 \
+    imagemagick \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json .npmrc ./
 COPY api/package.json ./api/

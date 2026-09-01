@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../../lib/prisma.js'
 import { AppError, paginated, parsePagination, slugify } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
+import { toPublicMediaPath } from '../../lib/media-url.js'
 
 const newsInput = z.object({
   title: z.string().min(3),
@@ -20,8 +21,8 @@ const newsInput = z.object({
 function mapNews(item: any) {
   return {
     ...item,
-    coverUrl: item.coverMedia?.url ?? null,
-    coverThumbUrl: item.coverMedia?.thumbnailUrl ?? null,
+    coverUrl: toPublicMediaPath(item.coverMedia?.url ?? null),
+    coverThumbUrl: toPublicMediaPath(item.coverMedia?.thumbnailUrl ?? null),
     authorName: item.author?.name ?? null,
     categoryName: item.category?.name ?? null,
   }

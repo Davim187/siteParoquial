@@ -22,6 +22,7 @@ export async function login(app: FastifyInstance, body: unknown) {
     where: { email: data.email.toLowerCase() },
     include: { role: true },
   })
+  console.log(data.email.toLowerCase())
   if (!user || !user.active) throw new AppError(401, 'E-mail ou senha inválidos.')
   const valid = await argon2.verify(user.passwordHash, data.password)
   if (!valid) throw new AppError(401, 'E-mail ou senha inválidos.')

@@ -5,12 +5,15 @@ import { prisma } from '../../lib/prisma.js'
 import { AppError, paginated, parsePagination, slugify } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
 import { authorize, authenticate } from '../../middlewares/authorize.js'
+import { toPublicMediaPath } from '../../lib/media-url.js'
 
 function withImage(item: any) {
+  const imageUrl = toPublicMediaPath(item.image?.url ?? item.photo?.url ?? null)
+  const imageThumbUrl = toPublicMediaPath(item.image?.thumbnailUrl ?? item.photo?.thumbnailUrl ?? null)
   return {
     ...item,
-    imageUrl: item.image?.url ?? item.photo?.url ?? null,
-    imageThumbUrl: item.image?.thumbnailUrl ?? item.photo?.thumbnailUrl ?? null,
+    imageUrl,
+    imageThumbUrl,
   }
 }
 

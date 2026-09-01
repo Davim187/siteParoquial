@@ -14,6 +14,10 @@ npm run dev
 
 Documentação OpenAPI: `/api/docs`
 
+## Banco de produção no dev
+
+Com `api/.env.production.local` configurado, `npm run dev` conecta automaticamente.
+
 ## Estrutura
 
 - `src/modules` — rotas e serviços por domínio
