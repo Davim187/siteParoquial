@@ -5,9 +5,13 @@ import { NewsCard } from '@/components/news/NewsCard'
 import { Badge, PageHeader } from '@/components/ui/PageHeader'
 import { Loading, ErrorState, EmptyState } from '@/components/ui/Feedback'
 import { useToast } from '@/components/ui/Toast'
-import { useAsync } from '@/hooks/useAsync'
+import { useQuery } from '@tanstack/react-query'
+import { useNewsDetailQuery } from '@/hooks/queries/usePublicQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { getNewsBySlug, getRelatedNews } from '@/services/newsService'
+import { getRelatedNews } from '@/services/newsService'
+import { queryKeys } from '@/lib/query-keys'
+import { STALE_TIME } from '@/lib/query-client'
 import { formatDate } from '@/utils/dates'
 
 async function copyToClipboard(text: string) {
@@ -30,12 +34,16 @@ export function NewsDetailPage() {
   const { slug = '' } = useParams()
   const toast = useToast()
   const [copied, setCopied] = useState(false)
-  const articleQuery = useAsync(() => getNewsBySlug(slug), [slug])
-  const relatedQuery = useAsync(async () => {
-    const article = await getNewsBySlug(slug)
-    if (!article) return []
-    return getRelatedNews(article)
-  }, [slug])
+  const articleQuery = useNewsDetailQuery(slug)
+  const relatedQuery = useQuery({
+    queryKey: [...queryKeys.news.detail(slug), 'related'],
+    queryFn: async () => {
+      if (!articleQuery.data) return []
+      return getRelatedNews(articleQuery.data)
+    },
+    enabled: Boolean(articleQuery.data),
+    staleTime: STALE_TIME.news,
+  })
 
   usePageMeta(
     articleQuery.data
@@ -44,8 +52,8 @@ export function NewsDetailPage() {
     articleQuery.data?.excerpt,
   )
 
-  if (articleQuery.loading) return <Loading />
-  if (articleQuery.error) return <ErrorState message={articleQuery.error} />
+  if (articleQuery.isLoading && !articleQuery.data) return <Loading />
+  if (articleQuery.error) return <ErrorState message={getErrorMessage(articleQuery.error)} />
   if (!articleQuery.data) return <EmptyState title="Notícia não encontrada" />
 
   const article = articleQuery.data

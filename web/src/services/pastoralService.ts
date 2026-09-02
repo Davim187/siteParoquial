@@ -1,7 +1,7 @@
 import { apiRequest, mediaUrl } from '@/lib/api-client'
 import type { Pastoral } from '@/types'
 
-export async function listPastorals(options?: { includeInactive?: boolean }) {
+export async function listPastorals(options?: { includeInactive?: boolean }): Promise<Pastoral[]> {
   const params = options?.includeInactive ? '?all=true' : ''
   const result = await apiRequest<{ data: any[] }>(`/api/pastorals${params}`, {
     auth: Boolean(options?.includeInactive),

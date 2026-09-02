@@ -1,4 +1,8 @@
+import { ApiError, parseApiError } from '@/lib/api-error'
+
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || ''
+
+export { ApiError }
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
   auth?: boolean
@@ -25,8 +29,7 @@ export function clearTokens() {
 }
 
 async function parseError(response: Response) {
-  const err = await response.json().catch(() => ({ message: 'Erro na API' }))
-  return new Error(err.message || 'Erro na API')
+  throw await parseApiError(response)
 }
 
 async function refreshAccessToken() {

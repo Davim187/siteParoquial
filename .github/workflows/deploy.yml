@@ -73,6 +73,10 @@ jobs:
               echo "POSTGRES_PASSWORD não definido em $APP_DIR/.env.production"
               exit 1
             fi
+            if ! grep -Eq '^DATABASE_URL=.+' .env.production; then
+              echo "DATABASE_URL não definido em $APP_DIR/.env.production"
+              exit 1
+            fi
             bash deploy/remove-apache.sh
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
             docker compose -f docker-compose.prod.yml --env-file .env.production exec -T postgres \

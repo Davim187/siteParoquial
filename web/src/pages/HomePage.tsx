@@ -8,19 +8,22 @@ import { EventCard } from '@/components/events/EventCard'
 import { NewsCard } from '@/components/news/NewsCard'
 import { PersonCard } from '@/components/people/PersonCard'
 import { PastoralCard } from '@/components/pastorals/PastoralCard'
-import { Gallery } from '@/components/gallery/Gallery'
+import { AlbumGrid } from '@/components/gallery/AlbumGrid'
 import { SectionTitle } from '@/components/ui/SectionTitle'
 import { Button } from '@/components/ui/Button'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
-import { useAsync } from '@/hooks/useAsync'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { listUpcomingMasses } from '@/services/massesService'
-import { getFeaturedNotices } from '@/services/noticesService'
-import { listNews } from '@/services/newsService'
-import { getSettings, listPeople } from '@/services/parishService'
-import { listUpcomingEvents } from '@/services/eventsService'
-import { listPastorals } from '@/services/pastoralService'
-import { listGallery } from '@/services/galleryService'
+import {
+  useFeaturedNoticesQuery,
+  useNewsQuery,
+  usePastoralsQuery,
+  usePeopleQuery,
+  useSettingsQuery,
+  useUpcomingEventsQuery,
+  useUpcomingMassesQuery,
+} from '@/hooks/queries/usePublicQueries'
+import { useGalleryAlbumsQuery } from '@/hooks/queries/useGalleryQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { mapsEmbedSrc } from '@/utils/maps'
 
 export function HomePage() {
@@ -29,18 +32,26 @@ export function HomePage() {
     'Portal oficial da Paróquia Nossa Senhora das Graças. Missas, avisos, notícias e vida em comunidade.',
   )
 
-  const settings = useAsync(() => getSettings(), [])
-  const notices = useAsync(() => getFeaturedNotices(), [])
-  const masses = useAsync(() => listUpcomingMasses(4), [])
-  const events = useAsync(() => listUpcomingEvents(3), [])
-  const news = useAsync(() => listNews().then((items) => items.slice(0, 3)), [])
-  const people = useAsync(() => listPeople(), [])
-  const pastorals = useAsync(() => listPastorals().then((items) => items.slice(0, 3)), [])
-  const gallery = useAsync(() => listGallery().then((items) => items.slice(0, 8)), [])
+  const settings = useSettingsQuery()
+  const notices = useFeaturedNoticesQuery()
+  const masses = useUpcomingMassesQuery(4)
+  const events = useUpcomingEventsQuery(3)
+  const news = useNewsQuery()
+  const people = usePeopleQuery()
+  const pastorals = usePastoralsQuery()
+  const gallery = useGalleryAlbumsQuery({ limit: 3 })
 
-  if (settings.loading || !settings.data) {
-    return settings.error ? <ErrorState message={settings.error} /> : <Loading />
+  if (settings.isLoading && !settings.data) {
+    return <Loading />
   }
+
+  if (settings.isError || !settings.data) {
+    return <ErrorState message={getErrorMessage(settings.error, 'Não foi possível carregar as informações da paróquia.')} />
+  }
+
+  const newsPreview = news.data?.slice(0, 3) ?? []
+  const pastoralsPreview = pastorals.data?.slice(0, 3) ?? []
+  const galleryPreview = gallery.data?.data ?? []
 
   return (
     <div className="animate-fade-in">
@@ -57,7 +68,7 @@ export function HomePage() {
             Ver todos os horários
           </Button>
         </div>
-        {masses.loading ? (
+        {masses.isLoading && !masses.data ? (
           <Loading />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -79,7 +90,7 @@ export function HomePage() {
               Ver agenda completa
             </Button>
           </div>
-          {events.loading ? (
+          {events.isLoading && !events.data ? (
             <Loading />
           ) : (
             <div className="grid gap-5 md:grid-cols-3">
@@ -98,11 +109,11 @@ export function HomePage() {
             Ver todas as notícias →
           </Button>
         </div>
-        {news.loading ? (
+        {news.isLoading && !newsPreview.length ? (
           <Loading />
         ) : (
           <div className="grid gap-6 md:grid-cols-3">
-            {news.data?.map((article) => (
+            {newsPreview.map((article) => (
               <NewsCard key={article.id} article={article} />
             ))}
           </div>
@@ -134,7 +145,7 @@ export function HomePage() {
             </Button>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
-            {pastorals.data?.map((pastoral) => (
+            {pastoralsPreview.map((pastoral) => (
               <PastoralCard key={pastoral.id} pastoral={pastoral} />
             ))}
           </div>
@@ -148,7 +159,7 @@ export function HomePage() {
             Ver galeria
           </Button>
         </div>
-        {gallery.data ? <Gallery items={gallery.data} /> : null}
+        {galleryPreview.length ? <AlbumGrid albums={galleryPreview} /> : null}
       </section>
 
       <SocialFollow settings={settings.data} />
@@ -158,21 +169,19 @@ export function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-2 md:px-6">
           <div>
             <SectionTitle eyebrow="Contato" title="Como chegar" />
-            <p className="mt-4 inline-flex items-start gap-2 text-muted">
-              <MapPin className="mt-1 shrink-0 text-gold-dark" size={18} />
+            <p className="mt-4 flex items-start gap-2 text-sm text-muted">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
               {settings.data.address}
             </p>
-            <p className="mt-3 text-sm text-muted">Telefone: {settings.data.phone}</p>
-            <p className="text-sm text-muted">WhatsApp: {settings.data.whatsapp}</p>
             <Button href="/contato" className="mt-6">
               Fale conosco
             </Button>
           </div>
-          <div className="overflow-hidden rounded-xl border border-line bg-beige">
+          <div className="overflow-hidden rounded-2xl border border-line shadow-sm">
             <iframe
               title="Mapa da paróquia"
               src={mapsEmbedSrc(settings.data.mapsUrl, settings.data.address)}
-              className="h-72 w-full border-0"
+              className="aspect-[4/3] w-full border-0"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />

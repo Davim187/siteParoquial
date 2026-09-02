@@ -35,7 +35,7 @@ function mapNews(item: ApiNews): NewsArticle {
   }
 }
 
-export async function listNews(options?: { includeDrafts?: boolean; search?: string; status?: string; page?: number }) {
+export async function listNews(options?: { includeDrafts?: boolean; search?: string; status?: string; page?: number }): Promise<NewsArticle[]> {
   const params = new URLSearchParams()
   if (options?.page) params.set('page', String(options.page))
   if (options?.search) params.set('search', options.search)

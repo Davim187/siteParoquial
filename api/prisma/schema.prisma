@@ -177,6 +177,8 @@ model Media {
   sacramentImages  Sacrament[]
   personPhotos     Person[]
   galleryItems     GalleryItem[]
+  albumCovers      GalleryAlbum[] @relation("AlbumCover")
+  galleryPhotos    GalleryPhoto[]
 
   @@index([folder])
   @@index([createdAt])
@@ -338,6 +340,39 @@ model GalleryItem {
   updatedAt DateTime        @updatedAt
 
   @@index([category, date])
+}
+
+model GalleryAlbum {
+  id           String         @id @default(cuid())
+  title        String
+  slug         String         @unique
+  description  String?
+  coverMediaId String?
+  coverMedia   Media?         @relation("AlbumCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  eventDate    DateTime
+  active       Boolean        @default(false)
+  sortOrder    Int            @default(0)
+  photos       GalleryPhoto[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([active, eventDate])
+  @@index([sortOrder])
+}
+
+model GalleryPhoto {
+  id          String       @id @default(cuid())
+  albumId     String
+  album       GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  mediaId     String
+  media       Media        @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  title       String?
+  description String?
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([albumId, sortOrder])
 }
 
 model PrayerRequest {

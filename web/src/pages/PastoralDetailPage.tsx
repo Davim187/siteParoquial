@@ -2,17 +2,17 @@ import { useParams, Link } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Loading, ErrorState, EmptyState } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
-import { useAsync } from '@/hooks/useAsync'
+import { usePastoralDetailQuery } from '@/hooks/queries/usePublicQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { getPastoralBySlug } from '@/services/pastoralService'
 
 export function PastoralDetailPage() {
   const { slug = '' } = useParams()
-  const { data, loading, error } = useAsync(() => getPastoralBySlug(slug), [slug])
+  const { data, isLoading, error } = usePastoralDetailQuery(slug)
   usePageMeta(data ? `${data.name} | Pastorais` : 'Pastoral')
 
-  if (loading) return <Loading />
-  if (error) return <ErrorState message={error} />
+  if (isLoading && !data) return <Loading />
+  if (error) return <ErrorState message={getErrorMessage(error)} />
   if (!data) return <EmptyState title="Pastoral não encontrada" />
 
   return (

@@ -135,6 +135,46 @@ export interface GalleryItem {
   date: string
 }
 
+export interface GalleryPhoto {
+  id: string
+  albumId: string
+  mediaId: string
+  title?: string
+  description?: string
+  sortOrder: number
+  url: string
+  thumbUrl: string
+  originalName?: string
+  createdAt: string
+}
+
+export interface GalleryAlbum {
+  id: string
+  title: string
+  slug: string
+  description?: string
+  coverMediaId?: string
+  coverUrl: string
+  coverThumbUrl: string
+  eventDate: string
+  active: boolean
+  sortOrder: number
+  photoCount: number
+  createdAt: string
+  updatedAt?: string
+  photos?: GalleryPhoto[]
+}
+
+export interface Paginated<T> {
+  data: T[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
 export interface PrayerRequest {
   id: string
   name: string

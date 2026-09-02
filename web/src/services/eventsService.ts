@@ -13,7 +13,7 @@ const typeToCategory: Record<string, EventCategory> = {
   OUTRO: 'evento',
 }
 
-export async function listEvents(category?: EventCategory | 'todos') {
+export async function listEvents(category?: EventCategory | 'todos'): Promise<ParishEvent[]> {
   const params = new URLSearchParams({ public: 'true', limit: '50' })
   if (category && category !== 'todos') {
     const map: Record<string, string> = {

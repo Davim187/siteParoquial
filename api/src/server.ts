@@ -1,4 +1,5 @@
 import Fastify from 'fastify'
+import { ZodError } from 'zod'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import jwt from '@fastify/jwt'
@@ -18,6 +19,7 @@ import { noticesRoutes } from './modules/notices/notices.routes.js'
 import { eventsRoutes } from './modules/events/events.routes.js'
 import { massesRoutes } from './modules/masses/masses.routes.js'
 import { contentRoutes } from './modules/content/content.routes.js'
+import { galleryRoutes } from './modules/gallery/gallery.routes.js'
 import { usersRoutes } from './modules/users/users.routes.js'
 
 async function buildServer() {
@@ -74,7 +76,21 @@ async function buildServer() {
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
-      return reply.status(error.statusCode).send({ error: error.code ?? 'APP_ERROR', message: error.message })
+      return reply.status(error.statusCode).send({
+        error: error.code ?? 'APP_ERROR',
+        message: error.message,
+      })
+    }
+    if (error instanceof ZodError) {
+      const first = error.errors[0]
+      return reply.status(422).send({
+        error: 'VALIDATION_ERROR',
+        message: first?.message ?? 'Dados inválidos.',
+        details: error.errors.map((item) => ({
+          path: item.path.join('.'),
+          message: item.message,
+        })),
+      })
     }
     const err = error as { validation?: unknown; statusCode?: number; message?: string; code?: string }
     if (err.validation) {
@@ -101,6 +117,7 @@ async function buildServer() {
       await api.register(eventsRoutes)
       await api.register(massesRoutes)
       await api.register(contentRoutes)
+      await api.register(galleryRoutes)
       await api.register(usersRoutes)
     },
     { prefix: '/api' },

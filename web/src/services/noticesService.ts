@@ -23,7 +23,7 @@ function mapNotice(item: any): Notice {
   }
 }
 
-export async function listNotices(options?: { includeDrafts?: boolean }) {
+export async function listNotices(options?: { includeDrafts?: boolean }): Promise<Notice[]> {
   const params = new URLSearchParams({ limit: '50' })
   if (!options?.includeDrafts) params.set('public', 'true')
   const result = await apiRequest<{ data: any[] }>(`/api/notices?${params}`, {

@@ -1,17 +1,17 @@
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionTitle } from '@/components/ui/SectionTitle'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
-import { useAsync } from '@/hooks/useAsync'
+import { useSettingsQuery } from '@/hooks/queries/usePublicQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { getSettings } from '@/services/parishService'
 import { images } from '@/data/mocks'
 
 export function ParishPage() {
   usePageMeta('Nossa Paróquia | Paróquia Nossa Senhora das Graças')
-  const { data, loading, error } = useAsync(() => getSettings(), [])
+  const { data, isLoading, error } = useSettingsQuery()
 
-  if (loading) return <Loading />
-  if (error || !data) return <ErrorState message={error ?? 'Erro ao carregar'} />
+  if (isLoading && !data) return <Loading />
+  if (error || !data) return <ErrorState message={getErrorMessage(error, 'Erro ao carregar')} />
 
   return (
     <div>

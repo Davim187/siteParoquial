@@ -3,9 +3,9 @@ import { Calendar } from '@/components/events/Calendar'
 import { EventCard } from '@/components/events/EventCard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Loading, ErrorState, EmptyState } from '@/components/ui/Feedback'
-import { useAsync } from '@/hooks/useAsync'
+import { useEventsQuery } from '@/hooks/queries/usePublicQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { listEvents } from '@/services/eventsService'
 import type { EventCategory } from '@/types'
 import { eventLabels } from '@/utils/labels'
 import { cn } from '@/utils/cn'
@@ -27,9 +27,8 @@ export function AgendaPage() {
   usePageMeta('Agenda | Paróquia Nossa Senhora das Graças')
   const [category, setCategory] = useState<EventCategory | 'todos'>('todos')
   const [view, setView] = useState<'lista' | 'calendario'>('lista')
-  const { data, loading, error } = useAsync(() => listEvents(category), [category])
-
-  const allForCalendar = useAsync(() => listEvents('todos'), [])
+  const { data, isLoading, error } = useEventsQuery(category)
+  const allForCalendar = useEventsQuery('todos')
   const calendarEvents = useMemo(() => allForCalendar.data ?? [], [allForCalendar.data])
 
   return (
@@ -75,12 +74,16 @@ export function AgendaPage() {
         </div>
         <div className="mt-8">
           {view === 'calendario' ? (
-            allForCalendar.loading ? <Loading /> : <Calendar events={calendarEvents} />
+            allForCalendar.isLoading && !calendarEvents.length ? (
+              <Loading />
+            ) : (
+              <Calendar events={calendarEvents} />
+            )
           ) : (
             <>
-              {loading ? <Loading /> : null}
-              {error ? <ErrorState message={error} /> : null}
-              {!loading && data?.length === 0 ? (
+              {isLoading && !data ? <Loading /> : null}
+              {error ? <ErrorState message={getErrorMessage(error)} /> : null}
+              {!isLoading && data?.length === 0 ? (
                 <EmptyState title="Nenhum evento nesta categoria" />
               ) : null}
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">

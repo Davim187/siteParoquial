@@ -2,17 +2,17 @@ import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Loading, ErrorState, EmptyState } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
-import { useAsync } from '@/hooks/useAsync'
+import { useSacramentDetailQuery } from '@/hooks/queries/usePublicQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { getSacramentBySlug } from '@/services/sacramentService'
 
 export function SacramentDetailPage() {
   const { slug = '' } = useParams()
-  const { data, loading, error } = useAsync(() => getSacramentBySlug(slug), [slug])
+  const { data, isLoading, error } = useSacramentDetailQuery(slug)
   usePageMeta(data ? `${data.name} | Sacramentos` : 'Sacramento')
 
-  if (loading) return <Loading />
-  if (error) return <ErrorState message={error} />
+  if (isLoading && !data) return <Loading />
+  if (error) return <ErrorState message={getErrorMessage(error)} />
   if (!data) return <EmptyState title="Sacramento não encontrado" />
 
   return (

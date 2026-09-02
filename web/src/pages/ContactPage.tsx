@@ -2,15 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
-import { useAsync } from '@/hooks/useAsync'
+import { useSettingsQuery } from '@/hooks/queries/usePublicQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { getSettings } from '@/services/parishService'
 import { submitContactMessage } from '@/services/contactService'
 import { mapsEmbedSrc } from '@/utils/maps'
 
 export function ContactPage() {
   usePageMeta('Contato | Paróquia Nossa Senhora das Graças')
-  const { data, loading, error } = useAsync(() => getSettings(), [])
+  const { data, isLoading, error } = useSettingsQuery()
   const [sent, setSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -39,8 +39,8 @@ export function ContactPage() {
       />
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 lg:grid-cols-2 md:px-6">
         <div>
-          {loading ? <Loading /> : null}
-          {error ? <ErrorState message={error} /> : null}
+          {isLoading && !data ? <Loading /> : null}
+          {error ? <ErrorState message={getErrorMessage(error)} /> : null}
           {data ? (
             <div className="space-y-3 rounded-2xl border border-line bg-white p-6 text-sm text-muted">
               <p><strong className="text-navy">Endereço:</strong> {data.address}</p>

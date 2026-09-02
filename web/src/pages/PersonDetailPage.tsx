@@ -2,21 +2,21 @@ import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Loading, ErrorState, EmptyState } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
-import { useAsync } from '@/hooks/useAsync'
+import { usePersonDetailQuery } from '@/hooks/queries/usePublicQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { getPersonBySlug } from '@/services/parishService'
 
 export function PersonDetailPage({ forcedSlug }: { forcedSlug?: string }) {
   const params = useParams()
   const slug = forcedSlug ?? params.slug ?? ''
-  const { data, loading, error } = useAsync(() => getPersonBySlug(slug), [slug])
+  const { data, isLoading, error } = usePersonDetailQuery(slug)
 
   usePageMeta(
     data ? `${data.name} | Paróquia Nossa Senhora das Graças` : 'Pastores | Paróquia Nossa Senhora das Graças',
   )
 
-  if (loading) return <Loading />
-  if (error) return <ErrorState message={error} />
+  if (isLoading && !data) return <Loading />
+  if (error) return <ErrorState message={getErrorMessage(error)} />
   if (!data) return <EmptyState title="Perfil não encontrado" description="Volte à página institucional." />
 
   return (

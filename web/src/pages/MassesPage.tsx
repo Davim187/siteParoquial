@@ -2,16 +2,15 @@ import { MassCard } from '@/components/events/MassCard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
-import { useAsync } from '@/hooks/useAsync'
+import { useMassesQuery, useSettingsQuery } from '@/hooks/queries/usePublicQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { listMasses } from '@/services/massesService'
-import { getSettings } from '@/services/parishService'
 
 export function MassesPage() {
   usePageMeta('Missas | Paróquia Nossa Senhora das Graças')
   const month = new Date().toISOString().slice(0, 7)
-  const masses = useAsync(() => listMasses({ month, limit: 50 }), [month])
-  const settings = useAsync(() => getSettings(), [])
+  const masses = useMassesQuery({ month, limit: 50 })
+  const settings = useSettingsQuery()
 
   return (
     <div>
@@ -25,8 +24,8 @@ export function MassesPage() {
         ) : null}
       </PageHeader>
       <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-        {masses.loading ? <Loading /> : null}
-        {masses.error ? <ErrorState message={masses.error} /> : null}
+        {masses.isLoading && !masses.data ? <Loading /> : null}
+        {masses.error ? <ErrorState message={getErrorMessage(masses.error)} /> : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {masses.data?.map((mass) => (
             <MassCard key={mass.id} mass={mass} />

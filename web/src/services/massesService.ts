@@ -24,7 +24,7 @@ function buildMassesUrl(options?: { month?: string; admin?: boolean; limit?: num
   return `/api/masses?${params.toString()}`
 }
 
-export async function listMasses(options?: { month?: string; admin?: boolean; limit?: number }) {
+export async function listMasses(options?: { month?: string; admin?: boolean; limit?: number }): Promise<Mass[]> {
   const result = await apiRequest<{ data: any[] }>(buildMassesUrl(options), { auth: Boolean(options?.admin) })
   return result.data.map(mapUpcoming)
 }

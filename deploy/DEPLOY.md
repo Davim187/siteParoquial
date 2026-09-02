@@ -231,9 +231,7 @@ curl -I http://localhost
 
 - **Site:** `http://SEU_IP`
 - **Admin:** `http://SEU_IP/admin/login`
-- **Login demo (trocar em produção):**
-  - E-mail: `admin@demo.paroquia`
-  - Senha: `Admin@123456`
+- Crie um usuário administrador real pelo painel ou diretamente no banco. **Não** rode o seed de desenvolvimento em produção.
 
 ---
 

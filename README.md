@@ -49,12 +49,9 @@ npm run dev
 - Health: http://localhost:3333/api/health
 - Swagger: http://localhost:3333/api/docs
 
-### Usuário demo (seed)
+### Usuário admin (seed — apenas desenvolvimento)
 
-- E-mail: `admin@demo.paroquia`
-- Senha: `Admin@123456`
-
-**Troque essa senha em produção.**
+Após `npm run db:seed`, um usuário administrador é criado para ambiente local. A senha pode ser definida com a variável `SEED_ADMIN_PASSWORD`. **Não use o seed em produção** — crie usuários reais pelo painel administrativo.
 
 ### Banco de produção no dev (automático)
 

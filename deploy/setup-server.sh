@@ -49,7 +49,7 @@ if [ ! -f .env.production ]; then
   sed -i "s/troque-esta-chave-em-producao-minimo-32-caracteres-aleatoria/$JWT_SECRET/" .env.production
   echo
   echo "IMPORTANTE: edite $APP_DIR/.env.production"
-  echo "  - POSTGRES_PASSWORD"
+  echo "  - POSTGRES_PASSWORD (e o mesmo valor em DATABASE_URL)"
   echo "  - CORS_ORIGIN e PUBLIC_URL (domínio ou IP público)"
   echo
 fi

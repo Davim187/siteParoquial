@@ -67,4 +67,10 @@ validate_env_production() {
     echo "JWT_SECRET não está definido em $file"
     exit 1
   fi
+
+  if ! read_env_value DATABASE_URL "$file" >/dev/null; then
+    echo "DATABASE_URL não está definido em $file"
+    echo "Use o mesmo usuário/senha/banco de POSTGRES_* com host postgres (rede Docker)."
+    exit 1
+  fi
 }

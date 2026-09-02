@@ -1,7 +1,7 @@
 import { apiRequest } from '@/lib/api-client'
 import type { Sacrament } from '@/types'
 
-export async function listSacraments() {
+export async function listSacraments(): Promise<Sacrament[]> {
   const result = await apiRequest<{ data: any[] }>('/api/sacraments', { auth: false })
   return result.data.map(
     (item): Sacrament => ({

@@ -16,7 +16,6 @@ import { uploadMedia } from '@/services/mediaService'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { deletePastoral, listPastorals, savePastoral } from '@/services/pastoralService'
 import { deleteSacrament, listSacraments, saveSacrament } from '@/services/sacramentService'
-import { deleteGalleryItem, listGallery, saveGalleryItem } from '@/services/galleryService'
 import { deletePerson, listPeople, savePerson } from '@/services/parishService'
 import {
   deletePrayerRequest,
@@ -25,7 +24,7 @@ import {
 } from '@/services/prayerService'
 import { deleteMessage, listMessages, updateMessageStatus } from '@/services/contactService'
 import { getFeast, getSettings, saveFeast, saveSettings } from '@/services/parishService'
-import type { ContactMessage, GalleryCategory, Pastoral, Person, Sacrament } from '@/types'
+import type { ContactMessage, Pastoral, Person, Sacrament } from '@/types'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { messageStatusLabels } from '@/utils/labels'
@@ -233,102 +232,6 @@ export function AdminSacramentsPage() {
               value={editing.secretaryContact}
               onChange={(secretaryContact) => setEditing({ ...editing, secretaryContact })}
             />
-            <Button type="submit">Salvar</Button>
-          </form>
-        ) : null}
-      </Modal>
-    </AdminCrudShell>
-  )
-}
-
-export function AdminGalleryPage() {
-  usePageMeta('Galeria | Admin')
-  const query = useAsync(() => listGallery('todas'), [])
-  const [editing, setEditing] = useState<{
-    id?: string
-    title: string
-    src: string
-    alt: string
-    category: GalleryCategory
-    date: string
-  } | null>(null)
-  const [toDelete, setToDelete] = useState<{ id: string; title: string } | null>(null)
-
-  async function refresh() {
-    query.setData(await listGallery('todas'))
-  }
-
-  return (
-    <AdminCrudShell
-      title="Galeria"
-      onCreate={() =>
-        setEditing({
-          title: '',
-          src: '',
-          alt: '',
-          category: 'eventos',
-          date: new Date().toISOString().slice(0, 10),
-        })
-      }
-      loading={query.loading}
-      error={query.error}
-    >
-      <AdminTable
-        headers={['Título', 'Categoria', 'Ações']}
-        rows={query.data?.map((item) => [
-          item.title,
-          item.category,
-          <RowActions
-            key={item.id}
-            entityLabel="foto"
-            onEdit={() => setEditing(item)}
-            onDelete={() => setToDelete(item)}
-          />,
-        ])}
-      />
-      <DeleteConfirm
-        open={Boolean(toDelete)}
-        label={toDelete?.title ?? ''}
-        onClose={() => setToDelete(null)}
-        onConfirm={async () => {
-          if (!toDelete) return
-          await deleteGalleryItem(toDelete.id)
-          setToDelete(null)
-          await refresh()
-        }}
-      />
-      <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Foto">
-        {editing ? (
-          <form
-            className="grid gap-3"
-            onSubmit={async (e: FormEvent) => {
-              e.preventDefault()
-              await saveGalleryItem(editing)
-              setEditing(null)
-              await refresh()
-            }}
-          >
-            <AdminInput label="Título" value={editing.title} onChange={(title) => setEditing({ ...editing, title })} />
-            <AdminInput label="URL da imagem" value={editing.src} onChange={(src) => setEditing({ ...editing, src })} />
-            <AdminInput label="Texto alternativo" value={editing.alt} onChange={(alt) => setEditing({ ...editing, alt })} />
-            <AdminInput label="Data" type="date" value={editing.date} onChange={(date) => setEditing({ ...editing, date })} />
-            <label className="text-sm">
-              Categoria
-              <select
-                className="mt-1 w-full rounded-xl border border-line px-3 py-2"
-                value={editing.category}
-                onChange={(e) => setEditing({ ...editing, category: e.target.value as GalleryCategory })}
-              >
-                <option value="missas">Missas</option>
-                <option value="eventos">Eventos</option>
-                <option value="festa-padroeira">Festa da Padroeira</option>
-                <option value="semana-santa">Semana Santa</option>
-                <option value="catequese">Catequese</option>
-                <option value="juventude">Juventude</option>
-                <option value="pastorais">Pastorais</option>
-                <option value="acoes-sociais">Ações sociais</option>
-              </select>
-            </label>
             <Button type="submit">Salvar</Button>
           </form>
         ) : null}

@@ -1,11 +1,10 @@
 import { FacebookIcon, InstagramIcon, YoutubeIcon } from '@/components/ui/SocialIcons'
 import { Link } from 'react-router-dom'
-import { useAsync } from '@/hooks/useAsync'
-import { getSettings } from '@/services/parishService'
+import { useSettingsQuery } from '@/hooks/queries/usePublicQueries'
 import { Logo } from '@/components/layout/Logo'
 
 export function Footer() {
-  const { data: settings } = useAsync(() => getSettings(), [])
+  const { data: settings } = useSettingsQuery()
   const parish = settings ?? {
     name: 'Paróquia Nossa Senhora das Graças',
     slogan: 'Uma comunidade de fé, esperança e amor.',

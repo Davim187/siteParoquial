@@ -29,6 +29,9 @@ const SacramentDetailPage = lazy(() =>
   import('@/pages/SacramentDetailPage').then((m) => ({ default: m.SacramentDetailPage })),
 )
 const GalleryPage = lazy(() => import('@/pages/GalleryPage').then((m) => ({ default: m.GalleryPage })))
+const GalleryAlbumPage = lazy(() =>
+  import('@/pages/GalleryAlbumPage').then((m) => ({ default: m.GalleryAlbumPage })),
+)
 const ContactPage = lazy(() => import('@/pages/ContactPage').then((m) => ({ default: m.ContactPage })))
 const PrayerPage = lazy(() => import('@/pages/PrayerPage').then((m) => ({ default: m.PrayerPage })))
 const DonatePage = lazy(() => import('@/pages/DonatePage').then((m) => ({ default: m.DonatePage })))
@@ -64,7 +67,7 @@ const AdminSacramentsPage = lazy(() =>
   import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminSacramentsPage })),
 )
 const AdminGalleryPage = lazy(() =>
-  import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminGalleryPage })),
+  import('@/pages/admin/AdminGalleryPage').then((m) => ({ default: m.AdminGalleryPage })),
 )
 const AdminPeoplePage = lazy(() =>
   import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminPeoplePage })),
@@ -211,6 +214,14 @@ export function AppRoutes() {
           element={
             <Suspend>
               <GalleryPage />
+            </Suspend>
+          }
+        />
+        <Route
+          path="galeria/:slug"
+          element={
+            <Suspend>
+              <GalleryAlbumPage />
             </Suspend>
           }
         />

@@ -343,7 +343,8 @@ export async function contentRoutes(app: FastifyInstance) {
       eventsThisMonth,
       masses,
       prayers,
-      gallery,
+      galleryPhotos,
+      galleryAlbums,
       recentNews,
       upcomingEvents,
       activities,
@@ -361,6 +362,7 @@ export async function contentRoutes(app: FastifyInstance) {
       prisma.massSchedule.count({ where: { active: true } }),
       prisma.prayerRequest.count({ where: { status: 'NEW' } }),
       prisma.galleryItem.count({ where: { active: true } }),
+      prisma.galleryAlbum.count({ where: { active: true } }),
       prisma.news.findMany({ orderBy: { createdAt: 'desc' }, take: 5, include: { category: true } }),
       prisma.event.findMany({
         where: { active: true, startsAt: { gte: now } },
@@ -381,7 +383,8 @@ export async function contentRoutes(app: FastifyInstance) {
         eventsThisMonth,
         upcomingMasses: masses,
         prayerRequests: prayers,
-        galleryPhotos: gallery,
+        galleryPhotos,
+        galleryAlbums,
         pastorals,
       },
       recentNews,
@@ -392,7 +395,8 @@ export async function contentRoutes(app: FastifyInstance) {
       publishedNews,
       activeNotices,
       prayerRequests: prayers,
-      galleryPhotos: gallery,
+      galleryPhotos,
+      galleryAlbums,
       upcomingMasses: masses,
     })
   })

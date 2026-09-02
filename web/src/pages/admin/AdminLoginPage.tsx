@@ -43,15 +43,27 @@ export function AdminLoginPage() {
           <p className="mt-1 text-xs tracking-wide text-muted uppercase">{BRAND.location}</p>
         </div>
         <p className="mt-6 text-center text-sm text-muted">
-          Ambiente demo: <strong>admin@demo.paroquia</strong> / <strong>Admin@123456</strong>
+          Acesso restrito a colaboradores autorizados da paróquia.
         </p>
         <label className="mt-6 block text-sm">
-          <span className="mb-1 block font-medium text-navy">E-mail</span>
-          <input name="email" type="email" required className="w-full rounded-xl border border-line px-3 py-2.5" />
+          <span className="mb-1 block font-medium text-navy">E-mail *</span>
+          <input
+            name="email"
+            type="email"
+            required
+            autoComplete="username"
+            className="w-full rounded-xl border border-line px-3 py-2.5"
+          />
         </label>
         <label className="mt-4 block text-sm">
-          <span className="mb-1 block font-medium text-navy">Senha</span>
-          <input name="password" type="password" required className="w-full rounded-xl border border-line px-3 py-2.5" />
+          <span className="mb-1 block font-medium text-navy">Senha *</span>
+          <input
+            name="password"
+            type="password"
+            required
+            autoComplete="current-password"
+            className="w-full rounded-xl border border-line px-3 py-2.5"
+          />
         </label>
         <Button type="submit" className="mt-6 w-full" disabled={loading}>
           {loading ? 'Entrando...' : 'Entrar'}

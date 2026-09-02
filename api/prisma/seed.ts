@@ -95,7 +95,8 @@ async function main() {
   }
 
   const adminRole = await prisma.role.findUniqueOrThrow({ where: { code: 'ADMIN' } })
-  const passwordHash = await argon2.hash('Admin@123456')
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123456'
+  const passwordHash = await argon2.hash(seedPassword)
   await prisma.user.upsert({
     where: { email: 'admin@demo.paroquia' },
     update: {
@@ -421,8 +422,10 @@ async function main() {
   })
 
   console.log('Seed concluído.')
-  console.log('Usuário demo: admin@demo.paroquia')
-  console.log('Senha demo: Admin@123456 (trocar em produção)')
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Usuário admin de desenvolvimento criado (admin@demo.paroquia).')
+    console.log('Defina SEED_ADMIN_PASSWORD no ambiente para personalizar a senha do seed.')
+  }
 }
 
 main()

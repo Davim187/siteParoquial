@@ -1,13 +1,13 @@
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
-import { useAsync } from '@/hooks/useAsync'
+import { useSettingsQuery } from '@/hooks/queries/usePublicQueries'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { getSettings } from '@/services/parishService'
 
 export function DonatePage() {
   usePageMeta('Dízimo e doações | Paróquia Nossa Senhora das Graças')
-  const { data, loading, error } = useAsync(() => getSettings(), [])
+  const { data, isLoading, error } = useSettingsQuery()
 
   return (
     <div>
@@ -17,8 +17,8 @@ export function DonatePage() {
         description="Sua contribuição sustenta a missão evangelizadora e o cuidado com a casa de Deus."
       />
       <div className="mx-auto max-w-3xl px-4 py-14 md:px-6">
-        {loading ? <Loading /> : null}
-        {error ? <ErrorState message={error} /> : null}
+        {isLoading && !data ? <Loading /> : null}
+        {error ? <ErrorState message={getErrorMessage(error)} /> : null}
         {data ? (
           <div className="space-y-6">
             <p className="leading-relaxed text-muted">
