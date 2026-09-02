@@ -1,13 +1,21 @@
+import { fieldLabel } from '@/lib/validation-labels'
+
+export type ValidationDetail = {
+  path: string
+  label?: string
+  message: string
+}
+
 export type ApiErrorBody = {
   error?: string
   message?: string
-  details?: Array<{ path: string; message: string }>
+  details?: ValidationDetail[]
 }
 
 export class ApiError extends Error {
   status: number
   code?: string
-  details?: ApiErrorBody['details']
+  details?: ValidationDetail[]
 
   constructor(status: number, body: ApiErrorBody) {
     super(body.message ?? 'Erro na requisição.')
@@ -31,5 +39,22 @@ export function getErrorMessage(error: unknown, fallback = 'Não foi possível c
 
 export function getFieldErrors(error: unknown): Record<string, string> {
   if (!(error instanceof ApiError) || !error.details?.length) return {}
-  return Object.fromEntries(error.details.map((item) => [item.path, item.message]))
+  return Object.fromEntries(
+    error.details.map((item) => {
+      const key = item.path.split('.').pop() ?? item.path
+      return [key, item.message]
+    }),
+  )
+}
+
+export function formatValidationSummary(error: unknown, fallback?: string): string {
+  if (error instanceof ApiError && error.details?.length) {
+    return error.details
+      .map((item) => {
+        const label = item.label ?? fieldLabel(item.path)
+        return `${label}: ${item.message}`
+      })
+      .join('\n')
+  }
+  return getErrorMessage(error, fallback)
 }

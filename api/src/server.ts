@@ -1,3 +1,4 @@
+import './lib/zod-pt.js'
 import Fastify from 'fastify'
 import { ZodError } from 'zod'
 import cors from '@fastify/cors'
@@ -12,6 +13,7 @@ import path from 'node:path'
 import { mkdir } from 'node:fs/promises'
 import { env } from './config/env.js'
 import { AppError } from './lib/http.js'
+import { fieldLabel } from './lib/validation-labels.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { newsRoutes } from './modules/news/news.routes.js'
 import { mediaRoutes } from './modules/media/media.routes.js'
@@ -82,14 +84,21 @@ async function buildServer() {
       })
     }
     if (error instanceof ZodError) {
-      const first = error.errors[0]
+      const details = error.errors.map((item) => {
+        const path = item.path.join('.')
+        const label = fieldLabel(path)
+        return {
+          path,
+          label,
+          message: item.message,
+        }
+      })
+      const first = details[0]
+      const message = first ? `${first.label}: ${first.message}` : 'Dados inválidos.'
       return reply.status(422).send({
         error: 'VALIDATION_ERROR',
-        message: first?.message ?? 'Dados inválidos.',
-        details: error.errors.map((item) => ({
-          path: item.path.join('.'),
-          message: item.message,
-        })),
+        message,
+        details,
       })
     }
     const err = error as { validation?: unknown; statusCode?: number; message?: string; code?: string }

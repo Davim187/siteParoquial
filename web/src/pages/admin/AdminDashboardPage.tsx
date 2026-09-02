@@ -10,20 +10,19 @@ import {
 } from 'lucide-react'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
-import { useAsync } from '@/hooks/useAsync'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { getDashboardStats } from '@/services/parishService'
 import { useAuth } from '@/contexts/AuthContext'
+import { useDashboardQuery } from '@/hooks/queries/useAdminQueries'
 import { cn } from '@/utils/cn'
 import { formatDateTime } from '@/utils/dates'
 
 export function AdminDashboardPage() {
   usePageMeta('Dashboard | Admin')
   const { user, hasPermission } = useAuth()
-  const { data, loading, error } = useAsync(() => getDashboardStats(), [])
+  const { data, isLoading, error } = useDashboardQuery()
 
-  if (loading) return <Loading />
-  if (error || !data) return <ErrorState message={error ?? 'Erro'} />
+  if (isLoading && !data) return <Loading />
+  if (error || !data) return <ErrorState message={error instanceof Error ? error.message : 'Erro'} />
 
   const cards = [
     {

@@ -9,10 +9,11 @@ import {
   RowActions,
 } from '@/components/admin/AdminUi'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useAsync } from '@/hooks/useAsync'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { useAuth } from '@/contexts/AuthContext'
-import { deleteNotice, listNotices, saveNotice } from '@/services/noticesService'
+import { useInvalidateQueries } from '@/hooks/queries/useAdminQueries'
+import { useNoticesQuery } from '@/hooks/queries/usePublicQueries'
+import { deleteNotice, saveNotice } from '@/services/noticesService'
 import type { ContentStatus, Notice, NoticeCategory } from '@/types'
 
 const empty: Omit<Notice, 'id'> = {
@@ -27,20 +28,17 @@ const empty: Omit<Notice, 'id'> = {
 export function AdminNoticesPage() {
   usePageMeta('Avisos | Admin')
   const { hasPermission } = useAuth()
-  const query = useAsync(() => listNotices({ includeDrafts: true }), [])
+  const invalidate = useInvalidateQueries()
+  const { data, isLoading, error } = useNoticesQuery({ includeDrafts: true })
   const [editing, setEditing] = useState<(Omit<Notice, 'id'> & { id?: string }) | null>(null)
   const [toDelete, setToDelete] = useState<Notice | null>(null)
-
-  async function refresh() {
-    query.setData(await listNotices({ includeDrafts: true }))
-  }
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
     if (!editing) return
     await saveNotice(editing)
     setEditing(null)
-    await refresh()
+    invalidate.notices()
   }
 
   return (
@@ -49,12 +47,12 @@ export function AdminNoticesPage() {
       createLabel="+ Novo aviso"
       createPermission="NOTICES_MANAGE"
       onCreate={() => setEditing({ ...empty })}
-      loading={query.loading}
-      error={query.error}
+      loading={isLoading && !data}
+      error={error instanceof Error ? error.message : null}
     >
       <AdminTable
         headers={['Título', 'Categoria', 'Destaque', 'Ações']}
-        rows={query.data?.map((item) => [
+        rows={data?.map((item) => [
           item.title,
           item.category,
           item.featured ? 'Sim' : 'Não',
@@ -129,7 +127,7 @@ export function AdminNoticesPage() {
           if (!toDelete) return
           await deleteNotice(toDelete.id)
           setToDelete(null)
-          await refresh()
+          invalidate.notices()
         }}
       />
     </AdminCrudShell>

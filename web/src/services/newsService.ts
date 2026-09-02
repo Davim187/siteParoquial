@@ -19,7 +19,7 @@ type ApiNews = {
   categoryId?: string | null
 }
 
-function mapNews(item: ApiNews): NewsArticle {
+function mapNews(item: ApiNews): NewsArticle & { categoryId?: string | null; coverMediaId?: string | null } {
   return {
     id: item.id,
     slug: item.slug,
@@ -31,6 +31,8 @@ function mapNews(item: ApiNews): NewsArticle {
     date: (item.publishedAt ?? item.createdAt).slice(0, 10),
     image: mediaUrl(item.coverUrl) || 'https://images.unsplash.com/photo-1519491050282-cf00c82424b4?auto=format&fit=crop&w=1200&q=80',
     category: item.categoryName ?? 'Comunidade',
+    categoryId: item.categoryId ?? null,
+    coverMediaId: item.coverMediaId ?? null,
     status: item.status === 'PUBLISHED' ? 'published' : item.status === 'ARCHIVED' ? 'archived' : 'draft',
   }
 }

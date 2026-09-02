@@ -9,31 +9,29 @@ import {
   RowActions,
 } from '@/components/admin/AdminUi'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useAsync } from '@/hooks/useAsync'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { useAuth } from '@/contexts/AuthContext'
-import { deleteEvent, listEvents, saveEvent } from '@/services/eventsService'
-import { deleteMass, listMasses, saveMass } from '@/services/massesService'
+import { useInvalidateQueries } from '@/hooks/queries/useAdminQueries'
+import { useEventsQuery, useMassesQuery } from '@/hooks/queries/usePublicQueries'
+import { deleteEvent, saveEvent } from '@/services/eventsService'
+import { deleteMass, saveMass } from '@/services/massesService'
 import type { EventCategory, Mass, ParishEvent } from '@/types'
 import { formatDate } from '@/utils/dates'
 
 export function AdminAgendaPage() {
   usePageMeta('Agenda | Admin')
   const { hasPermission } = useAuth()
-  const query = useAsync(() => listEvents('todos'), [])
+  const invalidate = useInvalidateQueries()
+  const { data, isLoading, error } = useEventsQuery('todos')
   const [editing, setEditing] = useState<(Omit<ParishEvent, 'id'> & { id?: string }) | null>(null)
   const [toDelete, setToDelete] = useState<ParishEvent | null>(null)
-
-  async function refresh() {
-    query.setData(await listEvents('todos'))
-  }
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
     if (!editing) return
     await saveEvent(editing)
     setEditing(null)
-    await refresh()
+    invalidate.events()
   }
 
   return (
@@ -51,12 +49,12 @@ export function AdminAgendaPage() {
           category: 'evento',
         })
       }
-      loading={query.loading}
-      error={query.error}
+      loading={isLoading && !data}
+      error={error instanceof Error ? error.message : null}
     >
       <AdminTable
         headers={['Título', 'Data', 'Categoria', 'Ações']}
-        rows={query.data?.map((item) => [
+        rows={data?.map((item) => [
           item.title,
           `${formatDate(item.date)} ${item.time}`,
           item.category,
@@ -122,7 +120,7 @@ export function AdminAgendaPage() {
           if (!toDelete) return
           await deleteEvent(toDelete.id)
           setToDelete(null)
-          await refresh()
+          invalidate.events()
         }}
       />
     </AdminCrudShell>
@@ -132,14 +130,11 @@ export function AdminAgendaPage() {
 export function AdminMassesPage() {
   usePageMeta('Missas | Admin')
   const { hasPermission } = useAuth()
+  const invalidate = useInvalidateQueries()
   const month = new Date().toISOString().slice(0, 7)
-  const query = useAsync(() => listMasses({ month, admin: true }), [month])
+  const { data, isLoading, error } = useMassesQuery({ month, admin: true })
   const [editing, setEditing] = useState<(Omit<Mass, 'id'> & { id?: string }) | null>(null)
   const [toDelete, setToDelete] = useState<Mass | null>(null)
-
-  async function refresh() {
-    query.setData(await listMasses({ month, admin: true }))
-  }
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
@@ -153,7 +148,7 @@ export function AdminMassesPage() {
       notes: editing.notes,
     })
     setEditing(null)
-    await refresh()
+    invalidate.masses()
   }
 
   return (
@@ -171,12 +166,12 @@ export function AdminMassesPage() {
           notes: '',
         })
       }
-      loading={query.loading}
-      error={query.error}
+      loading={isLoading && !data}
+      error={error instanceof Error ? error.message : null}
     >
       <AdminTable
         headers={['Data', 'Horário', 'Tipo', 'Ações']}
-        rows={query.data?.map((item) => [
+        rows={data?.map((item) => [
           formatDate(item.date),
           item.time,
           item.type,
@@ -224,7 +219,7 @@ export function AdminMassesPage() {
           if (!toDelete) return
           await deleteMass(toDelete.id)
           setToDelete(null)
-          await refresh()
+          invalidate.masses()
         }}
       />
     </AdminCrudShell>

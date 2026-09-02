@@ -180,22 +180,74 @@ export function AdminTextarea({
   value,
   onChange,
   hint,
+  error,
+  required,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   hint?: string
+  error?: string
+  required?: boolean
 }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1.5 block font-medium text-slate-700">{label}</span>
+      <span className="mb-1.5 block font-medium text-slate-700">
+        {label}
+        {required ? <span className="text-red-500"> *</span> : null}
+      </span>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={4}
         className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm transition outline-none focus:border-marian/40 focus:ring-2 focus:ring-marian/20"
       />
-      {hint ? <span className="mt-1.5 block text-xs text-slate-400">{hint}</span> : null}
+      {hint && !error ? <span className="mt-1.5 block text-xs text-slate-400">{hint}</span> : null}
+      {error ? <span className="mt-1.5 block text-xs text-red-600">⚠ {error}</span> : null}
+    </label>
+  )
+}
+
+export function AdminSelect({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = 'Selecione...',
+  hint,
+  error,
+  required,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: Array<{ value: string; label: string }>
+  placeholder?: string
+  hint?: string
+  error?: string
+  required?: boolean
+}) {
+  return (
+    <label className="block text-sm">
+      <span className="mb-1.5 block font-medium text-slate-700">
+        {label}
+        {required ? <span className="text-red-500"> *</span> : null}
+      </span>
+      <select
+        value={value}
+        required={required}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm transition outline-none focus:border-marian/40 focus:ring-2 focus:ring-marian/20"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {hint && !error ? <span className="mt-1.5 block text-xs text-slate-400">{hint}</span> : null}
+      {error ? <span className="mt-1.5 block text-xs text-red-600">⚠ {error}</span> : null}
     </label>
   )
 }

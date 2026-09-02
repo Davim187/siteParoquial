@@ -1,3 +1,4 @@
+import '../lib/zod-pt.js'
 import './load-env.js'
 import { z } from 'zod'
 

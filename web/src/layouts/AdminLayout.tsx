@@ -29,6 +29,7 @@ import { cn } from '@/utils/cn'
 import { BRAND } from '@/config/brand'
 import { BrandMark } from '@/components/layout/Logo'
 import { getNotifications, type AdminActivityItem, type AdminNotificationAlert } from '@/services/parishService'
+import { prefetchAdminRoute } from '@/lib/admin-prefetch'
 import { formatDateTime } from '@/utils/dates'
 
 const STORAGE_KEY = 'admin_sidebar_collapsed'
@@ -178,7 +179,9 @@ export function AdminLayout() {
   useEffect(() => {
     if (!isAuthenticated) return
     void loadNotifications()
-  }, [isAuthenticated])
+    prefetchAdminRoute(location.pathname)
+    prefetchAdminRoute('/admin')
+  }, [isAuthenticated, location.pathname])
 
   const initials = useMemo(() => {
     const parts = (user?.name ?? 'A').trim().split(/\s+/)
@@ -225,6 +228,7 @@ export function AdminLayout() {
                     to={item.to}
                     end={'end' in item ? Boolean(item.end) : false}
                     onClick={() => setMobileOpen(false)}
+                    onMouseEnter={() => prefetchAdminRoute(item.to)}
                     title={compact ? item.label : undefined}
                     aria-label={item.label}
                     className={({ isActive }) =>

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import {
@@ -10,25 +10,34 @@ import {
 } from '@/components/admin/AdminUi'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { MediaPicker } from '@/components/admin/MediaPicker'
-import { useAsync } from '@/hooks/useAsync'
 import { useToast } from '@/components/ui/Toast'
 import { uploadMedia } from '@/services/mediaService'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { deletePastoral, listPastorals, savePastoral } from '@/services/pastoralService'
-import { deleteSacrament, listSacraments, saveSacrament } from '@/services/sacramentService'
-import { deletePerson, listPeople, savePerson } from '@/services/parishService'
 import {
-  deletePrayerRequest,
-  listPrayerRequests,
-  updatePrayerStatus,
-} from '@/services/prayerService'
-import { deleteMessage, listMessages, updateMessageStatus } from '@/services/contactService'
-import { getFeast, getSettings, saveFeast, saveSettings } from '@/services/parishService'
+  useAdminSettingsQuery,
+  useFeastQuery,
+  useInvalidateQueries,
+  useMessagesQuery,
+  usePrayerRequestsQuery,
+} from '@/hooks/queries/useAdminQueries'
+import { usePastoralsQuery, usePeopleQuery, useSacramentsQuery } from '@/hooks/queries/usePublicQueries'
+import { deletePastoral, savePastoral } from '@/services/pastoralService'
+import { deleteSacrament, saveSacrament } from '@/services/sacramentService'
+import { deletePerson, savePerson } from '@/services/parishService'
+import { deletePrayerRequest, updatePrayerStatus } from '@/services/prayerService'
+import { deleteMessage, updateMessageStatus } from '@/services/contactService'
+import { saveFeast, saveSettings } from '@/services/parishService'
 import type { ContactMessage, Pastoral, Person, Sacrament } from '@/types'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { messageStatusLabels } from '@/utils/labels'
 import { formatDateTime } from '@/utils/dates'
+
+type PastoralForm = Omit<Pastoral, 'id' | 'slug'> & {
+  id?: string
+  slug?: string
+  imageId?: string | null
+}
 
 function DeleteConfirm({
   open,
@@ -54,13 +63,13 @@ function DeleteConfirm({
 
 export function AdminPastoralsPage() {
   usePageMeta('Pastorais | Admin')
-  const query = useAsync(() => listPastorals({ includeInactive: true }), [])
-  const [editing, setEditing] = useState<(Omit<Pastoral, 'id' | 'slug'> & { id?: string; slug?: string }) | null>(null)
+  const toast = useToast()
+  const invalidate = useInvalidateQueries()
+  const { data, isLoading, error } = usePastoralsQuery({ includeInactive: true })
+  const [editing, setEditing] = useState<PastoralForm | null>(null)
   const [toDelete, setToDelete] = useState<Pastoral | null>(null)
-
-  async function refresh() {
-    query.setData(await listPastorals({ includeInactive: true }))
-  }
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   return (
     <AdminCrudShell
@@ -70,6 +79,7 @@ export function AdminPastoralsPage() {
           name: '',
           description: '',
           image: '',
+          imageId: null,
           responsible: '[RESPONSÁVEL]',
           contact: '[CONTATO]',
           meetingTime: '[HORÁRIO]',
@@ -77,18 +87,23 @@ export function AdminPastoralsPage() {
           active: true,
         })
       }
-      loading={query.loading}
-      error={query.error}
+      loading={isLoading && !data}
+      error={error instanceof Error ? error.message : null}
     >
       <AdminTable
         headers={['Nome', 'Ativa', 'Ações']}
-        rows={query.data?.map((item) => [
+        rows={data?.map((item) => [
           item.name,
           item.active ? 'Sim' : 'Não',
           <RowActions
             key={item.id}
             entityLabel="pastoral"
-            onEdit={() => setEditing(item)}
+            onEdit={() =>
+              setEditing({
+                ...item,
+                imageId: (item as PastoralForm).imageId ?? null,
+              })
+            }
             onDelete={() => setToDelete(item)}
           />,
         ])}
@@ -101,7 +116,7 @@ export function AdminPastoralsPage() {
           if (!toDelete) return
           await deletePastoral(toDelete.id)
           setToDelete(null)
-          await refresh()
+          invalidate.pastorals()
         }}
       />
       <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Pastoral">
@@ -112,7 +127,7 @@ export function AdminPastoralsPage() {
               e.preventDefault()
               await savePastoral(editing)
               setEditing(null)
-              await refresh()
+              invalidate.pastorals()
             }}
           >
             <AdminInput label="Nome" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
@@ -121,7 +136,58 @@ export function AdminPastoralsPage() {
               value={editing.description}
               onChange={(description) => setEditing({ ...editing, description })}
             />
-            <AdminInput label="Imagem" value={editing.image} onChange={(image) => setEditing({ ...editing, image })} />
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-700">Imagem</p>
+              <div className="flex flex-wrap items-center gap-3">
+                {editing.image ? (
+                  <img src={editing.image} alt="" className="h-20 w-28 rounded-lg object-cover" />
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-navy hover:bg-cream">
+                    {uploadingPhoto ? 'Enviando...' : 'Enviar arquivo'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+                      className="hidden"
+                      disabled={uploadingPhoto}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        e.target.value = ''
+                        if (!file) return
+                        setUploadingPhoto(true)
+                        try {
+                          const media = await uploadMedia(file, 'pastorals')
+                          setEditing((current) =>
+                            current ? { ...current, image: media.url, imageId: media.id } : null,
+                          )
+                          toast.push('Imagem enviada com sucesso.')
+                        } catch (uploadError) {
+                          toast.push(
+                            uploadError instanceof Error ? uploadError.message : 'Falha ao enviar imagem',
+                            'error',
+                          )
+                        } finally {
+                          setUploadingPhoto(false)
+                        }
+                      }}
+                    />
+                  </label>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
+                    Biblioteca de mídia
+                  </Button>
+                  {editing.image ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setEditing({ ...editing, image: '', imageId: null })}
+                    >
+                      Remover
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
             <AdminInput
               label="Responsável"
               value={editing.responsible}
@@ -154,25 +220,35 @@ export function AdminPastoralsPage() {
           </form>
         ) : null}
       </Modal>
+      <MediaPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(media) => {
+          if (!editing) return
+          setEditing({ ...editing, image: media.url, imageId: media.id })
+          setPickerOpen(false)
+        }}
+      />
     </AdminCrudShell>
   )
 }
 
 export function AdminSacramentsPage() {
   usePageMeta('Sacramentos | Admin')
-  const query = useAsync(() => listSacraments(), [])
+  const invalidate = useInvalidateQueries()
+  const { data, isLoading, error } = useSacramentsQuery()
   const [editing, setEditing] = useState<(Omit<Sacrament, 'id' | 'slug'> & { id?: string; slug?: string }) | null>(null)
   const [toDelete, setToDelete] = useState<Sacrament | null>(null)
 
-  async function refresh() {
-    query.setData(await listSacraments())
-  }
-
   return (
-    <AdminCrudShell title="Sacramentos" loading={query.loading} error={query.error}>
+    <AdminCrudShell
+      title="Sacramentos"
+      loading={isLoading && !data}
+      error={error instanceof Error ? error.message : null}
+    >
       <AdminTable
         headers={['Nome', 'Ações']}
-        rows={query.data?.map((item) => [
+        rows={data?.map((item) => [
           item.name,
           <RowActions
             key={item.id}
@@ -190,7 +266,7 @@ export function AdminSacramentsPage() {
           if (!toDelete) return
           await deleteSacrament(toDelete.id)
           setToDelete(null)
-          await refresh()
+          invalidate.sacraments()
         }}
       />
       <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Sacramento">
@@ -201,7 +277,7 @@ export function AdminSacramentsPage() {
               e.preventDefault()
               await saveSacrament(editing)
               setEditing(null)
-              await refresh()
+              invalidate.sacraments()
             }}
           >
             <AdminInput label="Nome" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
@@ -243,7 +319,8 @@ export function AdminSacramentsPage() {
 export function AdminPeoplePage() {
   usePageMeta('Pessoas | Admin')
   const toast = useToast()
-  const query = useAsync(() => listPeople(), [])
+  const invalidate = useInvalidateQueries()
+  const { data, isLoading, error } = usePeopleQuery()
   const [editing, setEditing] = useState<(Omit<Person, 'id' | 'slug'> & { id?: string; slug?: string }) | null>(null)
   const [toDelete, setToDelete] = useState<Person | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -251,15 +328,15 @@ export function AdminPeoplePage() {
 
   const usesPhotoUpload = editing?.type === 'padre' || editing?.type === 'diacono'
 
-  async function refresh() {
-    query.setData(await listPeople())
-  }
-
   return (
-    <AdminCrudShell title="Pessoas" loading={query.loading} error={query.error}>
+    <AdminCrudShell
+      title="Pessoas"
+      loading={isLoading && !data}
+      error={error instanceof Error ? error.message : null}
+    >
       <AdminTable
         headers={['Nome', 'Função', 'Ações']}
-        rows={query.data?.map((item) => [
+        rows={data?.map((item) => [
           item.name,
           item.role,
           <RowActions
@@ -278,7 +355,7 @@ export function AdminPeoplePage() {
           if (!toDelete) return
           await deletePerson(toDelete.id)
           setToDelete(null)
-          await refresh()
+          invalidate.people()
         }}
       />
       <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Pessoa">
@@ -289,7 +366,7 @@ export function AdminPeoplePage() {
               e.preventDefault()
               await savePerson(editing)
               setEditing(null)
-              await refresh()
+              invalidate.people()
             }}
           >
             <AdminInput label="Nome" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
@@ -385,18 +462,19 @@ export function AdminPeoplePage() {
 
 export function AdminPrayersPage() {
   usePageMeta('Orações | Admin')
-  const query = useAsync(() => listPrayerRequests(), [])
+  const invalidate = useInvalidateQueries()
+  const { data, isLoading, error } = usePrayerRequestsQuery()
   const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null)
 
-  async function refresh() {
-    query.setData(await listPrayerRequests())
-  }
-
   return (
-    <AdminCrudShell title="Pedidos de oração" loading={query.loading} error={query.error}>
+    <AdminCrudShell
+      title="Pedidos de oração"
+      loading={isLoading && !data}
+      error={error instanceof Error ? error.message : null}
+    >
       <AdminTable
         headers={['Nome', 'Pedido', 'Status', 'Ações']}
-        rows={query.data?.map((item) => [
+        rows={data?.map((item) => [
           item.name,
           item.request,
           item.status,
@@ -405,7 +483,8 @@ export function AdminPrayersPage() {
             entityLabel="pedido"
             onToggle={async () => {
               await updatePrayerStatus(item.id, item.status === 'new' ? 'prayed' : 'archived')
-              await refresh()
+              invalidate.prayers()
+              invalidate.dashboard()
             }}
             toggleLabel="Atualizar status"
             onDelete={() => setToDelete(item)}
@@ -420,7 +499,8 @@ export function AdminPrayersPage() {
           if (!toDelete) return
           await deletePrayerRequest(toDelete.id)
           setToDelete(null)
-          await refresh()
+          invalidate.prayers()
+          invalidate.dashboard()
         }}
       />
     </AdminCrudShell>
@@ -429,13 +509,10 @@ export function AdminPrayersPage() {
 
 export function AdminMessagesPage() {
   usePageMeta('Mensagens | Admin')
-  const query = useAsync(() => listMessages(), [])
+  const invalidate = useInvalidateQueries()
+  const { data, isLoading, error } = useMessagesQuery()
   const [viewing, setViewing] = useState<ContactMessage | null>(null)
   const [toDelete, setToDelete] = useState<{ id: string; subject: string } | null>(null)
-
-  async function refresh() {
-    query.setData(await listMessages())
-  }
 
   function nextStatus(status: ContactMessage['status']): ContactMessage['status'] | null {
     if (status === 'new') return 'read'
@@ -450,10 +527,14 @@ export function AdminMessagesPage() {
   }
 
   return (
-    <AdminCrudShell title="Mensagens" loading={query.loading} error={query.error}>
+    <AdminCrudShell
+      title="Mensagens"
+      loading={isLoading && !data}
+      error={error instanceof Error ? error.message : null}
+    >
       <AdminTable
         headers={['Nome', 'Assunto', 'Status', 'Ações']}
-        rows={query.data?.map((item) => [
+        rows={data?.map((item) => [
           item.name,
           item.subject,
           <StatusBadge key={`${item.id}-status`} status={item.status} label={messageStatusLabels[item.status]} />,
@@ -467,7 +548,7 @@ export function AdminMessagesPage() {
                     const next = nextStatus(item.status)
                     if (!next) return
                     await updateMessageStatus(item.id, next)
-                    await refresh()
+                    invalidate.messages()
                   }
                 : undefined
             }
@@ -526,7 +607,7 @@ export function AdminMessagesPage() {
                     const next = nextStatus(viewing.status)
                     if (!next) return
                     await updateMessageStatus(viewing.id, next)
-                    await refresh()
+                    invalidate.messages()
                     setViewing({ ...viewing, status: next })
                   }}
                 >
@@ -549,7 +630,7 @@ export function AdminMessagesPage() {
           if (!toDelete) return
           await deleteMessage(toDelete.id)
           setToDelete(null)
-          await refresh()
+          invalidate.messages()
         }}
       />
     </AdminCrudShell>
@@ -558,13 +639,19 @@ export function AdminMessagesPage() {
 
 export function AdminFeastPage() {
   usePageMeta('Festa | Admin')
-  const query = useAsync(() => getFeast(), [])
+  const invalidate = useInvalidateQueries()
+  const { data, isLoading, error } = useFeastQuery()
+  const [feast, setFeast] = useState(data)
   const [saving, setSaving] = useState(false)
 
-  if (query.loading) return <Loading />
-  if (query.error || !query.data) return <ErrorState message={query.error ?? 'Erro'} />
+  useEffect(() => {
+    if (data) setFeast(data)
+  }, [data])
 
-  const feast = query.data
+  if (isLoading && !data) return <Loading />
+  if (error || !data) return <ErrorState message={error instanceof Error ? error.message : 'Erro'} />
+
+  const current = feast ?? data
 
   return (
     <div>
@@ -574,35 +661,36 @@ export function AdminFeastPage() {
         onSubmit={async (e) => {
           e.preventDefault()
           setSaving(true)
-          await saveFeast(feast)
+          await saveFeast(current)
+          invalidate.feast()
           setSaving(false)
         }}
       >
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={feast.enabled}
-            onChange={(e) => query.setData({ ...feast, enabled: e.target.checked })}
+            checked={current.enabled}
+            onChange={(e) => setFeast({ ...current, enabled: e.target.checked })}
           />
           Exibir banner especial na página inicial
         </label>
         <AdminInput
           label="Título"
-          value={feast.title}
-          onChange={(title) => query.setData({ ...feast, title })}
+          value={current.title}
+          onChange={(title) => setFeast({ ...current, title })}
         />
         <AdminInput
           label="Data (rótulo)"
-          value={feast.dateLabel}
-          onChange={(dateLabel) => query.setData({ ...feast, dateLabel })}
+          value={current.dateLabel}
+          onChange={(dateLabel) => setFeast({ ...current, dateLabel })}
         />
         <AdminTextarea
           label="Descrição"
-          value={feast.description}
-          onChange={(description) => query.setData({ ...feast, description })}
+          value={current.description}
+          onChange={(description) => setFeast({ ...current, description })}
         />
         <p className="text-sm text-muted">
-          A programação detalhada pode ser ampliada futuramente. Itens atuais: {feast.program.length}.
+          A programação detalhada pode ser ampliada futuramente. Itens atuais: {current.program.length}.
         </p>
         <Button type="submit" disabled={saving}>
           {saving ? 'Salvando...' : 'Salvar'}
@@ -614,12 +702,19 @@ export function AdminFeastPage() {
 
 export function AdminSettingsPage() {
   usePageMeta('Configurações | Admin')
-  const query = useAsync(() => getSettings(), [])
+  const invalidate = useInvalidateQueries()
+  const { data, isLoading, error } = useAdminSettingsQuery()
+  const [settings, setSettings] = useState(data)
   const [saving, setSaving] = useState(false)
 
-  if (query.loading) return <Loading />
-  if (query.error || !query.data) return <ErrorState message={query.error ?? 'Erro'} />
-  const settings = query.data
+  useEffect(() => {
+    if (data) setSettings(data)
+  }, [data])
+
+  if (isLoading && !data) return <Loading />
+  if (error || !data) return <ErrorState message={error instanceof Error ? error.message : 'Erro'} />
+
+  const current = settings ?? data
 
   return (
     <div>
@@ -629,64 +724,65 @@ export function AdminSettingsPage() {
         onSubmit={async (e) => {
           e.preventDefault()
           setSaving(true)
-          await saveSettings(settings)
+          await saveSettings(current)
+          invalidate.settings()
           setSaving(false)
         }}
       >
-        <AdminInput label="Nome" value={settings.name} onChange={(name) => query.setData({ ...settings, name })} />
+        <AdminInput label="Nome" value={current.name} onChange={(name) => setSettings({ ...current, name })} />
         <AdminInput
           label="Slogan"
-          value={settings.slogan}
-          onChange={(slogan) => query.setData({ ...settings, slogan })}
+          value={current.slogan}
+          onChange={(slogan) => setSettings({ ...current, slogan })}
         />
         <AdminTextarea
           label="Texto de boas-vindas"
-          value={settings.welcomeText}
-          onChange={(welcomeText) => query.setData({ ...settings, welcomeText })}
+          value={current.welcomeText}
+          onChange={(welcomeText) => setSettings({ ...current, welcomeText })}
         />
         <AdminInput
           label="Endereço"
-          value={settings.address}
-          onChange={(address) => query.setData({ ...settings, address })}
+          value={current.address}
+          onChange={(address) => setSettings({ ...current, address })}
         />
         <AdminInput
           label="URL do mapa"
-          value={settings.mapsUrl}
-          onChange={(mapsUrl) => query.setData({ ...settings, mapsUrl })}
+          value={current.mapsUrl}
+          onChange={(mapsUrl) => setSettings({ ...current, mapsUrl })}
           hint="Link do Google Maps usado no botão Como chegar (página de contato)."
         />
-        <AdminInput label="Telefone" value={settings.phone} onChange={(phone) => query.setData({ ...settings, phone })} />
+        <AdminInput label="Telefone" value={current.phone} onChange={(phone) => setSettings({ ...current, phone })} />
         <AdminInput
           label="WhatsApp"
-          value={settings.whatsapp}
-          onChange={(whatsapp) => query.setData({ ...settings, whatsapp })}
+          value={current.whatsapp}
+          onChange={(whatsapp) => setSettings({ ...current, whatsapp })}
         />
-        <AdminInput label="E-mail" value={settings.email} onChange={(email) => query.setData({ ...settings, email })} />
+        <AdminInput label="E-mail" value={current.email} onChange={(email) => setSettings({ ...current, email })} />
         <AdminInput
           label="Instagram"
-          value={settings.instagram}
-          onChange={(instagram) => query.setData({ ...settings, instagram })}
+          value={current.instagram}
+          onChange={(instagram) => setSettings({ ...current, instagram })}
         />
         <AdminInput
           label="Facebook"
-          value={settings.facebook}
-          onChange={(facebook) => query.setData({ ...settings, facebook })}
+          value={current.facebook}
+          onChange={(facebook) => setSettings({ ...current, facebook })}
         />
         <AdminInput
           label="YouTube"
-          value={settings.youtube}
-          onChange={(youtube) => query.setData({ ...settings, youtube })}
+          value={current.youtube}
+          onChange={(youtube) => setSettings({ ...current, youtube })}
         />
         <AdminInput
           label="Horário da secretaria"
-          value={settings.secretaryHours}
-          onChange={(secretaryHours) => query.setData({ ...settings, secretaryHours })}
+          value={current.secretaryHours}
+          onChange={(secretaryHours) => setSettings({ ...current, secretaryHours })}
         />
-        <AdminInput label="PIX" value={settings.pixKey} onChange={(pixKey) => query.setData({ ...settings, pixKey })} />
+        <AdminInput label="PIX" value={current.pixKey} onChange={(pixKey) => setSettings({ ...current, pixKey })} />
         <AdminTextarea
           label="Dados bancários"
-          value={settings.bankDetails}
-          onChange={(bankDetails) => query.setData({ ...settings, bankDetails })}
+          value={current.bankDetails}
+          onChange={(bankDetails) => setSettings({ ...current, bankDetails })}
         />
         <Button type="submit" disabled={saving}>
           {saving ? 'Salvando...' : 'Salvar configurações'}

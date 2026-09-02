@@ -70,8 +70,22 @@ export async function listPeople(): Promise<Person[]> {
 }
 
 export async function getPersonBySlug(slug: string) {
-  const people = await listPeople()
-  return people.find((item) => item.slug === slug)
+  const item = await apiRequest<any>(`/api/people/${slug}`, { auth: false })
+  return {
+    id: item.id,
+    slug: item.slug,
+    name: item.name,
+    role: item.roleTitle,
+    photo:
+      mediaUrl(item.imageUrl) ||
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+    photoId: item.photoId ?? null,
+    bio: item.bio,
+    quote: item.quote ?? undefined,
+    ministry: item.ministry ?? undefined,
+    attendance: item.attendance ?? undefined,
+    type: item.type === 'PADRE' ? 'padre' : item.type === 'DIACONO' ? 'diacono' : 'coordenacao',
+  } as Person
 }
 
 export async function savePerson(input: any) {

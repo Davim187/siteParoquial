@@ -25,7 +25,7 @@ import {
   usePublishAlbumMutation,
   useUpdateAlbumMutation,
 } from '@/hooks/queries/useGalleryQueries'
-import { getErrorMessage, getFieldErrors } from '@/lib/api-error'
+import { getErrorMessage, getFieldErrors, formatValidationSummary } from '@/lib/api-error'
 import { formatDate } from '@/utils/dates'
 import type { GalleryAlbum } from '@/types'
 import { uploadMedia } from '@/services/mediaService'
@@ -123,7 +123,7 @@ export function AdminGalleryPage() {
       setEditing(null)
     } catch (error) {
       setFormErrors(getFieldErrors(error))
-      toast.push(getErrorMessage(error), 'error')
+      toast.push(formatValidationSummary(error, 'Não foi possível salvar o álbum.'), 'error')
     }
   }
 

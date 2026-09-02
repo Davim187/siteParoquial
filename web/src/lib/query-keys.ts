@@ -4,6 +4,7 @@ export const queryKeys = {
     all: ['news'] as const,
     list: (params?: { includeDrafts?: boolean }) => ['news', 'list', params] as const,
     detail: (slug: string) => ['news', 'detail', slug] as const,
+    categories: ['news', 'categories'] as const,
   },
   notices: {
     all: ['notices'] as const,

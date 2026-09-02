@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { STALE_TIME } from '@/lib/query-client'
+import { GC_TIME, STALE_TIME } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
 import type { EventCategory, NewsArticle, Notice, ParishEvent, Mass, Pastoral, Person, Sacrament, ParishSettings } from '@/types'
 import { getSettings, listPeople } from '@/services/parishService'
@@ -17,6 +17,8 @@ export function useSettingsQuery() {
     queryKey: queryKeys.settings,
     queryFn: getSettings,
     staleTime: STALE_TIME.settings,
+    gcTime: GC_TIME.long,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -25,6 +27,7 @@ export function useNewsQuery(params?: { includeDrafts?: boolean }) {
     queryKey: queryKeys.news.list(params),
     queryFn: () => listNews(params),
     staleTime: STALE_TIME.news,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -42,6 +45,7 @@ export function useNoticesQuery(params?: { includeDrafts?: boolean }) {
     queryKey: queryKeys.notices.list(params),
     queryFn: () => listNotices(params),
     staleTime: STALE_TIME.notices,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -50,6 +54,7 @@ export function useFeaturedNoticesQuery() {
     queryKey: queryKeys.notices.featured,
     queryFn: getFeaturedNotices,
     staleTime: STALE_TIME.notices,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -58,6 +63,7 @@ export function useEventsQuery(category?: EventCategory | 'todos') {
     queryKey: queryKeys.events.list(category),
     queryFn: () => listEvents(category),
     staleTime: STALE_TIME.events,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -66,6 +72,7 @@ export function useUpcomingEventsQuery(limit?: number) {
     queryKey: queryKeys.events.upcoming(limit),
     queryFn: () => listUpcomingEvents(limit),
     staleTime: STALE_TIME.events,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -74,6 +81,7 @@ export function useMassesQuery(params?: { month?: string; admin?: boolean; limit
     queryKey: queryKeys.masses.list(params),
     queryFn: () => listMasses(params),
     staleTime: STALE_TIME.masses,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -82,6 +90,7 @@ export function useUpcomingMassesQuery(limit?: number) {
     queryKey: queryKeys.masses.upcoming(limit),
     queryFn: () => listUpcomingMasses(limit),
     staleTime: STALE_TIME.masses,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -90,6 +99,7 @@ export function usePastoralsQuery(params?: { includeInactive?: boolean }) {
     queryKey: queryKeys.pastorals.list(params),
     queryFn: () => listPastorals(params),
     staleTime: STALE_TIME.pastorals,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -107,6 +117,8 @@ export function useSacramentsQuery() {
     queryKey: queryKeys.sacraments.list,
     queryFn: listSacraments,
     staleTime: STALE_TIME.sacraments,
+    gcTime: GC_TIME.long,
+    placeholderData: (previous) => previous,
   })
 }
 
@@ -124,6 +136,7 @@ export function usePeopleQuery() {
     queryKey: queryKeys.people.list,
     queryFn: listPeople,
     staleTime: STALE_TIME.people,
+    placeholderData: (previous) => previous,
   })
 }
 
