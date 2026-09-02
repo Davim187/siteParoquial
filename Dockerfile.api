@@ -24,18 +24,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY package.json package-lock.json .npmrc turbo.json ./
 COPY apps/api/package.json ./apps/api/package.json
 
-RUN npm ci --omit=dev --workspace=paroquia-api && npm install -w paroquia-api prisma tsx --no-save
+RUN npm ci --omit=dev --workspace=paroquia-api \
+  && npm install prisma@6.16.2 tsx --no-save
 
 # Mantém /app/api no container para compatibilidade com volumes de produção existentes
 COPY --from=builder /app/apps/api/dist ./api/dist
 COPY apps/api/prisma ./api/prisma
-
-WORKDIR /app
-RUN npx prisma generate --schema=./api/prisma/schema.prisma
+COPY --from=builder /app/apps/api/node_modules/.prisma ./api/node_modules/.prisma
+COPY --from=builder /app/apps/api/node_modules/@prisma/client ./api/node_modules/@prisma/client
 
 WORKDIR /app/api
 
 ENV NODE_ENV=production
 EXPOSE 3333
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+CMD ["sh", "-c", "../node_modules/.bin/prisma migrate deploy && node dist/server.js"]
