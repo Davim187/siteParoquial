@@ -6,6 +6,8 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { queryClient } from '@/lib/query-client'
 
 export default function App() {
+
+  
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
