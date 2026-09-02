@@ -46,6 +46,23 @@ read_env_value() {
   printf '%s\n' "$value"
 }
 
+git_sync_branch() {
+  local branch="${1:?branch obrigatório}"
+  local repo="${GITHUB_REPOSITORY:-Davim187/siteParoquial}"
+  local token="${DEPLOY_GITHUB_TOKEN:-${GITHUB_TOKEN:-}}"
+
+  export GIT_TERMINAL_PROMPT=0
+
+  if [ -n "$token" ]; then
+    git remote set-url origin "https://x-access-token:${token}@github.com/${repo}.git"
+  fi
+
+  # Evita prompt de credencial quando o remote está em HTTPS sem token.
+  git -c credential.helper= fetch origin --prune
+  git checkout "$branch"
+  git reset --hard "origin/$branch"
+}
+
 validate_env_production() {
   local file="$1"
 

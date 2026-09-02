@@ -14,6 +14,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Validar secrets de deploy
         env:
@@ -42,12 +44,18 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          DEPLOY_GITHUB_TOKEN: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
+          envs: GITHUB_TOKEN,GITHUB_REPOSITORY,GITHUB_REF_NAME,DEPLOY_GITHUB_TOKEN
           script_stop: true
           command_timeout: 30m
           script: |
@@ -58,13 +66,18 @@ jobs:
               APP_DIR=/www
             else
               echo "Repositório não encontrado em /var/www nem /www"
-              echo "Rode no VPS: git clone https://github.com/Davim187/siteParoquial.git /var/www"
+              echo "Rode no VPS: git clone https://github.com/${GITHUB_REPOSITORY}.git /www"
               exit 1
             fi
             cd "$APP_DIR"
-            git fetch origin
-            git checkout ${{ github.ref_name }}
-            git reset --hard origin/${{ github.ref_name }}
+            export GIT_TERMINAL_PROMPT=0
+            TOKEN="${DEPLOY_GITHUB_TOKEN:-$GITHUB_TOKEN}"
+            if [ -n "$TOKEN" ]; then
+              git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            fi
+            git -c credential.helper= fetch origin --prune
+            git checkout "$GITHUB_REF_NAME"
+            git reset --hard "origin/$GITHUB_REF_NAME"
             if [ ! -f .env.production ]; then
               echo "Arquivo .env.production não encontrado. Copie .env.production.example e configure."
               exit 1

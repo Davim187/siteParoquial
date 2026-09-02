@@ -15,9 +15,7 @@ validate_env_production "$ENV_FILE"
 echo "==> Diretório do projeto: $APP_DIR"
 
 echo "==> Atualizando código ($BRANCH)..."
-git fetch origin
-git checkout "$BRANCH"
-git reset --hard "origin/$BRANCH"
+git_sync_branch "$BRANCH"
 
 echo "==> Liberando porta 80..."
 bash deploy/remove-apache.sh
