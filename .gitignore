@@ -23,4 +23,8 @@ dist-ssr
 
 api/uploads
 api/generated
+apps/api/uploads
+apps/api/generated
 web/dist
+apps/web/dist
+.turbo

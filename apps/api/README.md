@@ -16,7 +16,7 @@ Documentação OpenAPI: `/api/docs`
 
 ## Banco de produção no dev
 
-Com `api/.env.production.local` configurado, `npm run dev` conecta automaticamente.
+Com `apps/api/.env.production.local` configurado, `npm run dev` na raiz conecta automaticamente.
 
 ## Estrutura
 

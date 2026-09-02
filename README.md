@@ -1,10 +1,19 @@
 # Paróquia Nossa Senhora das Graças
 
-Sistema profissional composto por:
+Monorepo com **npm workspaces** + **Turborepo**.
 
-- `web/` — site público + painel administrativo (React + Vite + TypeScript + Tailwind)
-- `api/` — backend REST (Fastify + Prisma + PostgreSQL)
-- PostgreSQL via Docker (porta `5433` neste ambiente)
+## Estrutura
+
+```text
+.
+├── apps/
+│   ├── api/     # Backend REST (Fastify + Prisma + PostgreSQL)
+│   └── web/     # Site público + painel admin (React + Vite)
+├── deploy/      # Scripts de deploy no VPS
+├── scripts/     # Utilitários (túnel DB, etc.)
+├── turbo.json   # Pipeline do Turborepo
+└── package.json # Raiz do monorepo
+```
 
 Inspiração de UX (sem cópia): portais católicos como Arquidiocese de Fortaleza / Celebre, priorizando **próxima missa**, avisos, agenda e navegação clara no mobile.
 
@@ -18,97 +27,92 @@ Inspiração de UX (sem cópia): portais católicos como Arquidiocese de Fortale
 
 ---
 
-## Subir o banco
+## Instalação
 
 ```bash
-docker run -d --name paroquia-postgres \
-  -e POSTGRES_USER=paroquia \
-  -e POSTGRES_PASSWORD=paroquia \
-  -e POSTGRES_DB=paroquia \
-  -p 5433:5432 \
-  -v paroquia_pg:/var/lib/postgresql/data \
-  postgres:16-alpine
+npm install
 ```
-
-> A porta `5433` evita conflito com PostgreSQL já instalado na máquina. Ajuste `DATABASE_URL` se preferir `5432`.
 
 ---
 
-## API
+## Subir o banco
 
 ```bash
-cp api/.env.example api/.env
-npm install
-cd api
-npx prisma migrate dev
-npx prisma db seed
+npm run db:up
+```
+
+Ou manualmente com Docker na porta `5433` (ver `docker-compose.yml`).
+
+---
+
+## Desenvolvimento
+
+```bash
+# API + Web em paralelo (Turborepo)
 npm run dev
+
+# Apenas um app
+npm run dev:api
+npm run dev:web
+
+# Banco local (sem túnel de produção)
+npm run dev:local
+```
+
+### Primeira vez na API
+
+```bash
+cp apps/api/.env.example apps/api/.env
+npm run db:migrate
+npm run db:seed
 ```
 
 - API: http://localhost:3333
 - Health: http://localhost:3333/api/health
 - Swagger: http://localhost:3333/api/docs
+- Site: http://localhost:5173
+- Admin: http://localhost:5173/admin/login
 
-### Usuário admin (seed — apenas desenvolvimento)
+### Frontend
 
-Após `npm run db:seed`, um usuário administrador é criado para ambiente local. A senha pode ser definida com a variável `SEED_ADMIN_PASSWORD`. **Não use o seed em produção** — crie usuários reais pelo painel administrativo.
+```bash
+cp apps/web/.env.example apps/web/.env
+```
+
+`VITE_API_URL` aponta para a API. Em desenvolvimento, o Vite também faz proxy de `/api` e `/uploads`.
 
 ### Banco de produção no dev (automático)
 
 **Setup (uma vez):**
+
 ```bash
-cp api/.env.production.local.example api/.env.production.local
-nano api/.env.production.local   # senha do VPS
+cp apps/api/.env.production.local.example apps/api/.env.production.local
+nano apps/api/.env.production.local
 ```
 
-**Depois, só isso:**
-```bash
-npm run dev
-```
+Depois, `npm run dev` abre o túnel SSH e conecta na API ao banco de produção.
 
-O túnel SSH abre sozinho e a API conecta no banco de produção.
-
-> Para usar o banco **local**: `npm run dev:local` ou apague `api/.env.production.local`.
-
-> **Não** rode `db:migrate`, `db:seed` nem `db:reset` com produção.
-
-### Variáveis principais (`api/.env`)
-
-| Variável | Descrição |
-|---|---|
-| `DATABASE_URL` | Conexão PostgreSQL |
-| `JWT_SECRET` | Segredo JWT (mín. 32 caracteres) |
-| `CORS_ORIGIN` | Origem do frontend |
-| `PUBLIC_URL` | URL pública da API (uploads) |
-| `STORAGE_PROVIDER` | `local` (preparado para S3/R2/Cloudinary) |
-| `UPLOAD_DIR` | Pasta local de uploads |
-| `MAX_UPLOAD_MB` | Limite de upload |
+> Para banco **local**: `npm run dev:local` ou remova `apps/api/.env.production.local`.
 
 ---
 
-## Frontend
+## Scripts do monorepo (Turborepo)
+
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | Sobe API e Web em paralelo |
+| `npm run build` | Build de todos os apps (com cache) |
+| `npm run lint` | Lint em todos os apps |
+| `npm run typecheck` | Verificação TypeScript |
+| `npm run db:migrate` | Migrations Prisma (API) |
+| `npm run db:seed` | Seed do banco |
+| `npm run db:studio` | Prisma Studio |
+
+Filtros por app:
 
 ```bash
-cp web/.env.example web/.env
-npm install
-npm run dev -w web
-```
-
-- Site: http://localhost:5173
-- Admin: http://localhost:5173/admin/login
-
-`VITE_API_URL` aponta para a API. Em desenvolvimento, o Vite também faz proxy de `/api` e `/uploads`.
-
----
-
-## Scripts do monorepo
-
-```bash
-npm run dev:web
-npm run dev:api
-npm run build
-npm run db:migrate -w api
-npm run db:seed -w api
+npx turbo run build --filter=paroquia-web
+npx turbo run dev --filter=paroquia-api
 ```
 
 ---
@@ -118,85 +122,33 @@ npm run db:seed -w api
 ```text
 SITE / ADMIN  →  API Fastify  →  PostgreSQL
                      ↓
-              StorageService (local agora; S3/R2/Cloudinary depois)
+              StorageService (local; S3/R2/Cloudinary depois)
 ```
 
 ### Permissões (RBAC)
 
 Perfis: `ADMIN`, `EDITOR`, `SECRETARIA`, `COMUNICACAO`
 
-O admin tem acesso total. Os demais recebem permissões específicas via seed.
-
 ### Mídia
 
-- Upload com validação MIME/tamanho
-- Conversão para WebP + thumbnail (`sharp`)
-- Metadados no banco; arquivos fora do banco
-- Biblioteca de mídia + `MediaPicker` no admin
+Upload com validação, WebP + thumbnail (`sharp`), biblioteca no admin.
 
 ---
 
-## Produção (checklist)
+## Produção
 
-1. Trocar `JWT_SECRET`
-2. Trocar senha do admin
-3. Configurar `CORS_ORIGIN` e `PUBLIC_URL`
-4. Usar storage em nuvem quando necessário
-5. `prisma migrate deploy`
-6. Não versionar `.env`
+1. Trocar `JWT_SECRET` e senhas
+2. Configurar `CORS_ORIGIN` e `PUBLIC_URL`
+3. `npm run db:migrate` (ou `prisma migrate deploy` no container)
+4. Não versionar `.env`
 
----
+**Deploy automático:** [`deploy/DEPLOY.md`](deploy/DEPLOY.md)
 
-## Deploy automático (VPS)
-
-**Guia completo:** [`deploy/DEPLOY.md`](deploy/DEPLOY.md)
-
-O projeto inclui Docker + GitHub Actions para publicar no servidor a cada push na branch `main`/`master`.
-
-### 1. Preparar o servidor (uma vez)
-
-No VPS (com acesso root/SSH):
-
-```bash
-# Envie a chave pública do GitHub/deploy para o servidor antes, se usar clone via SSH
-bash deploy/setup-server.sh
-nano /www/.env.production   # senha do Postgres, domínio/IP, JWT
-bash deploy/deploy.sh
-```
-
-O site ficará em `http://SEU_IP` (porta 80).
-
-### 2. Secrets no GitHub
-
-Em **Settings → Secrets and variables → Actions** do repositório:
-
-| Secret | Valor |
-|---|---|
-| `DEPLOY_HOST` | IP ou domínio do VPS |
-| `DEPLOY_USER` | `root` (ou usuário com Docker) |
-| `DEPLOY_SSH_KEY` | chave privada SSH (não use senha no workflow) |
-| `DEPLOY_PORT` | `22` (opcional) |
-
-> **Segurança:** use autenticação por chave SSH. Não commite senhas no repositório.
-
-### 3. Repositório
-
-O deploy espera o **monorepo completo** (`web/` + `api/`) em `/www`.
-
-Após cada push em `main`/`master`, o workflow executa `deploy/deploy.sh` no servidor.
-
-### Comandos úteis no servidor
-
-```bash
-cd /www
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f api
-bash deploy/deploy.sh   # deploy manual
-```
+O deploy usa Docker + GitHub Actions. O monorepo completo (`apps/api` + `apps/web`) deve estar em `/www` ou `/var/www` no servidor.
 
 ---
 
 ## Observações
 
-- Dados sensíveis e contatos reais da paróquia usam placeholders (`[ENDEREÇO]`, `[TELEFONE]`, etc.).
-- O sistema está preparado para crescer (inscrições, dízimo, app mobile) sem acoplar o frontend ao banco.
+- Dados sensíveis usam placeholders (`[ENDEREÇO]`, `[TELEFONE]`, etc.).
+- Cache de build do Turborepo fica em `.turbo/` (ignorado pelo git).

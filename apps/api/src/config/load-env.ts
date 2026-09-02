@@ -18,11 +18,11 @@ if (usesProductionDb()) {
   dotenv.config({ path: productionEnvPath, override: true })
 
   if (process.env.DATABASE_URL?.includes('SUA_SENHA')) {
-    console.error('Edite api/.env.production.local — substitua SUA_SENHA_PRODUCAO pela senha do VPS.')
+    console.error('Edite apps/api/.env.production.local — substitua SUA_SENHA_PRODUCAO pela senha do VPS.')
     process.exit(1)
   }
 
-  console.info('[db] Produção (api/.env.production.local)')
+  console.info('[db] Produção (apps/api/.env.production.local)')
 }
 
 

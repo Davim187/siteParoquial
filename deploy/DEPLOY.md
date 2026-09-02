@@ -413,10 +413,12 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 
 ```
 /www/
-├── api/                  # Backend
-├── web/                  # Frontend (build vai pro container Nginx)
+├── apps/
+│   ├── api/              # Backend
+│   └── web/              # Frontend (build vai pro container Nginx)
 ├── deploy/               # Scripts de deploy
 ├── docker-compose.prod.yml
+├── turbo.json
 ├── .env.production       # Configurações (NÃO commitar)
 └── ...
 ```

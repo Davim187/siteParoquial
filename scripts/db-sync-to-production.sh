@@ -4,8 +4,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEV_ENV="$ROOT/api/.env"
-PROD_ENV="$ROOT/api/.env.production.local"
+DEV_ENV="$ROOT/apps/api/.env"
+PROD_ENV="$ROOT/apps/api/.env.production.local"
 DUMP_FILE="${DUMP_FILE:-/tmp/paroquia-dev-to-prod.dump}"
 
 read_env_var() {

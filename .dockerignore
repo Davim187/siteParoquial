@@ -4,8 +4,10 @@ node_modules
 **/.git
 dist
 **/dist
-web/dist
-api/uploads
+apps/web/dist
+apps/api/uploads
+.turbo
+**/.turbo
 *.log
 .env
 .env.*

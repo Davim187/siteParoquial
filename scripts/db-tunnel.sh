@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="${ENV_FILE:-$ROOT/api/.env.production.local}"
+ENV_FILE="${ENV_FILE:-$ROOT/apps/api/.env.production.local}"
 BACKGROUND="${BACKGROUND:-0}"
 
 read_env() {

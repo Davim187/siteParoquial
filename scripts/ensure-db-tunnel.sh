@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Abre o túnel SSH em background se api/.env.production.local existir
+# Abre o túnel SSH em background se apps/api/.env.production.local existir
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="$ROOT/api/.env.production.local"
+ENV_FILE="$ROOT/apps/api/.env.production.local"
 
 if [ "${USE_LOCAL_DB:-}" = "1" ] || [ ! -f "$ENV_FILE" ]; then
   exit 0
