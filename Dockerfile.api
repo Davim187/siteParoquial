@@ -30,9 +30,10 @@ RUN npm ci --omit=dev --workspace=paroquia-api && npm install -w paroquia-api pr
 COPY --from=builder /app/apps/api/dist ./api/dist
 COPY apps/api/prisma ./api/prisma
 
-WORKDIR /app/api
+WORKDIR /app
+RUN npx prisma generate --schema=./api/prisma/schema.prisma
 
-RUN npx prisma generate
+WORKDIR /app/api
 
 ENV NODE_ENV=production
 EXPOSE 3333
