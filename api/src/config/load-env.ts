@@ -24,3 +24,7 @@ if (usesProductionDb()) {
 
   console.info('[db] Produção (api/.env.production.local)')
 }
+
+
+
+
