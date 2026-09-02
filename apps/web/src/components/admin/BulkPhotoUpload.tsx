@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { AlertCircle, CheckCircle2, ImagePlus, Trash2, Upload } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { prepareUploadImage } from '@/utils/prepareUploadImage'
 
@@ -11,7 +11,7 @@ export type PendingUploadFile = {
   id: string
   file: File
   previewUrl: string
-  status: 'pending' | 'uploading' | 'success' | 'error'
+  status: 'preparing' | 'pending' | 'uploading' | 'success' | 'error'
   error?: string
 }
 
@@ -37,6 +37,7 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [items, setItems] = useState<PendingUploadFile[]>([])
   const [uploading, setUploading] = useState(false)
+  const [preparing, setPreparing] = useState(false)
   const [summary, setSummary] = useState<string | null>(null)
 
   const pendingFiles = useMemo(
@@ -44,15 +45,17 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
     [items],
   )
 
+  const preparingCount = useMemo(() => items.filter((item) => item.status === 'preparing').length, [items])
+
   async function handleSelect(selected: FileList | null) {
-    if (!selected?.length) return
+    if (!selected?.length || preparing) return
     setSummary(null)
 
-    const next: PendingUploadFile[] = []
+    const validFiles: File[] = []
     const errors: string[] = []
 
     for (const file of Array.from(selected)) {
-      if (items.length + next.length >= MAX_FILES) {
+      if (items.length + validFiles.length >= MAX_FILES) {
         errors.push(`É possível selecionar no máximo ${MAX_FILES} fotos por vez.`)
         break
       }
@@ -61,20 +64,41 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
         errors.push(validationError)
         continue
       }
+      validFiles.push(file)
+    }
+
+    if (!validFiles.length) {
+      if (errors.length) setSummary(errors.join(' '))
+      return
+    }
+
+    const placeholders: PendingUploadFile[] = validFiles.map((file) => ({
+      id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+      file,
+      previewUrl: '',
+      status: 'preparing',
+    }))
+
+    setPreparing(true)
+    setItems((current) => [...current, ...placeholders])
+
+    for (const placeholder of placeholders) {
       try {
-        const prepared = await prepareUploadImage(file)
-        next.push({
-          id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+        const prepared = await prepareUploadImage(placeholder.file)
+        const ready: PendingUploadFile = {
+          id: placeholder.id,
           file: prepared,
           previewUrl: URL.createObjectURL(prepared),
           status: 'pending',
-        })
+        }
+        setItems((current) => current.map((item) => (item.id === placeholder.id ? ready : item)))
       } catch {
-        errors.push(`Não foi possível preparar o arquivo ${file.name}.`)
+        errors.push(`Não foi possível preparar o arquivo ${placeholder.file.name}.`)
+        setItems((current) => current.filter((item) => item.id !== placeholder.id))
       }
     }
 
-    if (next.length) setItems((current) => [...current, ...next])
+    setPreparing(false)
     if (errors.length) setSummary(errors.join(' '))
   }
 
@@ -143,7 +167,7 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
           accept={ACCEPT}
           multiple
           className="hidden"
-          disabled={disabled || uploading}
+          disabled={disabled || uploading || preparing}
           onChange={(event) => {
             void handleSelect(event.target.files)
             event.target.value = ''
@@ -153,14 +177,15 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
           type="button"
           variant="secondary"
           size="sm"
-          disabled={disabled || uploading}
+          disabled={disabled || uploading || preparing}
+          loading={preparing}
           onClick={() => inputRef.current?.click()}
         >
-          <ImagePlus className="mr-2 h-4 w-4" />
-          Selecionar fotos
+          {!preparing ? <ImagePlus className="mr-2 h-4 w-4" /> : null}
+          {preparing ? 'Preparando fotos...' : 'Selecionar fotos'}
         </Button>
         {pendingFiles.length ? (
-          <Button type="button" size="sm" disabled={disabled || uploading} onClick={() => void handleUpload()}>
+          <Button type="button" size="sm" disabled={disabled || uploading || preparing} onClick={() => void handleUpload()}>
             <Upload className="mr-2 h-4 w-4" />
             {uploading ? 'Enviando...' : `Enviar ${pendingFiles.length} foto(s)`}
           </Button>
@@ -177,9 +202,16 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
         cada.
       </p>
 
+      {preparingCount ? (
+        <p className="flex items-center gap-2 text-sm text-muted">
+          <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Preparando {preparingCount} foto(s)...
+        </p>
+      ) : null}
+
       {summary ? (
         <p className="flex items-start gap-2 rounded-lg bg-white px-3 py-2 text-sm text-navy">
-          {summary.includes('não puderam') ? (
+          {summary.includes('não puderam') || summary.includes('não é um formato') || summary.includes('Não foi possível') ? (
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           ) : (
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
@@ -192,10 +224,22 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {items.map((item, index) => (
             <li key={item.id} className="relative overflow-hidden rounded-lg border border-line bg-white">
-              <img src={item.previewUrl} alt="" className="aspect-square w-full object-cover" />
+              {item.status === 'preparing' ? (
+                <div className="flex aspect-square w-full items-center justify-center bg-cream">
+                  <LoaderCircle className="h-6 w-6 animate-spin text-muted" aria-hidden="true" />
+                  <span className="sr-only">Preparando foto...</span>
+                </div>
+              ) : (
+                <img src={item.previewUrl} alt="" className="aspect-square w-full object-cover" />
+              )}
               <span className="absolute top-1 left-1 rounded bg-navy-deep/70 px-1.5 py-0.5 text-[10px] text-white">
                 {index + 1}
               </span>
+              {item.status === 'preparing' ? (
+                <span className="absolute inset-x-0 bottom-0 bg-navy-deep/80 py-1 text-center text-[10px] text-white">
+                  Preparando...
+                </span>
+              ) : null}
               {item.status === 'uploading' ? (
                 <span className="absolute inset-0 flex items-center justify-center bg-navy-deep/40 text-xs font-medium text-white">
                   Enviando...
@@ -211,7 +255,7 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
                   {item.error ?? 'Erro'}
                 </span>
               ) : null}
-              {!uploading && item.status !== 'success' ? (
+              {!uploading && !preparing && item.status !== 'success' && item.status !== 'preparing' ? (
                 <button
                   type="button"
                   onClick={() => removeItem(item.id)}
