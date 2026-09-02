@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { LoaderCircle } from 'lucide-react'
 import { z } from 'zod'
 import { BulkPhotoUpload } from '@/components/admin/BulkPhotoUpload'
 import {
@@ -69,6 +70,7 @@ export function AdminGalleryPage() {
 
   const [editing, setEditing] = useState<AlbumForm | null>(null)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [managing, setManaging] = useState<GalleryAlbum | null>(null)
@@ -76,7 +78,7 @@ export function AdminGalleryPage() {
 
   async function saveAlbum(event: FormEvent) {
     event.preventDefault()
-    if (!editing) return
+    if (!editing || saving) return
 
     const parsed = albumFormSchema.safeParse({
       title: editing.title,
@@ -94,6 +96,7 @@ export function AdminGalleryPage() {
       return
     }
 
+    setSaving(true)
     setFormErrors({})
 
     try {
@@ -110,7 +113,7 @@ export function AdminGalleryPage() {
         })
         toast.push('Álbum atualizado com sucesso.')
       } else {
-        const created = await createMutation.mutateAsync({
+        await createMutation.mutateAsync({
           title: editing.title,
           description: editing.description || undefined,
           eventDate: editing.eventDate,
@@ -118,12 +121,14 @@ export function AdminGalleryPage() {
           coverMediaId: editing.coverMediaId ?? null,
         })
         toast.push('Álbum criado com sucesso.')
-        setManaging(created)
       }
+      setPickerOpen(false)
       setEditing(null)
     } catch (error) {
       setFormErrors(getFieldErrors(error))
       toast.push(formatValidationSummary(error, 'Não foi possível salvar o álbum.'), 'error')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -252,8 +257,8 @@ export function AdminGalleryPage() {
               Publicado
             </label>
 
-            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-              {createMutation.isPending || updateMutation.isPending ? 'Salvando...' : 'Salvar álbum'}
+            <Button type="submit" loading={saving} disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar álbum'}
             </Button>
           </form>
         ) : null}
@@ -293,6 +298,60 @@ export function AdminGalleryPage() {
   )
 }
 
+function AlbumPhotoItem({
+  thumbUrl,
+  name,
+  onRemove,
+}: {
+  thumbUrl: string
+  name: string
+  onRemove: () => void
+}) {
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    setLoaded(false)
+  }, [thumbUrl])
+
+  return (
+    <li className="relative overflow-hidden rounded-lg border bg-cream/40">
+      <div className="relative aspect-square w-full">
+        {!loaded ? (
+          <div className="absolute inset-0 z-[1] flex items-center justify-center bg-cream">
+            <LoaderCircle className="h-6 w-6 animate-spin text-muted" aria-hidden="true" />
+            <span className="sr-only">Carregando foto...</span>
+          </div>
+        ) : null}
+        <img
+          src={thumbUrl}
+          alt={name}
+          className={`aspect-square w-full object-cover transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setLoaded(true)}
+          onError={() => setLoaded(true)}
+        />
+      </div>
+      <button
+        type="button"
+        className="absolute top-1 right-1 z-10 rounded bg-white/90 px-2 py-0.5 text-xs text-red-600"
+        onClick={onRemove}
+      >
+        Remover
+      </button>
+    </li>
+  )
+}
+
+function AlbumPhotoPlaceholder() {
+  return (
+    <li className="relative overflow-hidden rounded-lg border bg-cream/40">
+      <div className="flex aspect-square w-full items-center justify-center bg-cream">
+        <LoaderCircle className="h-6 w-6 animate-spin text-muted" aria-hidden="true" />
+        <span className="sr-only">Enviando foto...</span>
+      </div>
+    </li>
+  )
+}
+
 function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onClose: () => void }) {
   const toast = useToast()
   const slug = album?.slug ?? ''
@@ -300,8 +359,11 @@ function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onCl
   const bulkMutation = useBulkUploadPhotosMutation()
   const deletePhotoMutation = useDeleteAlbumPhotoMutation()
   const [photoToDelete, setPhotoToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [pendingUploads, setPendingUploads] = useState(0)
 
   const photos = albumQuery.data?.photos ?? []
+  const isRefreshingPhotos = albumQuery.isFetching && !albumQuery.isLoading
+  const showPlaceholders = pendingUploads > 0
 
   return (
     <>
@@ -311,39 +373,52 @@ function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onCl
             <BulkPhotoUpload
               disabled={bulkMutation.isPending}
               onUpload={async (files) => {
-                const result = await bulkMutation.mutateAsync({ albumId: album.id, files })
-                if (result.failed.length) {
-                  toast.push(result.message, result.succeeded.length ? 'success' : 'error')
-                } else {
-                  toast.push(result.message)
-                }
-                await albumQuery.refetch()
-                return {
-                  succeeded: result.succeeded.map((item) => item.fileName),
-                  failed: result.failed,
+                setPendingUploads(files.length)
+                try {
+                  const result = await bulkMutation.mutateAsync({ albumId: album.id, files })
+                  if (result.failed.length) {
+                    toast.push(result.message, result.succeeded.length ? 'success' : 'error')
+                  } else {
+                    toast.push(result.message)
+                  }
+                  setPendingUploads(0)
+                  await albumQuery.refetch()
+                  return {
+                    succeeded: result.succeeded.map((item) => item.fileName),
+                    failed: result.failed,
+                  }
+                } catch (error) {
+                  setPendingUploads(0)
+                  throw error
                 }
               }}
             />
 
             {albumQuery.isLoading ? <p className="text-sm text-muted">Carregando fotos...</p> : null}
 
-            {photos.length ? (
+            {photos.length || showPlaceholders ? (
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                 {photos.map((photo) => (
-                  <li key={photo.id} className="relative overflow-hidden rounded-lg border">
-                    <img src={photo.thumbUrl} alt="" className="aspect-square w-full object-cover" />
-                    <button
-                      type="button"
-                      className="absolute top-1 right-1 rounded bg-white/90 px-2 py-0.5 text-xs text-red-600"
-                      onClick={() =>
-                        setPhotoToDelete({ id: photo.id, name: photo.title ?? photo.originalName ?? 'Foto' })
-                      }
-                    >
-                      Remover
-                    </button>
-                  </li>
+                  <AlbumPhotoItem
+                    key={photo.id}
+                    thumbUrl={photo.thumbUrl}
+                    name={photo.title ?? photo.originalName ?? 'Foto'}
+                    onRemove={() =>
+                      setPhotoToDelete({ id: photo.id, name: photo.title ?? photo.originalName ?? 'Foto' })
+                    }
+                  />
                 ))}
+                {showPlaceholders
+                  ? Array.from({ length: pendingUploads }, (_, index) => (
+                      <AlbumPhotoPlaceholder key={`uploading-${index}`} />
+                    ))
+                  : null}
               </ul>
+            ) : isRefreshingPhotos ? (
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                Atualizando fotos...
+              </div>
             ) : (
               <p className="text-sm text-muted">Nenhuma foto neste álbum ainda.</p>
             )}
