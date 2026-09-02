@@ -278,15 +278,15 @@ export function AdminNewsPage() {
         onClose={() => setToDelete(null)}
         onConfirm={async () => {
           if (!toDelete) return
+          const { id } = toDelete
           try {
-            const { id } = toDelete
             await deleteNews(id)
-            setToDelete(null)
             await invalidate.news(id)
             invalidate.dashboard()
             toast.push('Notícia excluída.')
           } catch (error) {
             toast.push(getErrorMessage(error, 'Não foi possível excluir a notícia.'), 'error')
+            throw error
           }
         }}
       />

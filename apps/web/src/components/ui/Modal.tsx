@@ -2,31 +2,37 @@ import { X } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
+let openModalCount = 0
+
 interface ModalProps {
   open: boolean
   onClose: () => void
   title?: string
   children: ReactNode
+  /** Confirmações e diálogos sobre outros modais */
+  elevated?: boolean
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, elevated = false }: ModalProps) {
   useEffect(() => {
     if (!open) return
+    openModalCount += 1
+    document.body.style.overflow = 'hidden'
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
     }
-    document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
     return () => {
-      document.body.style.overflow = ''
       window.removeEventListener('keydown', onKey)
+      openModalCount = Math.max(0, openModalCount - 1)
+      if (openModalCount === 0) document.body.style.overflow = ''
     }
   }, [open, onClose])
 
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] overflow-y-auto">
+    <div className={`fixed inset-0 overflow-y-auto ${elevated ? 'z-[90]' : 'z-[80]'}`}>
       <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
         <button
           type="button"

@@ -274,12 +274,14 @@ export function AdminGalleryPage() {
         onClose={() => setToDelete(null)}
         onConfirm={async () => {
           if (!toDelete) return
+          const albumId = toDelete.id
           try {
-            await deleteMutation.mutateAsync(toDelete.id)
+            await deleteMutation.mutateAsync(albumId)
+            if (managing?.id === albumId) setManaging(null)
             toast.push('Álbum excluído.')
-            setToDelete(null)
           } catch (error) {
             toast.push(getErrorMessage(error), 'error')
+            throw error
           }
         }}
       />
@@ -437,10 +439,10 @@ function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onCl
           try {
             await deletePhotoMutation.mutateAsync({ albumId: album.id, photoId: photoToDelete.id })
             toast.push('Foto removida.')
-            setPhotoToDelete(null)
             await albumQuery.refetch()
           } catch (error) {
             toast.push(getErrorMessage(error), 'error')
+            throw error
           }
         }}
       />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 
@@ -22,17 +22,24 @@ export function ConfirmDialog({
   const [busy, setBusy] = useState(false)
   const isLoading = loading || busy
 
+  useEffect(() => {
+    if (!open) setBusy(false)
+  }, [open])
+
   async function handleConfirm() {
     setBusy(true)
     try {
       await onConfirm()
+      onClose()
+    } catch {
+      // Mantém o diálogo aberto em caso de erro.
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={title}>
+    <Modal open={open} onClose={onClose} title={title} elevated>
       <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{description}</p>
       <div className="mt-6 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose} disabled={isLoading}>

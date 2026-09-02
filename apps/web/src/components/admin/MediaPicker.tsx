@@ -144,9 +144,9 @@ export function MediaPicker({
             await remove(toDelete.id)
             if (selected?.id === toDelete.id) setSelected(null)
             toast.push('Imagem excluída.')
-            setToDelete(null)
           } catch (error) {
             toast.push(error instanceof Error ? error.message : 'Falha ao excluir imagem', 'error')
+            throw error
           } finally {
             setDeleting(false)
           }

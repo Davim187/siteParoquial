@@ -86,9 +86,9 @@ export function AdminMediaPage() {
           try {
             await remove(toDelete.id)
             toast.push('Imagem excluída.')
-            setToDelete(null)
           } catch (error) {
             toast.push(error instanceof Error ? error.message : 'Falha ao excluir imagem', 'error')
+            throw error
           } finally {
             setDeleting(false)
           }
