@@ -26,6 +26,7 @@ export function CampaignBanner({ article }: { article: NewsArticle }) {
             <ProgressBar
               current={article.progressCurrent}
               goal={article.progressGoal}
+              mode={article.progressMode}
               label={article.progressLabel || 'Arrecadação para o novo Centro Pastoral'}
               tone="dark"
             />

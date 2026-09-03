@@ -37,6 +37,7 @@ export function DonatePage() {
                     <ProgressBar
                       current={campaign.progressCurrent}
                       goal={campaign.progressGoal}
+                      mode={campaign.progressMode}
                       label={campaign.progressLabel || 'Arrecadação para o novo Centro Pastoral'}
                     />
                   </div>

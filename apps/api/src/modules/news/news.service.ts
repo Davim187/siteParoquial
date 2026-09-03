@@ -18,6 +18,7 @@ const newsInput = z.object({
   publishedAt: z.string().datetime().optional().nullable(),
   galleryMediaIds: z.array(z.string()).optional(),
   showProgress: z.boolean().default(false),
+  progressMode: z.enum(['amount', 'percent']).default('amount'),
   progressLabel: z.string().optional().nullable(),
   progressCurrent: z.coerce.number().min(0).optional(),
   progressGoal: z.coerce.number().min(0).optional(),
@@ -100,6 +101,7 @@ export async function getCampaignNews() {
       status: true,
       featured: true,
       showProgress: true,
+      progressMode: true,
       progressLabel: true,
       progressCurrent: true,
       progressGoal: true,
@@ -140,6 +142,11 @@ export async function createNews(body: unknown, authorId: string) {
   const exists = await prisma.news.findUnique({ where: { slug } })
   if (exists) throw new AppError(409, 'Já existe uma notícia com este endereço de página.')
 
+  const progressCurrent =
+    data.progressMode === 'percent'
+      ? Math.min(100, Math.max(0, data.progressCurrent ?? 0))
+      : (data.progressCurrent ?? 0)
+
   const item = await prisma.news.create({
     data: {
       title: data.title,
@@ -152,9 +159,10 @@ export async function createNews(body: unknown, authorId: string) {
       status: data.status,
       featured: data.featured,
       showProgress: data.showProgress,
+      progressMode: data.progressMode,
       progressLabel: data.progressLabel ?? null,
-      progressCurrent: data.progressCurrent ?? 0,
-      progressGoal: data.progressGoal ?? 0,
+      progressCurrent,
+      progressGoal: data.progressMode === 'percent' ? 100 : (data.progressGoal ?? 0),
       authorId,
       publishedAt:
         data.status === 'PUBLISHED'
@@ -182,6 +190,13 @@ export async function updateNews(id: string, body: unknown, userId: string) {
   }
   const { galleryMediaIds, publishedAt: publishedAtInput, ...newsData } = data
   const status = newsData.status ?? current.status
+  const nextMode = newsData.progressMode ?? current.progressMode
+  if (newsData.progressCurrent !== undefined && nextMode === 'percent') {
+    newsData.progressCurrent = Math.min(100, Math.max(0, newsData.progressCurrent))
+  }
+  if (newsData.progressMode === 'percent') {
+    newsData.progressGoal = 100
+  }
   const item = await prisma.news.update({
     where: { id },
     data: {
@@ -234,6 +249,7 @@ export async function duplicateNews(id: string, userId: string) {
       coverMediaId: true,
       categoryId: true,
       showProgress: true,
+      progressMode: true,
       progressLabel: true,
       progressCurrent: true,
       progressGoal: true,
@@ -254,6 +270,7 @@ export async function duplicateNews(id: string, userId: string) {
       status: 'DRAFT',
       featured: false,
       showProgress: current.showProgress,
+      progressMode: current.progressMode,
       progressLabel: current.progressLabel,
       progressCurrent: current.progressCurrent,
       progressGoal: current.progressGoal,

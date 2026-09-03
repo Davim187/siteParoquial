@@ -210,6 +210,7 @@ model News {
   status      ContentStatus @default(DRAFT)
   featured    Boolean       @default(false)
   showProgress    Boolean @default(false)
+  progressMode    String  @default("amount") // amount | percent
   progressLabel   String?
   progressCurrent Float   @default(0)
   progressGoal    Float   @default(0)

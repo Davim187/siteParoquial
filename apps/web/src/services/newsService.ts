@@ -20,6 +20,7 @@ type ApiNews = {
   gallery?: Array<string | null>
   galleryMediaIds?: string[]
   showProgress?: boolean
+  progressMode?: 'amount' | 'percent' | null
   progressLabel?: string | null
   progressCurrent?: number
   progressGoal?: number
@@ -44,6 +45,7 @@ function mapNews(item: ApiNews): NewsArticle & { categoryId?: string | null; cov
     gallery: (item.gallery ?? []).filter((src): src is string => Boolean(src)).map((src) => mediaUrl(src) || src),
     galleryMediaIds: item.galleryMediaIds ?? [],
     showProgress: Boolean(item.showProgress),
+    progressMode: item.progressMode === 'percent' ? 'percent' : 'amount',
     progressLabel: item.progressLabel ?? undefined,
     progressCurrent: Number(item.progressCurrent ?? 0),
     progressGoal: Number(item.progressGoal ?? 0),
@@ -113,6 +115,7 @@ export async function saveNews(input: Partial<NewsArticle> & { title: string; ex
     featured: Boolean(input.featured),
     galleryMediaIds: input.galleryMediaIds ?? [],
     showProgress: Boolean(input.showProgress),
+    progressMode: input.progressMode === 'percent' ? 'percent' : 'amount',
     progressLabel: input.progressLabel || null,
     progressCurrent: Number(input.progressCurrent ?? 0),
     progressGoal: Number(input.progressGoal ?? 0),

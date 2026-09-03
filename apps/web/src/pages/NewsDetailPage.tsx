@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNewsDetailQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import { stripHtml } from '@/utils/html'
 import { getRelatedNews } from '@/services/newsService'
 import { queryKeys } from '@/lib/query-keys'
 import { STALE_TIME } from '@/lib/query-client'
@@ -53,7 +54,7 @@ export function NewsDetailPage() {
     articleQuery.data
       ? `${articleQuery.data.title} | Paróquia Nossa Senhora das Graças`
       : 'Notícia | Paróquia Nossa Senhora das Graças',
-    articleQuery.data?.excerpt,
+    articleQuery.data ? stripHtml(articleQuery.data.excerpt) : undefined,
   )
 
   if (articleQuery.isLoading && !articleQuery.data) return <Loading />
@@ -80,7 +81,7 @@ export function NewsDetailPage() {
       try {
         await navigator.share({
           title: article.title,
-          text: article.excerpt,
+          text: stripHtml(article.excerpt),
           url: shareUrl,
         })
         return
@@ -108,6 +109,7 @@ export function NewsDetailPage() {
               <ProgressBar
                 current={article.progressCurrent}
                 goal={article.progressGoal}
+                mode={article.progressMode}
                 label={article.progressLabel || 'Arrecadação para o novo Centro Pastoral'}
               />
             </div>

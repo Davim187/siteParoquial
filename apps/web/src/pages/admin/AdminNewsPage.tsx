@@ -6,7 +6,6 @@ import {
   AdminInput,
   AdminSelect,
   AdminTable,
-  AdminTextarea,
   FormSection,
   RowActions,
 } from '@/components/admin/AdminUi'
@@ -34,7 +33,7 @@ const empty: NewsForm = {
   slug: '',
   title: '',
   subtitle: '',
-  excerpt: '',
+  excerpt: '<p></p>',
   content: '<p></p>',
   author: '[EQUIPE DE COMUNICAÇÃO]',
   date: new Date().toISOString().slice(0, 10),
@@ -47,6 +46,7 @@ const empty: NewsForm = {
   gallery: [],
   galleryMediaIds: [],
   showProgress: false,
+  progressMode: 'amount',
   progressLabel: 'Arrecadação para o novo Centro Pastoral',
   progressCurrent: 0,
   progressGoal: 0,
@@ -136,6 +136,7 @@ export function AdminNewsPage() {
                 gallery: item.gallery ?? [],
                 galleryMediaIds: item.galleryMediaIds ?? [],
                 progressLabel: item.progressLabel || empty.progressLabel,
+                progressMode: item.progressMode === 'percent' ? 'percent' : 'amount',
               })
             }}
             onDelete={() => setToDelete(item)}
@@ -221,13 +222,23 @@ export function AdminNewsPage() {
               />
             </FormSection>
             <FormSection title="Conteúdo">
-              <AdminTextarea
-                label="Resumo"
-                value={editing.excerpt}
-                onChange={(excerpt) => setEditing({ ...editing, excerpt })}
-                required
-                error={formErrors.excerpt}
-              />
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-slate-700">
+                  Resumo <span className="text-red-500">*</span>
+                </p>
+                <p className="mb-2 text-xs text-slate-500">
+                  Texto curto exibido nos cards. Use negrito, itálico e quebras de linha conforme digitado.
+                </p>
+                <RichTextEditor
+                  compact
+                  value={editing.excerpt}
+                  onChange={(excerpt) => setEditing({ ...editing, excerpt })}
+                  placeholder="Resumo da notícia..."
+                />
+                {formErrors.excerpt ? (
+                  <span className="mt-1.5 block text-xs text-red-600">⚠ {formErrors.excerpt}</span>
+                ) : null}
+              </div>
               <div>
                 <p className="mb-1.5 text-sm font-medium text-slate-700">
                   Conteúdo <span className="text-red-500">*</span>
@@ -351,20 +362,59 @@ export function AdminNewsPage() {
                     value={editing.progressLabel ?? ''}
                     onChange={(progressLabel) => setEditing({ ...editing, progressLabel })}
                   />
-                  <AdminInput
-                    label="Valor arrecadado (R$)"
-                    type="number"
-                    value={String(editing.progressCurrent ?? 0)}
-                    onChange={(progressCurrent) =>
-                      setEditing({ ...editing, progressCurrent: Number(progressCurrent) || 0 })
+                  <AdminSelect
+                    label="Tipo de progresso"
+                    value={editing.progressMode === 'percent' ? 'percent' : 'amount'}
+                    onChange={(progressMode) =>
+                      setEditing({
+                        ...editing,
+                        progressMode: progressMode === 'percent' ? 'percent' : 'amount',
+                        progressGoal: progressMode === 'percent' ? 100 : editing.progressGoal,
+                      })
                     }
+                    options={[
+                      { value: 'amount', label: 'Por valores (R$)' },
+                      { value: 'percent', label: 'Por porcentagem (%)' },
+                    ]}
+                    hint="Escolha se a barra usa arrecadação em reais ou apenas o percentual concluído."
                   />
-                  <AdminInput
-                    label="Meta (R$)"
-                    type="number"
-                    value={String(editing.progressGoal ?? 0)}
-                    onChange={(progressGoal) => setEditing({ ...editing, progressGoal: Number(progressGoal) || 0 })}
-                  />
+                  {editing.progressMode === 'percent' ? (
+                    <AdminInput
+                      label="Progresso (%)"
+                      type="number"
+                      value={String(editing.progressCurrent ?? 0)}
+                      onChange={(progressCurrent) => {
+                        const value = Number(progressCurrent)
+                        setEditing({
+                          ...editing,
+                          progressCurrent: Number.isFinite(value)
+                            ? Math.min(100, Math.max(0, value))
+                            : 0,
+                          progressGoal: 100,
+                        })
+                      }}
+                      hint="Informe um número de 0 a 100."
+                    />
+                  ) : (
+                    <>
+                      <AdminInput
+                        label="Valor arrecadado (R$)"
+                        type="number"
+                        value={String(editing.progressCurrent ?? 0)}
+                        onChange={(progressCurrent) =>
+                          setEditing({ ...editing, progressCurrent: Number(progressCurrent) || 0 })
+                        }
+                      />
+                      <AdminInput
+                        label="Meta (R$)"
+                        type="number"
+                        value={String(editing.progressGoal ?? 0)}
+                        onChange={(progressGoal) =>
+                          setEditing({ ...editing, progressGoal: Number(progressGoal) || 0 })
+                        }
+                      />
+                    </>
+                  )}
                 </div>
               ) : null}
             </FormSection>

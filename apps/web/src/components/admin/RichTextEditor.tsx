@@ -10,10 +10,12 @@ export function RichTextEditor({
   value,
   onChange,
   placeholder = 'Escreva o conteúdo...',
+  compact = false,
 }: {
   value: string
   onChange: (html: string) => void
   placeholder?: string
+  compact?: boolean
 }) {
   const editor = useEditor({
     extensions: [
@@ -43,21 +45,27 @@ export function RichTextEditor({
         <ToolbarButton active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} label="Itálico">
           <Italic size={15} />
         </ToolbarButton>
-        <ToolbarButton active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label="Título">
-          <Heading2 size={15} />
-        </ToolbarButton>
-        <ToolbarButton active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} label="Subtítulo">
-          <span className="text-[11px] font-bold">H3</span>
-        </ToolbarButton>
+        {!compact ? (
+          <>
+            <ToolbarButton active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label="Título">
+              <Heading2 size={15} />
+            </ToolbarButton>
+            <ToolbarButton active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} label="Subtítulo">
+              <span className="text-[11px] font-bold">H3</span>
+            </ToolbarButton>
+          </>
+        ) : null}
         <ToolbarButton active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} label="Lista">
           <List size={15} />
         </ToolbarButton>
         <ToolbarButton active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} label="Lista numerada">
           <ListOrdered size={15} />
         </ToolbarButton>
-        <ToolbarButton active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} label="Citação">
-          <Quote size={15} />
-        </ToolbarButton>
+        {!compact ? (
+          <ToolbarButton active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} label="Citação">
+            <Quote size={15} />
+          </ToolbarButton>
+        ) : null}
         <ToolbarButton
           active={editor.isActive('link')}
           onClick={() => {
@@ -75,7 +83,14 @@ export function RichTextEditor({
           <Link2 size={15} />
         </ToolbarButton>
       </div>
-      <EditorContent editor={editor} className="prose prose-sm max-w-none px-4 py-3 min-h-48 focus:outline-none [&_.tiptap]:min-h-40 [&_.tiptap]:outline-none" />
+      <EditorContent
+        editor={editor}
+        className={
+          compact
+            ? 'prose prose-sm max-w-none px-4 py-3 min-h-28 focus:outline-none [&_.tiptap]:min-h-20 [&_.tiptap]:whitespace-pre-wrap [&_.tiptap]:outline-none'
+            : 'prose prose-sm max-w-none px-4 py-3 min-h-48 focus:outline-none [&_.tiptap]:min-h-40 [&_.tiptap]:whitespace-pre-wrap [&_.tiptap]:outline-none'
+        }
+      />
     </div>
   )
 }
