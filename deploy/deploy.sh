@@ -46,9 +46,6 @@ for attempt in $(seq 1 20); do
   sleep 3
 done
 
-echo "==> Configurando Apache..."
-bash deploy/setup-apache.sh
-
 echo "==> Reiniciando API (PM2)..."
 if ! command -v pm2 >/dev/null 2>&1; then
   echo "PM2 não encontrado. Rode: bash deploy/setup-server.sh"
@@ -58,6 +55,12 @@ fi
 load_env_file "$ENV_FILE"
 pm2 startOrReload "$APP_DIR/deploy/ecosystem.config.cjs" --update-env
 pm2 save
+
+echo "==> Configurando Apache..."
+bash deploy/setup-apache.sh
+
+echo "==> Configurando HTTPS..."
+bash deploy/setup-ssl.sh
 
 echo "==> Deploy concluído."
 pm2 status

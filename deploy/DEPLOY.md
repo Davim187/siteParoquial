@@ -205,23 +205,38 @@ Verifique se subiu:
 ```bash
 pm2 status
 systemctl status apache2
-curl -I http://localhost
-curl http://localhost/api/health
+curl -I https://paroquiansdasgracas.com.br
+curl https://paroquiansdasgracas.com.br/api/health
 ```
 
 ---
 
 ## 2.4 Acessar o site
 
-- **Site:** `http://SEU_IP` ou `https://paroquiansdasgracas.com.br`
+- **Site:** `https://paroquiansdasgracas.com.br`
 - **Admin:** `/admin/login`
 - Crie um usuário administrador real pelo painel ou diretamente no banco. **Não** rode o seed de desenvolvimento em produção.
 
-### HTTPS com Certbot (recomendado)
+### HTTPS (automático)
+
+O script `deploy/deploy.sh` roda `deploy/setup-ssl.sh`, que:
+
+1. Obtém certificado Let's Encrypt (Certbot)
+2. Configura Apache na porta 443
+3. Redireciona HTTP → HTTPS
+4. Renova o certificado automaticamente
+
+**Requisitos:**
+
+- Domínio apontando para o IP do VPS (`paroquiansdasgracas.com.br` e `www`)
+- Porta **443** aberta no firewall do VPS
+- `PUBLIC_URL` e `ACME_EMAIL` definidos em `.env.production`
+
+Para configurar HTTPS manualmente (sem deploy completo):
 
 ```bash
-apt-get install -y certbot python3-certbot-apache
-certbot --apache -d paroquiansdasgracas.com.br -d www.paroquiansdasgracas.com.br
+cd /www
+bash deploy/setup-ssl.sh
 ```
 
 ---
@@ -249,7 +264,8 @@ git push origin master
    - Sobe Postgres (Docker)
    - Faz build do web e da API
    - Aplica migrations
-   - Recarrega Apache e reinicia API no PM2
+   - Reinicia API no PM2
+   - Recarrega Apache e renova/configura HTTPS (Certbot)
 
 Acompanhe em: **https://github.com/Davim187/siteParoquial/actions**
 
@@ -350,7 +366,9 @@ systemctl reload apache2
 | `Repositório não encontrado em /www` | Rodar clone + setup no servidor |
 | `.env.production não encontrado` | `cp .env.production.example .env.production` e editar |
 | API não responde | `pm2 logs paroquia-api` — verificar `DATABASE_URL` com `127.0.0.1` |
-| Site 404 no refresh | Verificar RewriteRule do Apache em `deploy/apache/paroquia.conf` |
+| Site 404 no refresh | Verificar RewriteRule do Apache (deploy/apache/render-config.sh) |
+| HTTPS não funciona | Domínio apontando pro VPS? Porta 443 aberta? Rode `bash deploy/setup-ssl.sh` |
+| Certbot falha | Confira DNS e se `ACME_EMAIL` está no `.env.production` |
 | Permission denied (SSH) | Verificar chave pública no VPS e secret `DEPLOY_SSH_KEY` |
 | `POSTGRES_PASSWORD is missing` | Edite `/www/.env.production` e defina a senha |
 | Erro Prisma OpenSSL | Instalar deps: `apt install openssl libheif1 imagemagick` |
@@ -366,8 +384,9 @@ systemctl reload apache2
 │   └── web/
 │       └── dist/         # Build estático servido pelo Apache
 ├── deploy/
-│   ├── apache/           # Virtual host
+│   ├── apache/           # Geração do virtual host (HTTP + HTTPS)
 │   ├── ecosystem.config.cjs  # Config PM2
+│   ├── setup-ssl.sh      # Certbot + HTTPS
 │   └── deploy.sh
 ├── docker-compose.prod.yml   # Somente Postgres
 ├── .env.production       # Configurações (NÃO commitar)
