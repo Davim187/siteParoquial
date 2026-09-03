@@ -30,11 +30,6 @@ if [ ! -f "$APP_DIR/apps/api/dist/server.js" ]; then
   exit 1
 fi
 
-if [ ! -d "$APP_DIR/node_modules/@fastify/swagger" ]; then
-  echo "ERRO: dependências incompletas após npm ci"
-  exit 1
-fi
-
 mkdir -p "$APP_DIR/apps/api/uploads"
 
 echo "==> Postgres..."
