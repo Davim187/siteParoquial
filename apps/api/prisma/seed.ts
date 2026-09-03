@@ -63,6 +63,8 @@ const ROLE_PERMS: Record<string, PermissionCode[]> = {
   ],
 }
 
+const PARISH_PHONE = '(85) 98928-3869'
+
 async function main() {
   for (const perm of ALL_PERMISSIONS) {
     await prisma.permission.upsert({
@@ -113,7 +115,15 @@ async function main() {
     },
   })
 
-  const categories = ['Comunidade', 'Liturgia', 'Formação', 'Juventude', 'Ação social', 'Sacramentos', 'Festa da Padroeira']
+  const categories = [
+    'Comunidade',
+    'Liturgia',
+    'Formação',
+    'Juventude',
+    'Ação social',
+    'Sacramentos',
+    'Festa da Padroeira',
+  ]
   for (const name of categories) {
     const slug = name
       .normalize('NFD')
@@ -127,49 +137,50 @@ async function main() {
     })
   }
 
+  const parishSettings = {
+    name: 'Paróquia Nossa Senhora das Graças',
+    slogan: 'Uma comunidade de fé, esperança e amor.',
+    description: 'Portal oficial da Paróquia Nossa Senhora das Graças.',
+    welcomeText:
+      'Seja bem-vindo à nossa comunidade. Aqui, caminhamos juntos na fé, celebrando a Palavra, a Eucaristia e a vida em comunidade.',
+    address: 'Rua Maria Quintino, 650, Parque Santa Maria - 60873-010',
+    phone: PARISH_PHONE,
+    whatsapp: PARISH_PHONE,
+    email: 'secretariaparoquialpnsg.psm@gmail.com',
+    instagram: '@paroquiansdasgracas',
+    facebook: 'nsdasgracasparoquia',
+    youtube: 'nsdasgracasparoquia',
+    secretaryHours: 'Segunda a Sexta - 14h às 20h',
+    mapsUrl:
+      'https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d967.9867097963381!2d-38.5007014!3d-3.8537541!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x7c7506955415eab%3A0x62bcc5304a892244!2sR.%20Maria%20Quintino%2C%20650%20-%20Parque%20Santa%20Maria%2C%20Fortaleza%20-%20CE%2C%2060873-010!5e1!3m2!1spt-BR!2sbr!4v1788204400542!5m2!1spt-BR!2sbr',
+    pixKey: '[CHAVE PIX — A DEFINIR]',
+    bankDetails: '[DADOS BANCÁRIOS — A DEFINIR]',
+    streamingUrl: '[LINK DA TRANSMISSÃO — A DEFINIR]',
+    history: 'A história completa da paróquia será publicada neste espaço. Texto demonstrativo.',
+    mission: 'Evangelizar com alegria e acolher cada pessoa. Texto demonstrativo.',
+    vision: 'Ser uma comunidade viva, orante e solidária. Texto demonstrativo.',
+    patroness: {
+      name: 'Nossa Senhora das Graças',
+      history: 'A devoção a Nossa Senhora das Graças está ligada às aparições da Virgem Maria a Santa Catarina Labouré, em 1830, na França. Maria se apresentou como Mãe das Graças, convidando os fiéis à confiança, à oração e à conversão.',
+      devotion: 'A devoção a Nossa Senhora das Graças expressa a confiança dos fiéis na intercessão materna de Maria. Sob seu olhar, os cristãos são convidados a fortalecer a fé, buscar a Deus e permanecer firmes na esperança.',
+      medal: 'A Medalha Milagrosa nasceu a partir das aparições de Nossa Senhora a Santa Catarina Labouré. Ela recorda que as graças de Deus são concedidas àqueles que, com fé e confiança, recorrem à intercessão de Maria.',
+      feast: 'Celebrada tradicionalmente em 27 de novembro, a festa de Nossa Senhora das Graças é um momento especial de fé e comunhão. A comunidade se reúne para celebrar a padroeira, participar das celebrações, renovar sua devoção e agradecer pelas graças recebidas.',
+      traditions: 'A devoção a Nossa Senhora das Graças é vivida por meio da oração, da participação na Santa Missa, da novena, do Santo Rosário e de momentos de confraternização da comunidade. Essas tradições fortalecem a fé e mantêm viva a espiritualidade mariana entre as gerações.',
+      image: '',
+    },
+    feast: {
+      enabled: false,
+      title: 'Festa de Nossa Senhora das Graças',
+      dateLabel: '[DATA DA FESTA — A DEFINIR]',
+      description: 'Banner demonstrativo da festa da Padroeira.',
+      program: [],
+    },
+  }
+
   await prisma.parishSettings.upsert({
     where: { id: 'default' },
-    update: {},
-    create: {
-      id: 'default',
-      name: 'Paróquia Nossa Senhora das Graças',
-      slogan: 'Uma comunidade de fé, esperança e amor.',
-      description: 'Portal oficial da Paróquia Nossa Senhora das Graças.',
-      welcomeText:
-        'Seja bem-vindo à nossa comunidade. Aqui, caminhamos juntos na fé, celebrando a Palavra, a Eucaristia e a vida em comunidade.',
-      address: '[ENDEREÇO DA PARÓQUIA]',
-      phone: '[TELEFONE]',
-      whatsapp: '[WHATSAPP]',
-      email: '[E-MAIL]',
-      instagram: '[INSTAGRAM]',
-      facebook: '[FACEBOOK]',
-      youtube: '[YOUTUBE]',
-      secretaryHours: '[HORÁRIO DA SECRETARIA]',
-      mapsUrl: 'https://www.google.com/maps/search/?api=1&query=igreja+catolica',
-      pixKey: '[CHAVE PIX — A DEFINIR]',
-      bankDetails: '[DADOS BANCÁRIOS — A DEFINIR]',
-      streamingUrl: '[LINK DA TRANSMISSÃO — A DEFINIR]',
-      history:
-        'A história completa da paróquia será publicada neste espaço. Texto demonstrativo.',
-      mission: 'Evangelizar com alegria e acolher cada pessoa. Texto demonstrativo.',
-      vision: 'Ser uma comunidade viva, orante e solidária. Texto demonstrativo.',
-      patroness: {
-        name: 'Nossa Senhora das Graças',
-        history: 'Invocação ligada às aparições a Santa Catarina Labouré (1830). Texto institucional.',
-        devotion: 'Confiança na intercessão maternal de Maria.',
-        medal: 'A Medalha Milagrosa simboliza as graças pedidas com fé.',
-        feast: '[DATA DA FESTA — A DEFINIR]',
-        traditions: '[TRADIÇÕES LOCAIS — A DEFINIR]',
-        image: '',
-      },
-      feast: {
-        enabled: true,
-        title: 'Festa de Nossa Senhora das Graças',
-        dateLabel: '[DATA DA FESTA — A DEFINIR]',
-        description: 'Banner demonstrativo da festa da Padroeira.',
-        program: [],
-      },
-    },
+    update: parishSettings,
+    create: { id: 'default', ...parishSettings },
   })
 
   const sacraments = [
@@ -183,7 +194,7 @@ async function main() {
       howItWorks: 'Procure a secretaria. [A CONFIRMAR]',
       documents: ['[DOCUMENTOS — A DEFINIR]'],
       howToRegister: 'Inscrição na secretaria.',
-      secretaryContact: '[CONTATO DA SECRETARIA]',
+      secretaryContact: PARISH_PHONE,
       sortOrder: 1,
     },
     {
@@ -196,7 +207,7 @@ async function main() {
       howItWorks: 'Itinerário catequético. [A CONFIRMAR]',
       documents: ['[DOCUMENTOS — A DEFINIR]'],
       howToRegister: 'Pastoral da Catequese / secretaria.',
-      secretaryContact: '[CONTATO DA SECRETARIA]',
+      secretaryContact: PARISH_PHONE,
       sortOrder: 2,
     },
     {
@@ -209,7 +220,7 @@ async function main() {
       howItWorks: 'Encontros e celebração. [A CONFIRMAR]',
       documents: ['[DOCUMENTOS — A DEFINIR]'],
       howToRegister: 'Catequese / secretaria.',
-      secretaryContact: '[CONTATO DA SECRETARIA]',
+      secretaryContact: PARISH_PHONE,
       sortOrder: 3,
     },
     {
@@ -222,7 +233,7 @@ async function main() {
       howItWorks: 'Horários publicados na agenda. [A CONFIRMAR]',
       documents: ['Não há documentos específicos.'],
       howToRegister: 'Sem inscrição prévia.',
-      secretaryContact: '[CONTATO DA SECRETARIA]',
+      secretaryContact: PARISH_PHONE,
       sortOrder: 4,
     },
     {
@@ -235,7 +246,7 @@ async function main() {
       howItWorks: 'Processo na secretaria com antecedência. [A CONFIRMAR]',
       documents: ['[DOCUMENTOS — A DEFINIR]'],
       howToRegister: 'Agende atendimento na secretaria.',
-      secretaryContact: '[CONTATO DA SECRETARIA]',
+      secretaryContact: PARISH_PHONE,
       sortOrder: 5,
     },
     {
@@ -248,7 +259,7 @@ async function main() {
       howItWorks: 'Solicite à secretaria ou ao pároco.',
       documents: ['Informar situação de saúde.'],
       howToRegister: 'Pedido pela família ou secretaria.',
-      secretaryContact: '[CONTATO DA SECRETARIA]',
+      secretaryContact: PARISH_PHONE,
       sortOrder: 6,
     },
     {
@@ -261,7 +272,7 @@ async function main() {
       howItWorks: 'Discernimento vocacional diocesano.',
       documents: ['Processo vocacional.'],
       howToRegister: 'Converse com o pároco.',
-      secretaryContact: '[CONTATO DA SECRETARIA]',
+      secretaryContact: PARISH_PHONE,
       sortOrder: 7,
     },
   ]
@@ -274,35 +285,169 @@ async function main() {
     })
   }
 
-  await prisma.person.upsert({
-    where: { slug: 'padre' },
-    update: {},
-    create: {
-      name: '[NOME DO PADRE]',
+  const people = [
+    {
+      name: 'Padre Bruno Xavier',
       slug: 'padre',
-      type: 'PADRE',
+      type: 'PADRE' as const,
       roleTitle: 'Pároco',
-      bio: 'Biografia demonstrativa. Nenhuma informação pessoal real foi inventada.',
-      quote: '[MENSAGEM DO PÁROCO — A DEFINIR]',
-      attendance: '[HORÁRIO DE ATENDIMENTO DO PÁROCO]',
+      bio: '– “Antes do Seminário: Trabalhei com equipe de liturgia e grupos de oração. Sempre gostei de trabalhar com os jovens. Quando eu entrei no Seminário continuei trabalhando com jovens de várias frentes (PJ, RCC…) Gostava  de eventos, retiros que possam elevar a espiritualidade.” (depoimento dado um mês antes da ordenação diaconal)',
+      quote: '',
+      attendance: '',
       featured: true,
       sortOrder: 1,
     },
-  })
-  await prisma.person.upsert({
-    where: { slug: 'diacono' },
-    update: {},
-    create: {
-      name: '[NOME DO DIÁCONO]',
+    {
+      name: 'Diácono Carlos',
       slug: 'diacono',
-      type: 'DIACONO',
+      type: 'DIACONO' as const,
       roleTitle: 'Diácono permanente',
       bio: 'Biografia demonstrativa. Dados reais serão inseridos pela paróquia.',
       ministry: '[ATUAÇÃO NA COMUNIDADE — A DEFINIR]',
       featured: true,
       sortOrder: 2,
     },
-  })
+  ]
+
+  for (const person of people) {
+    await prisma.person.upsert({
+      where: { slug: person.slug },
+      update: person,
+      create: person,
+    })
+  }
+
+  const pastorals = [
+    {
+      name: 'Catequese',
+      slug: 'catequese',
+      description:
+        'A Catequese tem como missão anunciar e ensinar a fé cristã, ajudando crianças, adolescentes e adultos a conhecerem melhor Jesus Cristo e os ensinamentos da Igreja. É um caminho de formação, descoberta da fé e preparação para uma vida cristã mais comprometida.',
+      responsible: '[RESPONSÁVEL]',
+      phone: '[CONTATO]',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+    {
+      name: 'Comunicação',
+      slug: 'pastoral-da-comunicacao',
+      description:
+        'A PASCOM tem como missão comunicar a vida e a missão da Igreja, utilizando os meios de comunicação para evangelizar, informar e aproximar a comunidade.\n\nPor meio das redes sociais, fotos, vídeos e outros canais, a pastoral divulga as celebrações, eventos e ações da paróquia, levando a mensagem de Cristo para além dos limites da Igreja.\n',
+      responsible: 'Eduarda',
+      phone: '85 9 82306380',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+    {
+      name: 'Coroinhas e Mestres',
+      slug: 'pastoral-dos-coroinhas-e-mestres',
+      description:
+        'A Pastoral dos Coroinhas e Cerimoniários tem como missão servir a Deus e à comunidade, auxiliando nas celebrações litúrgicas com fé, alegria e dedicação. É também um espaço de aprendizado, convivência e crescimento na fé.\n\nCoroinhas: auxiliam o sacerdote e servem no altar durante as celebrações.\n\nCerimoniários: orientam os coroinhas e coordenam os serviços litúrgicos, contribuindo para que as celebrações aconteçam de forma organizada e solene.\n\n\nCoordenador: João Victor \nVice Coordenador: Davi Morais\nSecretario: Lucas Monteiro',
+      responsible: 'João Victor',
+      phone: '85 9 97970715',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+    {
+      name: 'Criança',
+      slug: 'pastoral-da-crianca',
+      description:
+        'A Pastoral da Criança atua junto às crianças e suas famílias, promovendo cuidado, acompanhamento e orientação. Seu trabalho busca contribuir para o desenvolvimento integral das crianças e fortalecer os vínculos entre as famílias e a comunidade.',
+      responsible: '[RESPONSÁVEL]',
+      phone: '[CONTATO]',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+    {
+      name: 'Dízimo',
+      slug: 'pastoral-do-dizimo',
+      description:
+        'A Pastoral do Dízimo ajuda a comunidade a compreender o verdadeiro sentido da partilha e da contribuição para a missão da Igreja. Por meio do dízimo, os fiéis colaboram com as necessidades da paróquia, com a evangelização e com as ações realizadas em benefício da comunidade.',
+      responsible: '[RESPONSÁVEL]',
+      phone: '[CONTATO]',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+    {
+      name: 'ECC',
+      slug: 'ecc',
+      description:
+        'O Encontro de Casais com Cristo (ECC) é um serviço da Igreja voltado aos casais e às famílias, buscando fortalecer a vida matrimonial e familiar à luz do Evangelho. É um espaço de encontro, diálogo, espiritualidade e crescimento na fé, aproximando os casais de Deus e da comunidade.',
+      responsible: '[RESPONSÁVEL]',
+      phone: '[CONTATO]',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+    {
+      name: 'Grupo de Jovens',
+      slug: 'grupo-de-jovens',
+      description:
+        'O Grupo de Jovens é um espaço de encontro, amizade, partilha e crescimento na fé. Busca ajudar os jovens a conhecerem e seguirem Jesus Cristo, fortalecendo sua participação na Igreja e incentivando-os a colocar seus dons a serviço da comunidade.',
+      responsible: '[RESPONSÁVEL]',
+      phone: '[CONTATO]',
+      meetingTime: '[HORÁRIO]',
+      location: '[LOCAL]',
+      active: true,
+    },
+    {
+      name: 'Leitores',
+      slug: 'leitores',
+      description:
+        'Os leitores têm a importante missão de proclamar a Palavra de Deus durante as celebrações, ajudando a comunidade a ouvir e compreender a mensagem das Sagradas Escrituras. Com preparação, dedicação e responsabilidade, colaboram para que a Palavra alcance o coração de cada fiel.',
+      responsible: '[RESPONSÁVEL]',
+      phone: '[CONTATO]',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+    {
+      name: 'MESC',
+      slug: 'pastoral-do-mesc',
+      description:
+        'O MESC tem como missão auxiliar na distribuição da Sagrada Comunhão durante as celebrações e levar a Eucaristia aos enfermos e àqueles que não podem participar da Santa Missa.\n\nCom fé, dedicação e espírito de serviço, os ministros colaboram para fortalecer a vida espiritual e a comunhão de toda a comunidade.',
+      responsible: 'Everardo',
+      phone: '85 9 84184889',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+    {
+      name: 'Ministério de Música',
+      slug: 'ministerio-de-musica',
+      description:
+        'O Ministério de Música tem a missão de servir à comunidade por meio da música e do canto, contribuindo para a oração e a participação dos fiéis nas celebrações. Com seus dons e talentos, seus integrantes ajudam a tornar a liturgia um momento de louvor, reflexão e encontro com Deus.',
+      responsible: '[RESPONSÁVEL]',
+      phone: '[CONTATO]',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+    {
+      name: 'Pessoa Idosa',
+      slug: 'pastoral-da-pessoa-idosa',
+      description:
+        'A Pastoral da Pessoa Idosa tem como missão acolher, acompanhar e valorizar as pessoas idosas, reconhecendo sua importância na família e na comunidade. Por meio da presença e da convivência, busca promover dignidade, cuidado e participação na vida da Igreja.',
+      responsible: '[RESPONSÁVEL]',
+      phone: '[CONTATO]',
+      meetingTime: '...',
+      location: '...',
+      active: true,
+    },
+  ]
+
+  for (const pastoral of pastorals) {
+    await prisma.pastoral.upsert({
+      where: { slug: pastoral.slug },
+      update: pastoral,
+      create: pastoral,
+    })
+  }
 
   const masses = [
     { weekday: 0, time: '07:00', type: 'Santa Missa', location: 'Igreja Matriz', notes: 'Domingo' },
@@ -382,44 +527,6 @@ async function main() {
       await prisma.massSchedule.create({ data: { ...mass, date: null } })
     }
   }
-
-  const feastCat = await prisma.newsCategory.findUnique({ where: { slug: 'festa-da-padroeira' } })
-  const admin = await prisma.user.findUnique({ where: { email: 'admin@demo.paroquia' } })
-  if (admin && feastCat) {
-    await prisma.news.upsert({
-      where: { slug: 'festa-da-padroeira' },
-      update: {},
-      create: {
-        title: 'Festa da Padroeira: programação em preparação',
-        slug: 'festa-da-padroeira',
-        subtitle: 'Conteúdo demonstrativo',
-        excerpt: 'A comunidade se prepara para honrar a Padroeira. Datas oficiais serão publicadas.',
-        content:
-          '<p>Este é um texto demonstrativo sobre a Festa de Nossa Senhora das Graças.</p><p>Quando a paróquia definir a programação oficial, este espaço será atualizado.</p>',
-        status: 'PUBLISHED',
-        featured: true,
-        publishedAt: new Date(),
-        authorId: admin.id,
-        categoryId: feastCat.id,
-      },
-    })
-  }
-
-  await prisma.notice.createMany({
-    data: [
-      {
-        title: 'Horários especiais desta semana',
-        description:
-          'Confira os horários especiais das celebrações. Conteúdo demonstrativo até confirmação da secretaria.',
-        category: 'LITURGIA',
-        featured: true,
-        priority: 10,
-        startsAt: new Date(),
-        endsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14),
-      },
-    ],
-    skipDuplicates: true,
-  })
 
   console.log('Seed concluído.')
   if (process.env.NODE_ENV !== 'production') {
