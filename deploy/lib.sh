@@ -111,3 +111,35 @@ load_env_file() {
     export "$key=$value"
   done < "$file"
 }
+
+# npm ci pula devDependencies se NODE_ENV=production (quebra turbo/tsc no servidor).
+npm_ci_dev() {
+  NODE_ENV=development npm ci
+}
+
+build_api() {
+  local app_dir="$1"
+  cd "$app_dir"
+
+  echo "==> Prisma generate..."
+  (cd apps/api && npx prisma generate)
+
+  echo "==> Compilando API..."
+  if [ ! -x "$app_dir/node_modules/.bin/tsc" ]; then
+    echo "ERRO: TypeScript não instalado. Rode: npm_ci_dev (npm ci com devDependencies)"
+    exit 1
+  fi
+  "$app_dir/node_modules/.bin/tsc" -p apps/api/tsconfig.json
+}
+
+build_web() {
+  local app_dir="$1"
+  cd "$app_dir"
+
+  echo "==> Compilando frontend..."
+  if [ -x "$app_dir/node_modules/.bin/turbo" ]; then
+    npx turbo run build --filter=paroquia-web
+  else
+    npm run build --workspace=paroquia-web
+  fi
+}

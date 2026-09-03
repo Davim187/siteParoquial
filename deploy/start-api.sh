@@ -19,11 +19,10 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-echo "==> Instalando dependências (npm ci)..."
-npm ci
+echo "==> Instalando dependências (npm ci + devDependencies)..."
+npm_ci_dev
 
-echo "==> Prisma generate + build da API..."
-npm run build --workspace=paroquia-api
+build_api "$APP_DIR"
 
 if [ ! -f "$APP_DIR/apps/api/dist/server.js" ]; then
   echo "ERRO: build não gerou apps/api/dist/server.js"

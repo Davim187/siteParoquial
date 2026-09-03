@@ -22,10 +22,15 @@ echo "==> Subindo Postgres (Docker)..."
 docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d postgres
 
 echo "==> Instalando dependências..."
-npm ci
+npm_ci_dev
 
 echo "==> Build web + API..."
-npm run build
+if [ -x "$APP_DIR/node_modules/.bin/turbo" ]; then
+  npx turbo run build
+else
+  build_api "$APP_DIR"
+  build_web "$APP_DIR"
+fi
 
 echo "==> Aguardando Postgres..."
 docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" exec -T postgres \
