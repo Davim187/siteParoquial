@@ -74,14 +74,32 @@ set_apache_listen_443() {
     return
   fi
 
+  # Ubuntu já define "Listen 443" dentro de <IfModule ssl_module>.
+  # O script antigo adicionava outro "Listen 443" solto → erro AH00526.
+
+  # Remove Listen 443 solto duplicado no fim do arquivo.
+  while [ "$(grep -cE '^Listen 443$' "$ports" 2>/dev/null || echo 0)" -gt 0 ] \
+    && grep -qE '[[:space:]]Listen 443' "$ports"; do
+    sed -i '/^Listen 443$/d' "$ports"
+  done
+
+  sed -i '/^# Listen 443 disabled/d' "$ports"
+
   if [ "$enabled" = "1" ]; then
-    if grep -qE '^# Listen 443 disabled' "$ports"; then
-      sed -i 's/^# Listen 443 disabled.*/Listen 443/' "$ports"
-    elif ! grep -qE '^Listen 443' "$ports"; then
-      printf '\nListen 443\n' >> "$ports"
+    sed -i 's/^\([[:space:]]*\)# Listen 443 disabled.*/\1Listen 443/' "$ports"
+    sed -i 's/^\([[:space:]]*\)# Listen 443/\1Listen 443/' "$ports"
+
+    if ! grep -qE 'Listen 443' "$ports"; then
+      cat >> "$ports" <<'EOF'
+
+<IfModule ssl_module>
+	Listen 443
+</IfModule>
+EOF
     fi
-  elif grep -qE '^Listen 443' "$ports"; then
-    sed -i 's/^Listen 443/# Listen 443 disabled until SSL is configured/' "$ports"
+  else
+    sed -i '/^Listen 443$/d' "$ports"
+    sed -i 's/^\([[:space:]]*\)Listen 443/\1# Listen 443 disabled/' "$ports"
   fi
 }
 

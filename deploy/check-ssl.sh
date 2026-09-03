@@ -42,7 +42,11 @@ a2query -s 2>/dev/null || ls -la /etc/apache2/sites-enabled/
 echo
 
 echo "==> Listen em ports.conf"
-grep -E '^Listen|^# Listen' /etc/apache2/ports.conf 2>/dev/null || true
+grep -E 'Listen|IfModule|ssl_module' /etc/apache2/ports.conf 2>/dev/null || true
+LISTEN443_COUNT="$(grep -cE 'Listen 443' /etc/apache2/ports.conf 2>/dev/null || echo 0)"
+if [ "$LISTEN443_COUNT" -gt 1 ]; then
+  echo "   ERRO — Listen 443 duplicado ($LISTEN443_COUNT vezes). Rode: bash deploy/fix-apache-ssl.sh"
+fi
 echo
 
 if [ -n "$DOMAIN" ]; then
