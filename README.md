@@ -9,7 +9,7 @@ Monorepo com **npm workspaces** + **Turborepo**.
 ├── apps/
 │   ├── api/     # Backend REST (Fastify + Prisma + PostgreSQL)
 │   └── web/     # Site público + painel admin (React + Vite)
-├── deploy/      # Scripts de deploy no VPS
+├── deploy/      # Scripts de deploy (Apache + PM2 + Docker Postgres)
 ├── scripts/     # Utilitários (túnel DB, etc.)
 ├── turbo.json   # Pipeline do Turborepo
 └── package.json # Raiz do monorepo

@@ -1,88 +1,122 @@
 #!/usr/bin/env bash
+# Deploy em produção — Apache (web) + PM2 (api) + Docker (Postgres)
+#
+# Uso:
+#   bash deploy/deploy.sh          # deploy completo
+#   bash deploy/deploy.sh api      # só API
+#   bash deploy/deploy.sh web      # só frontend + Apache
+#   bash deploy/deploy.sh ssl      # só HTTPS
+#   bash deploy/setup.sh           # configuração inicial do VPS
+#   bash deploy/doctor.sh          # diagnóstico
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEPLOY_SCRIPT_DIR="$SCRIPT_DIR"
 # shellcheck source=lib.sh
 source "$SCRIPT_DIR/lib.sh"
 
-APP_DIR="$(resolve_app_dir)"
-BRANCH="${DEPLOY_BRANCH:-master}"
-ENV_FILE="${ENV_FILE:-$APP_DIR/.env.production}"
-export APP_DIR
+CMD="${1:-deploy}"
 
-cd "$APP_DIR"
-validate_env_production "$ENV_FILE"
+deploy_full() {
+  deploy_init
+  validate_env_production "$ENV_FILE"
 
-echo "==> Diretório do projeto: $APP_DIR"
+  deploy_log "Projeto: $APP_DIR"
 
-echo "==> Atualizando código ($BRANCH)..."
-git_sync_branch "$BRANCH"
-
-echo "==> Subindo Postgres (Docker)..."
-docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d postgres
-
-echo "==> Instalando dependências..."
-npm_ci_dev
-
-echo "==> Build web + API..."
-if [ -x "$APP_DIR/node_modules/.bin/turbo" ]; then
-  npx turbo run build
-else
-  build_api "$APP_DIR"
-  build_web "$APP_DIR"
-fi
-
-echo "==> Aguardando Postgres..."
-docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" exec -T postgres \
-  sh -c 'until pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; do sleep 1; done'
-
-echo "==> Rodando migrations..."
-load_env_file "$ENV_FILE"
-for attempt in $(seq 1 20); do
-  if (cd apps/api && npx prisma migrate deploy); then
-    break
+  if [ "${SKIP_GIT:-0}" != "1" ]; then
+    deploy_log "Atualizando código (${DEPLOY_BRANCH:-master})..."
+    git_sync_branch "${DEPLOY_BRANCH:-master}"
   fi
-  if [ "$attempt" -eq 20 ]; then
-    echo "Falha ao aplicar migrations. Logs da API:"
-    pm2 logs paroquia-api --lines 80 --nostream 2>/dev/null || true
-    exit 1
+
+  postgres_up
+  npm_ci_dev
+  build_all
+  postgres_wait
+  migrate_deploy
+  restart_api
+  wait_api_health
+  configure_apache
+
+  if domain_from_env "$ENV_FILE" >/dev/null 2>&1 \
+    && read_env_value ACME_EMAIL "$ENV_FILE" >/dev/null 2>&1; then
+    configure_ssl || deploy_warn "SSL não configurado — rode: bash deploy/deploy.sh ssl"
   fi
-  echo "   Tentativa ${attempt}/20 — aguardando banco..."
-  sleep 3
-done
 
-echo "==> Reiniciando API (PM2)..."
-if ! command -v pm2 >/dev/null 2>&1; then
-  echo "PM2 não encontrado. Rode: bash deploy/setup-server.sh"
-  exit 1
-fi
+  deploy_log "Deploy concluído"
+  pm2 status 2>/dev/null || true
+}
 
-load_env_file "$ENV_FILE"
-pm2 startOrReload "$APP_DIR/deploy/ecosystem.config.cjs" --update-env
-pm2 save
+deploy_api_only() {
+  deploy_init
+  validate_env_production "$ENV_FILE"
+  postgres_up
+  npm_ci_dev
+  build_api
+  postgres_wait
+  migrate_deploy
+  restart_api
+  wait_api_health
+  deploy_log "API atualizada"
+}
 
-echo "==> Aguardando API..."
-for attempt in $(seq 1 20); do
-  if curl -fsS http://127.0.0.1:3333/api/health >/dev/null 2>&1; then
-    echo "   API online na porta 3333"
-    break
-  fi
-  if [ "$attempt" -eq 20 ]; then
-    echo "ERRO: API não respondeu após reiniciar o PM2."
-    pm2 logs paroquia-api --lines 50 --nostream 2>/dev/null || true
-    echo "Rode: bash deploy/check-api.sh"
-    exit 1
-  fi
-  echo "   Tentativa ${attempt}/20..."
-  sleep 2
-done
+deploy_web_only() {
+  deploy_init
+  validate_env_production "$ENV_FILE"
+  npm_ci_dev
+  build_web
+  configure_apache
+  deploy_log "Frontend atualizado"
+}
 
-echo "==> Configurando Apache..."
-bash deploy/setup-apache.sh
+deploy_ssl_only() {
+  deploy_init
+  validate_env_production "$ENV_FILE"
+  configure_ssl
+}
 
-echo "==> Configurando HTTPS..."
-bash deploy/setup-ssl.sh
+usage() {
+  cat <<EOF
+Uso: bash deploy/deploy.sh [comando]
 
-echo "==> Deploy concluído."
-pm2 status
-systemctl is-active apache2 && echo "Apache: ativo"
+Comandos:
+  deploy, full   Deploy completo (padrão)
+  api            Build + migrations + PM2
+  web            Build frontend + Apache
+  ssl            Certificado HTTPS (Certbot)
+  setup          Configuração inicial do VPS
+  doctor         Diagnóstico do ambiente
+
+Exemplos:
+  bash deploy/deploy.sh
+  bash deploy/deploy.sh api
+  bash deploy/doctor.sh
+EOF
+}
+
+case "$CMD" in
+  deploy|full)
+    deploy_full
+    ;;
+  api)
+    deploy_api_only
+    ;;
+  web)
+    deploy_web_only
+    ;;
+  ssl)
+    deploy_ssl_only
+    ;;
+  setup)
+    exec "$SCRIPT_DIR/setup.sh"
+    ;;
+  doctor)
+    exec "$SCRIPT_DIR/doctor.sh"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    deploy_die "Comando desconhecido: $CMD (use --help)"
+    ;;
+esac
