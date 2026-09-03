@@ -4,8 +4,10 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const apiRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+const monorepoRoot = resolve(apiRoot, '..')
 
 const productionEnvPath = resolve(apiRoot, '.env.production.local')
+const rootProductionEnvPath = resolve(monorepoRoot, '.env.production')
 const useLocalDb = process.env.USE_LOCAL_DB === '1'
 const localEnvPath = resolve(apiRoot, '.env')
 const inProduction = process.env.NODE_ENV === 'production'
@@ -16,6 +18,10 @@ if (existsSync(localEnvPath)) {
   console.error('Crie apps/api/.env a partir de apps/api/.env.example (cp no Linux, copy no Windows).')
   console.error('O JWT_SECRET e as outras configs da API vêm desse arquivo.')
   process.exit(1)
+}
+
+if (inProduction && existsSync(rootProductionEnvPath)) {
+  dotenv.config({ path: rootProductionEnvPath })
 }
 
 export function usesProductionDb(): boolean {

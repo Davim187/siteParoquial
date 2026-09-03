@@ -62,7 +62,4 @@ fi
 
 echo
 echo "==> Corrigir"
-echo "   cd $APP_DIR"
-echo "   pm2 delete paroquia-api 2>/dev/null || true"
-echo "   pm2 start deploy/ecosystem.config.cjs --update-env"
-echo "   pm2 save"
+echo "   bash deploy/start-api.sh"

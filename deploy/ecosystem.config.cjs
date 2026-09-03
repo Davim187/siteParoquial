@@ -44,6 +44,7 @@ module.exports = {
       name: 'paroquia-api',
       cwd: path.join(appDir, 'apps/api'),
       script: 'dist/server.js',
+      exec_mode: 'fork',
       instances: 1,
       autorestart: true,
       max_memory_restart: '512M',
