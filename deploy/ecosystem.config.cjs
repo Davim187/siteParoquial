@@ -33,17 +33,24 @@ function loadEnvFile(filePath) {
   return env
 }
 
+const fileEnv = loadEnvFile(path.join(appDir, '.env.production'))
+const uploadDirName = fileEnv.UPLOAD_DIR || 'uploads'
+const uploadDir = path.isAbsolute(uploadDirName)
+  ? uploadDirName
+  : path.join(appDir, 'apps/api', uploadDirName)
+
 const productionEnv = {
   NODE_ENV: 'production',
-  ...loadEnvFile(path.join(appDir, '.env.production')),
+  ...fileEnv,
+  UPLOAD_DIR: uploadDir,
 }
 
 module.exports = {
   apps: [
     {
       name: 'paroquia-api',
-      cwd: path.join(appDir, 'apps/api'),
-      script: 'dist/server.js',
+      cwd: appDir,
+      script: 'apps/api/dist/server.js',
       exec_mode: 'fork',
       instances: 1,
       autorestart: true,

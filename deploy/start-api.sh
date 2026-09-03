@@ -19,14 +19,30 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+echo "==> Instalando dependências (npm ci)..."
+npm ci
+
+echo "==> Prisma generate + build da API..."
+npm run build --workspace=paroquia-api
+
 if [ ! -f "$APP_DIR/apps/api/dist/server.js" ]; then
-  echo "==> Build da API ausente — compilando..."
-  npm ci
-  npm run build
+  echo "ERRO: build não gerou apps/api/dist/server.js"
+  exit 1
 fi
+
+if [ ! -d "$APP_DIR/node_modules/@fastify/swagger" ]; then
+  echo "ERRO: dependências incompletas após npm ci"
+  exit 1
+fi
+
+mkdir -p "$APP_DIR/apps/api/uploads"
 
 echo "==> Postgres..."
 docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d postgres
+
+echo "==> Migrations..."
+load_env_file "$ENV_FILE"
+(cd apps/api && npx prisma migrate deploy)
 
 echo "==> PM2..."
 if ! command -v pm2 >/dev/null 2>&1; then
@@ -38,8 +54,10 @@ pm2 delete paroquia-api 2>/dev/null || true
 pm2 start "$APP_DIR/deploy/ecosystem.config.cjs" --update-env
 pm2 save
 
+sleep 2
+
 echo "==> Aguardando API na porta 3333..."
-for attempt in $(seq 1 15); do
+for attempt in $(seq 1 20); do
   if curl -fsS http://127.0.0.1:3333/api/health >/dev/null 2>&1; then
     echo "   OK — API online"
     curl -fsS http://127.0.0.1:3333/api/health
@@ -47,12 +65,12 @@ for attempt in $(seq 1 15); do
     pm2 status paroquia-api
     exit 0
   fi
-  if [ "$attempt" -eq 15 ]; then
+  if [ "$attempt" -eq 20 ]; then
     echo "ERRO: API não subiu. Logs:"
-    pm2 logs paroquia-api --lines 60 --nostream || true
+    pm2 logs paroquia-api --lines 40 --nostream || true
     echo
     echo "Teste manual:"
-    echo "  cd $APP_DIR/apps/api && NODE_ENV=production node dist/server.js"
+    echo "  cd $APP_DIR && NODE_ENV=production node apps/api/dist/server.js"
     exit 1
   fi
   sleep 2
