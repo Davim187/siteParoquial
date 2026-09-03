@@ -140,6 +140,12 @@ validate_env_production() {
     || deploy_die "JWT_SECRET ausente em $file"
   read_env_value DATABASE_URL "$file" >/dev/null \
     || deploy_die "DATABASE_URL ausente em $file (use host 127.0.0.1)"
+
+  local db_url
+  db_url="$(read_env_value DATABASE_URL "$file")"
+  if [[ "$db_url" == *"@postgres:"* ]]; then
+    deploy_die "DATABASE_URL usa host 'postgres' — troque por 127.0.0.1 no $file"
+  fi
 }
 
 git_sync_branch() {

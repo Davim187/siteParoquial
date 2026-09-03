@@ -3,6 +3,7 @@
 # npm ci omite devDependencies quando NODE_ENV=production (quebra tsc/turbo).
 npm_ci_dev() {
   deploy_log "Instalando dependências (npm ci)..."
+  rm -rf "$APP_DIR/apps/api/node_modules" "$APP_DIR/apps/web/node_modules" 2>/dev/null || true
   NODE_ENV=development npm ci
 }
 

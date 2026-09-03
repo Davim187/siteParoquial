@@ -60,6 +60,12 @@ if ss -tlnp 2>/dev/null | grep -q ':3333 '; then
   curl -fsS http://127.0.0.1:3333/api/health 2>/dev/null && echo || echo "   /api/health ERRO"
 else
   echo "   Porta 3333 ERRO — API offline"
+  echo "   Rode: bash deploy/deploy.sh api"
+fi
+
+if [ -f "$APP_DIR/logs/api-error.log" ]; then
+  echo "   Últimas linhas de logs/api-error.log:"
+  tail -5 "$APP_DIR/logs/api-error.log" 2>/dev/null | sed 's/^/     /' || true
 fi
 echo
 
