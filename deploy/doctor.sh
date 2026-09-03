@@ -31,7 +31,9 @@ echo
 echo "▸ Build"
 [ -f "$APP_DIR/apps/api/dist/server.js" ] && echo "   API dist   OK" || echo "   API dist   ERRO"
 [ -d "$APP_DIR/apps/web/dist" ] && echo "   Web dist   OK" || echo "   Web dist   ERRO"
-[ -x "$APP_DIR/node_modules/.bin/tsc" ] && echo "   TypeScript OK" || echo "   TypeScript ERRO (rode: NODE_ENV=development npm ci)"
+[ -x "$APP_DIR/node_modules/.bin/tsc" ] && echo "   TypeScript OK (root)" \
+  || [ -x "$APP_DIR/apps/api/node_modules/.bin/tsc" ] && echo "   TypeScript OK (api)" \
+  || echo "   TypeScript ERRO — rode: env -u NODE_ENV npm ci --include=dev"
 echo
 
 # ── Postgres ──

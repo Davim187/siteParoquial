@@ -1,26 +1,41 @@
 #!/usr/bin/env bash
 
-# npm ci omite devDependencies quando NODE_ENV=production (quebra tsc/turbo).
+# npm ci omite devDependencies se NODE_ENV=production (comum no VPS).
 npm_ci_dev() {
-  deploy_log "Instalando dependências (npm ci)..."
+  deploy_log "Instalando dependências (npm ci + dev)..."
   rm -rf "$APP_DIR/apps/api/node_modules" "$APP_DIR/apps/web/node_modules" 2>/dev/null || true
-  NODE_ENV=development npm ci
+  env -u NODE_ENV NODE_ENV=development npm ci --include=dev
+}
+
+bin_path() {
+  local name="$1"
+  local candidate
+
+  for candidate in \
+    "$APP_DIR/node_modules/.bin/$name" \
+    "$APP_DIR/apps/api/node_modules/.bin/$name" \
+    "$APP_DIR/apps/web/node_modules/.bin/$name"; do
+    if [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
 }
 
 build_api() {
-  deploy_log "Prisma generate..."
-  (cd apps/api && npx prisma generate)
-
   deploy_log "Compilando API..."
-  [ -x "$APP_DIR/node_modules/.bin/tsc" ] \
-    || deploy_die "TypeScript não instalado — rode npm ci com devDependencies"
-
-  "$APP_DIR/node_modules/.bin/tsc" -p apps/api/tsconfig.json
+  if bin_path tsc >/dev/null; then
+    (cd apps/api && npx prisma generate && npx tsc -p tsconfig.json)
+  else
+    npm run build --workspace=paroquia-api
+  fi
 }
 
 build_web() {
   deploy_log "Compilando frontend..."
-  if [ -x "$APP_DIR/node_modules/.bin/turbo" ]; then
+  if bin_path turbo >/dev/null; then
     npx turbo run build --filter=paroquia-web
   else
     npm run build --workspace=paroquia-web
@@ -28,7 +43,7 @@ build_web() {
 }
 
 build_all() {
-  if [ -x "$APP_DIR/node_modules/.bin/turbo" ]; then
+  if bin_path turbo >/dev/null; then
     deploy_log "Build (turbo)..."
     npx turbo run build
   else
