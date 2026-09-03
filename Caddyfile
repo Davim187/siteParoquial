@@ -1,0 +1,8 @@
+{
+	email {$ACME_EMAIL:secretariaparoquialpnsg.psm@gmail.com}
+}
+
+paroquiansdasgracas.com.br, www.paroquiansdasgracas.com.br {
+	encode gzip
+	reverse_proxy web:80
+}

@@ -382,8 +382,8 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 - [ ] Projeto em `/www`
 - [ ] `.env.production` configurado
 - [ ] `bash deploy/deploy.sh` rodou sem erro
-- [ ] Site abre em `http://SEU_IP`
-- [ ] Apache removido (porta 80 livre)
+- [ ] Site abre em `https://paroquiansdasgracas.com.br`
+- [ ] Apache removido (portas 80 e 443 livres para o Caddy)
 
 ### Segurança (produção)
 - [ ] Trocar senha do admin do painel
@@ -401,6 +401,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 | `Repositório não encontrado em /www` | Rodar clone + setup no servidor |
 | `.env.production não encontrado` | `cp .env.production.example .env.production` e editar |
 | Porta 80 em uso | `bash deploy/remove-apache.sh` |
+| Navegador recusa HTTPS (443) | O Caddy precisa da porta 443. No painel do VPS, libere 443/tcp além da 80. |
 | Permission denied (SSH) | Verificar chave pública no VPS e secret `DEPLOY_SSH_KEY` |
 | `Permission denied (publickey)` ao clonar | Use HTTPS: `git clone https://github.com/Davim187/siteParoquial.git /www` |
 | Clone em `/opt/siteParoquial` | O deploy usa `/www`. Remova a pasta errada e clone de novo em `/www` |
