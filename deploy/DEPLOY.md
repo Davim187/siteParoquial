@@ -256,7 +256,7 @@ git push origin master
 3. Atualiza código em `/www`
 4. Remove Apache se voltou a subir
 5. Rebuild dos containers Docker
-6. Roda migrations e seed
+6. Roda as migrations (o seed de desenvolvimento **não** roda em produção)
 
 Acompanhe em: **https://github.com/Davim187/siteParoquial/actions**
 

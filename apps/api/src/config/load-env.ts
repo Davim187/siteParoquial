@@ -7,16 +7,16 @@ export const apiRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
 const productionEnvPath = resolve(apiRoot, '.env.production.local')
 const useLocalDb = process.env.USE_LOCAL_DB === '1'
-
 const localEnvPath = resolve(apiRoot, '.env')
+const inProduction = process.env.NODE_ENV === 'production'
 
-if (!existsSync(localEnvPath)) {
+if (existsSync(localEnvPath)) {
+  dotenv.config({ path: localEnvPath })
+} else if (!inProduction) {
   console.error('Crie apps/api/.env a partir de apps/api/.env.example (cp no Linux, copy no Windows).')
   console.error('O JWT_SECRET e as outras configs da API vêm desse arquivo.')
   process.exit(1)
 }
-
-dotenv.config({ path: localEnvPath })
 
 export function usesProductionDb(): boolean {
   return !useLocalDb && existsSync(productionEnvPath)

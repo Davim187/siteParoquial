@@ -29,7 +29,8 @@ docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" exec -T postgre
 
 echo "==> Rodando migrations..."
 for attempt in $(seq 1 20); do
-  if docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" exec -T api npx prisma migrate deploy; then
+  if docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" exec -T api \
+    ../../node_modules/.bin/prisma migrate deploy; then
     break
   fi
   if [ "$attempt" -eq 20 ]; then
@@ -40,9 +41,6 @@ for attempt in $(seq 1 20); do
   echo "   Tentativa ${attempt}/20 — aguardando API..."
   sleep 3
 done
-
-echo "==> Rodando seed..."
-docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" exec -T api npx tsx prisma/seed.ts
 
 echo "==> Deploy concluído."
 docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" ps

@@ -94,11 +94,19 @@ jobs:
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
             docker compose -f docker-compose.prod.yml --env-file .env.production exec -T postgres \
               sh -c 'until pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; do sleep 1; done'
+            echo "==> Aplicando migrations..."
             for attempt in $(seq 1 20); do
-              if docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api npx prisma migrate deploy; then
-                break
+              if docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
+                ../../node_modules/.bin/prisma migrate deploy; then
+                echo "==> Deploy concluído."
+                docker compose -f docker-compose.prod.yml --env-file .env.production ps
+                exit 0
               fi
-              [ "$attempt" -eq 20 ] && exit 1
+              echo "   Tentativa ${attempt}/20 — aguardando API..."
+              [ "$attempt" -eq 20 ] && {
+                echo "Falha ao aplicar migrations. Logs da API:"
+                docker compose -f docker-compose.prod.yml --env-file .env.production logs api --tail 80
+                exit 1
+              }
               sleep 3
             done
-            docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api npx tsx prisma/seed.ts
