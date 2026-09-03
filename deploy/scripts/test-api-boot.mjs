@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Testa se a API sobe e responde /api/health antes do PM2.
+ * Usa porta temporária para não conflitar com a instância já no ar.
  * Uso: APP_DIR=/var/www node deploy/scripts/test-api-boot.mjs
  */
 import { spawn } from 'node:child_process'
@@ -15,7 +16,8 @@ const require = createRequire(import.meta.url)
 const config = require(join(appDir, 'deploy/ecosystem.config.cjs'))
 const app = config.apps[0]
 const apiDir = join(appDir, 'apps/api')
-const env = { ...process.env, ...app.env }
+const bootPort = String(process.env.BOOT_TEST_PORT || 13933)
+const env = { ...process.env, ...app.env, PORT: bootPort }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -43,7 +45,7 @@ proc.on('exit', (code) => {
 for (let attempt = 1; attempt <= 15; attempt++) {
   await sleep(1000)
   try {
-    const res = await fetch('http://127.0.0.1:3333/api/health')
+    const res = await fetch(`http://127.0.0.1:${bootPort}/api/health`)
     if (res.ok) {
       const body = await res.text()
       console.log(`Boot OK: ${body}`)
