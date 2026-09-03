@@ -11,14 +11,32 @@ export type MediaItem = {
   createdAt: string
 }
 
-export async function listMedia(params?: { search?: string; page?: number }) {
-  const query = new URLSearchParams({ limit: '24', page: String(params?.page ?? 1) })
+export async function listMedia(params?: { search?: string; page?: number; limit?: number }) {
+  const query = new URLSearchParams({
+    limit: String(params?.limit ?? 100),
+    page: String(params?.page ?? 1),
+  })
   if (params?.search) query.set('search', params.search)
-  const result = await apiRequest<{ data: MediaItem[]; pagination: unknown }>(`/api/media?${query}`)
+  const result = await apiRequest<{
+    data: MediaItem[]
+    pagination?: { page: number; limit: number; total: number; totalPages: number }
+  }>(`/api/media?${query}`)
   return {
     ...result,
     data: result.data.map(mapMediaItem),
   }
+}
+
+export async function listAllMedia(params?: { search?: string }) {
+  const first = await listMedia({ ...params, page: 1, limit: 100 })
+  const totalPages = first.pagination?.totalPages ?? 1
+  if (totalPages <= 1) return first.data
+  const rest = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) =>
+      listMedia({ ...params, page: index + 2, limit: 100 }),
+    ),
+  )
+  return [first.data, ...rest.map((page) => page.data)].flat()
 }
 
 export async function uploadMedia(file: File, folder = 'general') {

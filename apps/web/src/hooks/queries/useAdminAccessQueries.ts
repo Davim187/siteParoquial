@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { STALE_TIME } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
 import { apiRequest } from '@/lib/api-client'
-import { deleteMedia, listMedia, uploadMedia, type MediaItem } from '@/services/mediaService'
+import { deleteMedia, listAllMedia, uploadMedia, type MediaItem } from '@/services/mediaService'
 import { mapMediaItem } from '@/utils/media'
 
 export type AdminUserRow = {
@@ -83,10 +83,7 @@ export function useAdminProfileQuery() {
 export function useAdminMediaQuery(search = '', enabled = true) {
   return useQuery({
     queryKey: queryKeys.media.list({ search }),
-    queryFn: async () => {
-      const result = await listMedia({ search: search || undefined })
-      return result.data
-    },
+    queryFn: () => listAllMedia({ search: search || undefined }),
     enabled,
     staleTime: STALE_TIME.admin,
     placeholderData: (previous) => previous,

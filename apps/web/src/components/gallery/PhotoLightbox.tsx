@@ -2,6 +2,35 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { GalleryPhoto } from '@/types'
 
+function GalleryImg({
+  src,
+  fallback,
+  alt,
+  className,
+}: {
+  src: string
+  fallback?: string
+  alt: string
+  className?: string
+}) {
+  const [current, setCurrent] = useState(src)
+
+  useEffect(() => {
+    setCurrent(src)
+  }, [src])
+
+  return (
+    <img
+      src={current}
+      alt={alt}
+      className={className}
+      onError={() => {
+        if (fallback && current !== fallback) setCurrent(fallback)
+      }}
+    />
+  )
+}
+
 function preload(url?: string) {
   if (!url) return
   const image = new Image()
@@ -21,6 +50,7 @@ export function PhotoLightbox({
   const [shownIndex, setShownIndex] = useState(initialIndex)
   const shown = photos[shownIndex]
   const pending = photos[index]
+  const pendingUrl = pending?.url
   const touchStartX = useRef<number | null>(null)
 
   const goPrev = useCallback(() => {
@@ -32,24 +62,22 @@ export function PhotoLightbox({
   }, [photos.length])
 
   useEffect(() => {
-    const photo = photos[index]
-    if (!photo) return
-
+    if (!pendingUrl) return
+    let cancelled = false
     const image = new Image()
-    const reveal = () => setShownIndex(index)
+    const reveal = () => {
+      if (!cancelled) setShownIndex(index)
+    }
     image.onload = reveal
     image.onerror = reveal
-    image.src = photo.url
+    image.src = pendingUrl
     if (image.complete) reveal()
-
     preload(photos[(index + 1) % photos.length]?.url)
     preload(photos[(index - 1 + photos.length) % photos.length]?.url)
-
     return () => {
-      image.onload = null
-      image.onerror = null
+      cancelled = true
     }
-  }, [index, photos])
+  }, [index, pendingUrl, photos])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -114,8 +142,9 @@ export function PhotoLightbox({
       ) : null}
 
       <div className="flex max-h-[90vh] max-w-5xl flex-col items-center">
-        <img
+        <GalleryImg
           src={shown.url}
+          fallback={shown.thumbUrl}
           alt={shown.title ?? shown.originalName ?? 'Foto da galeria'}
           className="max-h-[75vh] max-w-full rounded-lg object-contain"
         />
@@ -146,11 +175,11 @@ export function PhotoGrid({
             onClick={() => onPhotoClick(photoIndex)}
             className="group relative block w-full overflow-hidden rounded-xl focus-visible:outline-none"
           >
-            <img
-              src={photo.thumbUrl}
+            <GalleryImg
+              src={photo.thumbUrl || photo.url}
+              fallback={photo.url}
               alt={photo.title ?? photo.originalName ?? 'Foto'}
               className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105"
-              loading="lazy"
             />
           </button>
         </li>

@@ -59,8 +59,8 @@ const prefetchers: Record<string, () => void> = {
   },
   '/galeria': () => {
     void queryClient.prefetchQuery({
-      queryKey: queryKeys.gallery.albums({ limit: 24 }),
-      queryFn: () => listAlbums({ limit: 24 }),
+      queryKey: queryKeys.gallery.albums({ limit: 100 }),
+      queryFn: () => listAlbums({ limit: 100 }),
       staleTime: STALE_TIME.gallery,
     })
   },

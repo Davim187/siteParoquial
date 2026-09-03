@@ -116,7 +116,7 @@ const prefetchers: Record<string, () => void> = {
   '/admin/midia': () => {
     void queryClient.prefetchQuery({
       queryKey: queryKeys.media.list({ search: '' }),
-      queryFn: async () => (await listMedia()).data,
+      queryFn: async () => (await listMedia({ limit: 100 })).data,
       staleTime: STALE_TIME.admin,
     })
   },

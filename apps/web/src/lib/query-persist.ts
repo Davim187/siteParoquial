@@ -89,12 +89,12 @@ const SPECS: PersistSpec[] = [
     restore: (data) => queryClient.setQueryData(queryKeys.sacraments.list, data),
   },
   {
-    storageKey: 'gallery-24',
+    storageKey: 'gallery-100',
     matches: (key) => {
       const params = asParams(key[2])
-      return key[0] === 'gallery' && key[1] === 'albums' && params?.limit === 24 && !params?.all
+      return key[0] === 'gallery' && key[1] === 'albums' && params?.limit === 100 && !params?.all
     },
-    restore: (data) => queryClient.setQueryData(queryKeys.gallery.albums({ limit: 24 }), data),
+    restore: (data) => restoreStale(queryKeys.gallery.albums({ limit: 100 }), data),
   },
   {
     storageKey: 'gallery-admin',

@@ -10,7 +10,7 @@ export function GalleryPage() {
     'Galeria | Paróquia Nossa Senhora das Graças',
     'Álbuns de fotos dos eventos e momentos especiais da paróquia.',
   )
-  const { data, isLoading, isFetching, error } = useGalleryAlbumsQuery({ limit: 24 })
+  const { data, isLoading, isFetching, error } = useGalleryAlbumsQuery({ limit: 100 })
   const albums = data?.data ?? []
   const showSkeleton = isLoading && !albums.length
 
