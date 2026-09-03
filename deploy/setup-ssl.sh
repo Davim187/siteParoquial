@@ -40,19 +40,28 @@ if [ -z "$ACME_EMAIL" ]; then
   exit 1
 fi
 
+if [ ! -d "$APP_DIR/apps/web/dist" ]; then
+  echo "ERRO: build do frontend não encontrado em $APP_DIR/apps/web/dist"
+  echo "Rode antes: npm ci && npm run build"
+  exit 1
+fi
+
 echo "==> Domínio: $DOMAIN"
 echo "==> E-mail Let's Encrypt: $ACME_EMAIL"
 
-echo "==> Garantindo Apache em HTTP (para validação do certificado)..."
+echo "==> Removendo sites padrão do Apache (evita HTTP na porta 443)..."
+disable_default_apache_sites
+set_apache_listen_443 0
+
+echo "==> Garantindo Apache em HTTP (porta 80) para validação..."
 write_apache_site_config "$APP_DIR" "$DOMAIN" "$OUTPUT" 0
 a2enmod ssl headers proxy proxy_http rewrite 2>/dev/null || true
 a2ensite "$APACHE_SITE" 2>/dev/null || true
-a2dissite 000-default.conf 2>/dev/null || true
-systemctl reload apache2
+reload_apache_safe
 
 if ssl_cert_exists "$DOMAIN"; then
   echo "==> Certificado já existe. Renovando se necessário..."
-  certbot renew --quiet --no-random-sleep-on-renew
+  certbot renew --quiet --no-random-sleep-on-renew || true
 else
   echo "==> Obtendo certificado SSL..."
   certbot certonly --webroot \
@@ -67,23 +76,43 @@ fi
 
 if ! ssl_cert_exists "$DOMAIN"; then
   echo "ERRO: certificado não encontrado após certbot."
+  echo "Verifique DNS, porta 80 aberta e logs: journalctl -u apache2 -n 50"
   exit 1
+fi
+
+if [ ! -f /etc/letsencrypt/options-ssl-apache.conf ]; then
+  echo "==> Criando options-ssl-apache.conf..."
+  mkdir -p /etc/letsencrypt
+  cat > /etc/letsencrypt/options-ssl-apache.conf <<'EOF'
+SSLEngine on
+SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1
+SSLHonorCipherOrder off
+SSLSessionTickets off
+EOF
 fi
 
 echo "==> Ativando HTTPS no Apache..."
 write_apache_site_config "$APP_DIR" "$DOMAIN" "$OUTPUT" 1
-systemctl reload apache2
+set_apache_listen_443 1
+reload_apache_safe
 
 HOOK_DIR="/etc/letsencrypt/renewal-hooks/deploy"
 mkdir -p "$HOOK_DIR"
-cat > "$HOOK_DIR/paroquia-reload-apache.sh" <<EOF
+cat > "$HOOK_DIR/paroquia-reload-apache.sh" <<'EOF'
 #!/usr/bin/env bash
 systemctl reload apache2
 EOF
 chmod +x "$HOOK_DIR/paroquia-reload-apache.sh"
 
+echo "==> Testando HTTPS localmente..."
+if curl -fsSI "https://${DOMAIN}/" >/dev/null 2>&1; then
+  echo "   OK — HTTPS respondendo"
+else
+  echo "   AVISO — HTTPS ainda não respondeu. Aguarde DNS/propagação ou verifique: bash deploy/check-ssl.sh"
+fi
+
 echo "==> Testando renovação automática..."
-certbot renew --dry-run
+certbot renew --dry-run || echo "   AVISO: teste de renovação falhou — verifique depois com certbot renew --dry-run"
 
 echo "==> HTTPS configurado."
 echo "   https://${DOMAIN}"

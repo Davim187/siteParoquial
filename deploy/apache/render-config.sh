@@ -23,6 +23,35 @@ ssl_cert_exists() {
     && [ -f "/etc/letsencrypt/live/${domain}/privkey.pem" ]
 }
 
+disable_default_apache_sites() {
+  a2dissite 000-default.conf 000-default 2>/dev/null || true
+  a2dissite default-ssl.conf default-ssl 2>/dev/null || true
+}
+
+set_apache_listen_443() {
+  local enabled="$1"
+  local ports="/etc/apache2/ports.conf"
+
+  if [ ! -f "$ports" ]; then
+    return
+  fi
+
+  if [ "$enabled" = "1" ]; then
+    if grep -qE '^# Listen 443 disabled' "$ports"; then
+      sed -i 's/^# Listen 443 disabled.*/Listen 443/' "$ports"
+    elif ! grep -qE '^Listen 443' "$ports"; then
+      printf '\nListen 443\n' >> "$ports"
+    fi
+  elif grep -qE '^Listen 443' "$ports"; then
+    sed -i 's/^Listen 443/# Listen 443 disabled until SSL is configured/' "$ports"
+  fi
+}
+
+reload_apache_safe() {
+  apache2ctl configtest
+  systemctl reload apache2
+}
+
 write_apache_site_config() {
   local app_dir="$1"
   local domain="$2"

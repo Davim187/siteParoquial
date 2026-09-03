@@ -20,6 +20,8 @@ apt-get install -y apache2
 echo "==> Habilitando módulos..."
 a2enmod proxy proxy_http rewrite headers ssl
 
+disable_default_apache_sites
+
 DOMAIN="$(domain_from_env "$ENV_FILE" 2>/dev/null || true)"
 if [ -z "$DOMAIN" ]; then
   DOMAIN="paroquiansdasgracas.com.br"
@@ -30,18 +32,22 @@ if ssl_cert_exists "$DOMAIN"; then
   SSL_ENABLED=1
   echo "==> Certificado SSL encontrado para $DOMAIN"
 else
-  echo "==> Sem certificado SSL — site em HTTP (rode deploy/setup-ssl.sh depois)"
+  echo "==> Sem certificado SSL — site em HTTP até rodar deploy/setup-ssl.sh"
+  set_apache_listen_443 0
 fi
 
 echo "==> Configurando site..."
 write_apache_site_config "$APP_DIR" "$DOMAIN" "$OUTPUT" "$SSL_ENABLED"
 
 a2ensite "$APACHE_SITE"
-a2dissite 000-default.conf 2>/dev/null || true
+
+if [ "$SSL_ENABLED" = "1" ]; then
+  set_apache_listen_443 1
+fi
 
 echo "==> Reiniciando Apache..."
 systemctl enable apache2
-systemctl reload apache2
+reload_apache_safe
 
 if [ "$SSL_ENABLED" = "1" ]; then
   echo "==> Apache configurado com HTTPS."
@@ -49,6 +55,7 @@ if [ "$SSL_ENABLED" = "1" ]; then
 else
   echo "==> Apache configurado (HTTP)."
   echo "   http://${DOMAIN}"
+  echo "   Porta 443 desativada até o certificado ser emitido."
 fi
 
 echo "   Site: $OUTPUT"

@@ -368,6 +368,7 @@ systemctl reload apache2
 | API não responde | `pm2 logs paroquia-api` — verificar `DATABASE_URL` com `127.0.0.1` |
 | Site 404 no refresh | Verificar RewriteRule do Apache (deploy/apache/render-config.sh) |
 | HTTPS não funciona | Domínio apontando pro VPS? Porta 443 aberta? Rode `bash deploy/setup-ssl.sh` |
+| `SSL_ERROR_RX_RECORD_TOO_LONG` | A porta 443 está servindo HTTP (site padrão Apache). Rode `bash deploy/setup-ssl.sh` e `bash deploy/check-ssl.sh` |
 | Certbot falha | Confira DNS e se `ACME_EMAIL` está no `.env.production` |
 | Permission denied (SSH) | Verificar chave pública no VPS e secret `DEPLOY_SSH_KEY` |
 | `POSTGRES_PASSWORD is missing` | Edite `/www/.env.production` e defina a senha |
