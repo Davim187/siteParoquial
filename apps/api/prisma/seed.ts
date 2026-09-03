@@ -187,91 +187,154 @@ async function main() {
     {
       name: 'Batismo',
       slug: 'batismo',
-      summary: 'Porta da vida cristã.',
-      content: 'Conteúdo demonstrativo sobre o Batismo.',
-      whatItIs: 'Sacramento da iniciação cristã.',
-      whoCanReceive: 'Crianças e adultos conforme orientação pastoral.',
-      howItWorks: 'Procure a secretaria. [A CONFIRMAR]',
-      documents: ['[DOCUMENTOS — A DEFINIR]'],
-      howToRegister: 'Inscrição na secretaria.',
+      summary: 'A porta de entrada na vida cristã e na comunidade da Igreja.',
+      content:
+        'No Batismo, celebramos o nascimento para a vida nova em Cristo. É o primeiro passo da iniciação cristã e o início do caminho de fé na comunidade parroquial.',
+      whatItIs:
+        'Pelo Batismo, a pessoa é mergulhada no mistério da morte e ressurreição de Jesus, torna-se filha de Deus e passa a fazer parte da Igreja. É o sacramento que inaugura a vida cristã e abre o caminho para os demais sacramentos.',
+      whoCanReceive:
+        'Crianças, por pedido dos pais e com a presença dos padrinhos; e adultos, após o caminho de preparação catecumenal. Em todos os casos, a família é acolhida e orientada pela paróquia.',
+      howItWorks:
+        'Procure a secretaria paroquial para iniciar o processo. Haverá orientação sobre a preparação dos pais e padrinhos, os documentos necessários e o agendamento da celebração, conforme a disponibilidade da agenda litúrgica.',
+      documents: [
+        'Certidão de nascimento da criança (ou documento de identidade, no caso de adultos)',
+        'Documentos de identidade dos pais',
+        'Documentos de identidade dos padrinhos',
+        'Comprovante de Batismo dos padrinhos (se batizados em outra paróquia)',
+        'Comprovante de residência',
+      ],
+      howToRegister:
+        'Dirija-se à secretaria paroquial para preencher a ficha de inscrição e receber as orientações sobre a preparação e a data da celebração.',
       secretaryContact: PARISH_PHONE,
       sortOrder: 1,
     },
     {
       name: 'Primeira Eucaristia',
       slug: 'primeira-eucaristia',
-      summary: 'Encontro com Jesus na Eucaristia.',
-      content: 'Conteúdo demonstrativo.',
-      whatItIs: 'Sacramento do Corpo e Sangue de Cristo.',
-      whoCanReceive: 'Crianças e adultos preparados pela catequese.',
-      howItWorks: 'Itinerário catequético. [A CONFIRMAR]',
-      documents: ['[DOCUMENTOS — A DEFINIR]'],
-      howToRegister: 'Pastoral da Catequese / secretaria.',
+      summary: 'O encontro com Jesus no Pão e no Vinho consagrados.',
+      content:
+        'A Primeira Eucaristia marca um momento especial na vida da criança, do adolescente ou do adulto: a primeira comunhão com o Corpo e o Sangue de Cristo, centro da vida cristã.',
+      whatItIs:
+        'A Eucaristia é o sacramento do Corpo e do Sangue de Cristo. Nela, a Igreja celebra a Páscoa do Senhor e se alimenta do próprio Jesus, fonte de comunhão, força e vida para o dia a dia na fé.',
+      whoCanReceive:
+        'Crianças e adolescentes que concluíram o itinerário da catequese definido pela paróquia; também adultos em processo próprio de preparação. É necessário estar batizado e participar da formação com a família.',
+      howItWorks:
+        'A preparação acontece na catequese, com encontros regulares, acompanhamento das famílias e celebração comunitária da Primeira Comunhão. As datas de inscrição e a programação são divulgadas pela Pastoral da Catequese e pela secretaria.',
+      documents: [
+        'Certidão de Batismo',
+        'Documento de identidade ou certidão de nascimento',
+        'Comprovante de residência',
+        'Fotos 3x4 (conforme orientação da catequese)',
+      ],
+      howToRegister:
+        'Procure a Pastoral da Catequese ou a secretaria paroquial no período de inscrições para conhecer o itinerário e garantir a vaga.',
       secretaryContact: PARISH_PHONE,
       sortOrder: 2,
     },
     {
       name: 'Crisma',
       slug: 'crisma',
-      summary: 'Confirmação no Espírito Santo.',
-      content: 'Conteúdo demonstrativo.',
-      whatItIs: 'Sacramento da Confirmação.',
-      whoCanReceive: 'Batizados após preparação.',
-      howItWorks: 'Encontros e celebração. [A CONFIRMAR]',
-      documents: ['[DOCUMENTOS — A DEFINIR]'],
-      howToRegister: 'Catequese / secretaria.',
+      summary: 'A Confirmação que sela o batizado com o dom do Espírito Santo.',
+      content:
+        'Na Crisma, o Espírito Santo confirma e fortalece a graça do Batismo, enviando o cristão a testemunhar a fé com coragem e responsabilidade na Igreja e no mundo.',
+      whatItIs:
+        'A Crisma, ou Confirmação, completa a iniciação cristã. Pela imposição das mãos e pela unção com o santo crisma, o batizado recebe de modo especial o Espírito Santo para viver e anunciar o Evangelho.',
+      whoCanReceive:
+        'Fiéis batizados que concluíram a preparação prevista pela diocese e pela paróquia, geralmente adolescentes e jovens, além de adultos em itinerário próprio.',
+      howItWorks:
+        'O caminho inclui encontros de formação, acompanhamento pastoral e a celebração com o bispo ou seu delegado. As turmas e os períodos de inscrição são anunciados pela catequese e pela secretaria.',
+      documents: [
+        'Certidão de Batismo',
+        'Documento de identidade',
+        'Comprovante de residência',
+        'Comprovante de participação na catequese (quando solicitado)',
+      ],
+      howToRegister:
+        'Acompanhe os avisos da catequese e faça a inscrição na secretaria no período indicado para cada turma.',
       secretaryContact: PARISH_PHONE,
       sortOrder: 3,
     },
     {
       name: 'Confissão',
       slug: 'confissao',
-      summary: 'Sacramento da Reconciliação.',
-      content: 'Conteúdo demonstrativo.',
-      whatItIs: 'Encontro com a misericórdia de Deus.',
-      whoCanReceive: 'Batizados com as devidas disposições.',
-      howItWorks: 'Horários publicados na agenda. [A CONFIRMAR]',
+      summary: 'O encontro com a misericórdia de Deus que reconcilia e renova.',
+      content:
+        'No sacramento da Reconciliação, Deus acolhe o filho que reconhece suas faltas e deseja recomeçar. É um caminho de paz, perdão e volta à comunhão com Deus e com a Igreja.',
+      whatItIs:
+        'Na Confissão, o penitente reconhece o pecado, pede perdão de coração e recebe a absolvição. O sacramento reconcilia com Deus, cura a consciência e fortalece a vida cristã.',
+      whoCanReceive:
+        'Todo batizado que deseja se reconciliar com Deus, com as devidas disposições: exame de consciência, arrependimento, propósito de mudança e cumprimento da penitência.',
+      howItWorks:
+        'Os horários de atendimento são divulgados na agenda da paróquia e nos avisos. Em caso de necessidade especial, procure a secretaria ou o pároco para orientar o melhor momento.',
       documents: ['Não há documentos específicos.'],
-      howToRegister: 'Sem inscrição prévia.',
+      howToRegister:
+        'Não é necessária inscrição prévia. Compareça nos horários de confissão ou solicite atendimento pastoral quando precisar.',
       secretaryContact: PARISH_PHONE,
       sortOrder: 4,
     },
     {
       name: 'Matrimônio',
       slug: 'matrimonio',
-      summary: 'Aliança sacramental dos esposos.',
-      content: 'Conteúdo demonstrativo.',
-      whatItIs: 'Sacramento do Matrimônio.',
-      whoCanReceive: 'Noivos livres para contrair matrimônio.',
-      howItWorks: 'Processo na secretaria com antecedência. [A CONFIRMAR]',
-      documents: ['[DOCUMENTOS — A DEFINIR]'],
-      howToRegister: 'Agende atendimento na secretaria.',
+      summary: 'A aliança de amor entre os esposos, sinal de Cristo e da Igreja.',
+      content:
+        'O Matrimônio é a celebração do amor que se torna aliança diante de Deus. Os noivos são acolhidos pela comunidade e preparados para construir uma família fundada na fé, no diálogo e na fidelidade.',
+      whatItIs:
+        'O sacramento do Matrimônio une o homem e a mulher em uma aliança indissolúvel de amor e vida. É sinal do amor de Cristo pela Igreja e fonte de graça para a caminhada do casal.',
+      whoCanReceive:
+        'Noivos livres para contrair matrimônio, após o processo de habilitação canônica e a preparação matrimonial exigida pela Igreja.',
+      howItWorks:
+        'Inicie o processo na secretaria com boa antecedência. Haverá entrevistas, orientação sobre documentos, encontros de preparação dos noivos e o agendamento da celebração conforme a disponibilidade da paróquia.',
+      documents: [
+        'Certidão de Batismo atualizada (emitida há menos de seis meses)',
+        'Documento de identidade e CPF dos noivos',
+        'Comprovante de residência',
+        'Certidão de nascimento',
+        'Outros documentos indicados pela secretaria no início do processo',
+      ],
+      howToRegister:
+        'Agende um atendimento na secretaria paroquial para abrir o processo matrimonial e receber o calendário da preparação.',
       secretaryContact: PARISH_PHONE,
       sortOrder: 5,
     },
     {
       name: 'Unção dos Enfermos',
       slug: 'uncao-dos-enfermos',
-      summary: 'Conforto aos doentes.',
-      content: 'Conteúdo demonstrativo.',
-      whatItIs: 'Sacramento que une o doente a Cristo.',
-      whoCanReceive: 'Fiéis em enfermidade grave ou idade avançada.',
-      howItWorks: 'Solicite à secretaria ou ao pároco.',
-      documents: ['Informar situação de saúde.'],
-      howToRegister: 'Pedido pela família ou secretaria.',
+      summary: 'O sacramento que conforta, fortalece e une o doente a Cristo.',
+      content:
+        'A Unção dos Enfermos é gesto de cuidado e esperança. Por ela, a Igreja se faz próxima de quem enfrenta a doença, a fragilidade ou a idade avançada, pedindo a graça da paz e da força.',
+      whatItIs:
+        'Este sacramento une o doente à paixão de Cristo, trazendo conforto, coragem e, se for vontade de Deus, o restabelecimento da saúde. Também prepara o coração para confiar plenamente no Senhor.',
+      whoCanReceive:
+        'Fiéis em enfermidade grave, idade avançada, recuperação delicada ou diante de cirurgia importante. Pode ser recebido mais de uma vez, conforme a necessidade.',
+      howItWorks:
+        'A família ou o próprio fiel pode solicitar o sacramento à secretaria ou ao pároco. Em situações de urgência, utilize os canais de contato da paróquia para atendimento o mais breve possível.',
+      documents: [
+        'Informar a situação de saúde e o local de atendimento (residência, hospital ou outro)',
+        'Nome e telefone de um responsável para contato',
+      ],
+      howToRegister:
+        'Faça o pedido pela secretaria, pelo pároco ou por meio dos contatos oficiais da paróquia. A equipe pastoral orientará o atendimento.',
       secretaryContact: PARISH_PHONE,
       sortOrder: 6,
     },
     {
       name: 'Ordem',
       slug: 'ordem',
-      summary: 'Ministério ordenado na Igreja.',
-      content: 'Conteúdo demonstrativo.',
-      whatItIs: 'Sacramento do serviço apostólico.',
-      whoCanReceive: 'Candidatos aprovados pela Igreja.',
-      howItWorks: 'Discernimento vocacional diocesano.',
-      documents: ['Processo vocacional.'],
-      howToRegister: 'Converse com o pároco.',
+      summary: 'O sacramento do serviço: diáconos, presbíteros e bispos.',
+      content:
+        'Pelo sacramento da Ordem, a Igreja recebe ministros para servir o Povo de Deus na pregação, na liturgia e na caridade. É um caminho de discernimento, formação e doação da vida.',
+      whatItIs:
+        'A Ordem configura o homem a Cristo servo e pastor, para o ministério ordenado na Igreja. Diáconos, padres e bispos são chamados a anunciar o Evangelho e a cuidar da comunidade com amor.',
+      whoCanReceive:
+        'Candidatos chamados e aprovados pela Igreja, segundo as normas da diocese, após sério discernimento vocacional e acompanhamento formativo.',
+      howItWorks:
+        'O primeiro passo é uma conversa aberta com o pároco. O discernimento continua com o serviço vocacional da diocese, a formação no seminário e o acompanhamento da comunidade.',
+      documents: [
+        'Processo vocacional diocesano',
+        'Documentação pessoal e eclesial solicitada pela diocese ao longo da formação',
+      ],
+      howToRegister:
+        'Converse com o pároco e, a partir dessa escuta, procure o serviço vocacional da diocese para iniciar o acompanhamento.',
       secretaryContact: PARISH_PHONE,
       sortOrder: 7,
     },

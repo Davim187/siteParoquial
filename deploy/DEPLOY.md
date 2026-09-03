@@ -1,6 +1,6 @@
 # Passo a passo — Deploy automático
 
-Guia completo para publicar o site paroquial no VPS com **Docker + GitHub Actions**.
+Guia completo para publicar o site paroquial no VPS com **Apache + PM2 + GitHub Actions**.
 
 **Resumo:** você configura o servidor uma vez em `/www`. Depois, cada `git push` na branch `master` atualiza o site automaticamente.
 
@@ -12,7 +12,7 @@ Guia completo para publicar o site paroquial no VPS com **Docker + GitHub Action
 |------|----------------|
 | **Seu computador** | Código no GitHub + chave SSH |
 | **GitHub** | Actions conecta no VPS e roda o deploy |
-| **Servidor (`/www`)** | Docker sobe PostgreSQL + API + Nginx (site na porta 80) |
+| **Servidor (`/www`)** | Apache serve o frontend; PM2 roda a API; Postgres fica no Docker (somente banco) |
 
 ---
 
@@ -108,22 +108,6 @@ git clone https://github.com/Davim187/siteParoquial.git /www
 
 > **Importante:** o deploy automático espera o projeto em **`/www`**, não em `/opt/siteParoquial`.
 
-### (Opcional) SSH no VPS
-
-Só use SSH se preferir. Gere uma chave no servidor e cadastre como **Deploy Key** em  
-GitHub → repositório → Settings → Deploy keys:
-
-```bash
-ssh-keygen -t ed25519 -C "vps-site-paroquial" -f ~/.ssh/id_ed25519 -N ""
-cat ~/.ssh/id_ed25519.pub
-```
-
-Depois clone com:
-
-```bash
-git clone git@github.com:Davim187/siteParoquial.git /www
-```
-
 ---
 
 # Parte 2 — No servidor (VPS)
@@ -148,14 +132,6 @@ git pull origin master
 bash deploy/setup-server.sh
 ```
 
-Se aparecer *branches divergentes*, alinhe o servidor ao GitHub (descarta commits locais no VPS):
-
-```bash
-cd /www
-git fetch origin
-git reset --hard origin/master
-```
-
 Se `/www` **ainda não existe**, clone primeiro:
 
 ```bash
@@ -166,24 +142,27 @@ bash deploy/setup-server.sh
 
 O script faz:
 
-- Instala Docker
-- Remove Apache/Nginx do sistema (libera porta 80)
+- Instala Node.js 20, PM2 e Apache
+- Instala Docker (somente para Postgres)
 - Configura firewall (22, 80, 443)
 - Clona o projeto em `/www` (se necessário)
 - Cria `.env.production` inicial
+- Configura virtual host do Apache
 
 ### Caminho B — Manual
 
 ```bash
 apt-get update
-apt-get install -y git curl
+apt-get install -y git curl apache2
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt-get install -y nodejs
+npm install -g pm2
 curl -fsSL https://get.docker.com | sh
-systemctl enable docker && systemctl start docker
 
 git clone https://github.com/Davim187/siteParoquial.git /www
 cd /www
-bash deploy/remove-apache.sh
 cp .env.production.example .env.production
+bash deploy/setup-apache.sh
 ```
 
 ---
@@ -199,11 +178,14 @@ Ajuste **obrigatoriamente**:
 | Variável | Exemplo |
 |----------|---------|
 | `POSTGRES_PASSWORD` | Senha forte para o banco (**não deixe o valor do exemplo**) |
-| `CORS_ORIGIN` | `http://SEU_IP` ou `https://seudominio.com.br` |
+| `DATABASE_URL` | `postgresql://paroquia:SENHA@127.0.0.1:5432/paroquia?schema=public` |
+| `CORS_ORIGIN` | `https://paroquiansdasgracas.com.br` |
 | `PUBLIC_URL` | Mesmo valor acima |
 | `JWT_SECRET` | String longa e aleatória (mín. 32 caracteres) |
 
 > Se aparecer `POSTGRES_PASSWORD is missing`, o arquivo `.env.production` não existe ou a senha não foi definida.
+
+> **Importante:** `DATABASE_URL` deve usar `127.0.0.1`, não `postgres` (a API roda fora do Docker).
 
 Salvar: `Ctrl+O`, Enter, `Ctrl+X`.
 
@@ -221,17 +203,26 @@ Aguarde o build (pode levar alguns minutos na primeira vez).
 Verifique se subiu:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
+pm2 status
+systemctl status apache2
 curl -I http://localhost
+curl http://localhost/api/health
 ```
 
 ---
 
 ## 2.4 Acessar o site
 
-- **Site:** `http://SEU_IP`
-- **Admin:** `http://SEU_IP/admin/login`
+- **Site:** `http://SEU_IP` ou `https://paroquiansdasgracas.com.br`
+- **Admin:** `/admin/login`
 - Crie um usuário administrador real pelo painel ou diretamente no banco. **Não** rode o seed de desenvolvimento em produção.
+
+### HTTPS com Certbot (recomendado)
+
+```bash
+apt-get install -y certbot python3-certbot-apache
+certbot --apache -d paroquiansdasgracas.com.br -d www.paroquiansdasgracas.com.br
+```
 
 ---
 
@@ -253,10 +244,12 @@ git push origin master
 
 1. GitHub Actions dispara o workflow **Deploy produção**
 2. Conecta no VPS via SSH
-3. Atualiza código em `/www`
-4. Remove Apache se voltou a subir
-5. Rebuild dos containers Docker
-6. Roda as migrations (o seed de desenvolvimento **não** roda em produção)
+3. Executa `bash deploy/deploy.sh`, que:
+   - Atualiza código em `/www`
+   - Sobe Postgres (Docker)
+   - Faz build do web e da API
+   - Aplica migrations
+   - Recarrega Apache e reinicia API no PM2
 
 Acompanhe em: **https://github.com/Davim187/siteParoquial/actions**
 
@@ -269,21 +262,17 @@ O Postgres fica exposto **somente em `127.0.0.1:5432` no VPS** (não abre na int
 ## Diagnóstico no VPS
 
 ```bash
-cd /var/www   # ou /www
+cd /www
 bash deploy/check-db.sh
 ```
 
-Esse script verifica porta, senha e mostra os dados corretos para o Beekeeper.
-
 ---
 
-## Método recomendado — túnel SSH manual (Linux Snap)
-
-O Beekeeper instalado via **Snap** costuma falhar com chave SSH. Use o terminal:
+## Método recomendado — túnel SSH manual
 
 **Terminal 1 (deixe aberto):**
 ```bash
-ssh -N -L 5432:127.0.0.1:5432 root@84.46.251.102
+ssh -N -L 5432:127.0.0.1:5432 root@SEU_IP
 ```
 
 **Beekeeper — nova conexão PostgreSQL (aba SSH Tunnel DESLIGADA):**
@@ -297,50 +286,6 @@ ssh -N -L 5432:127.0.0.1:5432 root@84.46.251.102
 | Database | `paroquia` |
 | SSL | Disabled |
 
-Clique **Test** → **Connect**.
-
-> Se a porta 5432 no seu PC já estiver em uso, use `-L 15432:127.0.0.1:5432` e Port `15432` no Beekeeper.
-
----
-
-## Método alternativo — SSH Tunnel dentro do Beekeeper
-
-Funciona melhor com Beekeeper `.deb` (não Snap).
-
-1. **New Connection** → **PostgreSQL**
-2. **Connection**: Host `127.0.0.1`, Port `5432`, User `paroquia`, Database `paroquia`
-3. **SSH Tunnel** ativado: Host IP do VPS, User `root`, chave ou senha
-4. **Test** → **Connect**
-
----
-
-## Senha não funciona?
-
-O Postgres grava a senha na **primeira criação** do volume. Se mudou o `.env.production` depois, alinhe no VPS:
-
-```bash
-cd /var/www
-grep POSTGRES_PASSWORD .env.production
-
-docker compose -f docker-compose.prod.yml --env-file .env.production exec postgres \
-  psql -U postgres -d paroquia -c "ALTER USER paroquia WITH PASSWORD 'SUA_SENHA_AQUI';"
-
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d api
-```
-
-Use **exatamente a mesma senha** no Beekeeper e no `.env.production`.
-
----
-
-## Porta não aparece em 127.0.0.1:5432?
-
-```bash
-cd /var/www
-git fetch origin && git reset --hard origin/master
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d
-ss -tlnp | grep 5432
-```
-
 ---
 
 # Parte 4 — Comandos úteis no servidor
@@ -348,23 +293,25 @@ ss -tlnp | grep 5432
 ```bash
 cd /www
 
-# Ver containers
+# Status da API
+pm2 status
+pm2 logs paroquia-api
+
+# Status do Apache
+systemctl status apache2
+tail -f /var/log/apache2/paroquia-access.log
+
+# Status do Postgres
 docker compose -f docker-compose.prod.yml ps
-
-# Ver logs da API
-docker compose -f docker-compose.prod.yml logs -f api
-
-# Ver logs do site (Nginx)
-docker compose -f docker-compose.prod.yml logs -f web
 
 # Deploy manual
 bash deploy/deploy.sh
 
-# Parar tudo
-docker compose -f docker-compose.prod.yml down
+# Reiniciar só a API
+pm2 restart paroquia-api
 
-# Subir de novo
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+# Recarregar Apache (após mudar config)
+systemctl reload apache2
 ```
 
 ---
@@ -378,18 +325,20 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 - [ ] Secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` no GitHub
 
 ### Servidor
-- [ ] Docker instalado
+- [ ] Node 20 + PM2 instalados
+- [ ] Apache configurado (`deploy/setup-apache.sh`)
+- [ ] Docker instalado (Postgres)
 - [ ] Projeto em `/www`
-- [ ] `.env.production` configurado
+- [ ] `.env.production` configurado (`DATABASE_URL` com `127.0.0.1`)
 - [ ] `bash deploy/deploy.sh` rodou sem erro
 - [ ] Site abre em `https://paroquiansdasgracas.com.br`
-- [ ] Apache removido (portas 80 e 443 livres para o Caddy)
 
 ### Segurança (produção)
 - [ ] Trocar senha do admin do painel
 - [ ] Trocar `JWT_SECRET` e `POSTGRES_PASSWORD`
 - [ ] Trocar senha root do VPS
 - [ ] Preferir chave SSH em vez de senha
+- [ ] HTTPS com Certbot
 
 ---
 
@@ -400,13 +349,11 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 | `missing server host` | Criar secret `DEPLOY_HOST` no GitHub |
 | `Repositório não encontrado em /www` | Rodar clone + setup no servidor |
 | `.env.production não encontrado` | `cp .env.production.example .env.production` e editar |
-| Porta 80 em uso | `bash deploy/remove-apache.sh` |
-| Navegador recusa HTTPS (443) | O Caddy precisa da porta 443. No painel do VPS, libere 443/tcp além da 80. |
+| API não responde | `pm2 logs paroquia-api` — verificar `DATABASE_URL` com `127.0.0.1` |
+| Site 404 no refresh | Verificar RewriteRule do Apache em `deploy/apache/paroquia.conf` |
 | Permission denied (SSH) | Verificar chave pública no VPS e secret `DEPLOY_SSH_KEY` |
-| `Permission denied (publickey)` ao clonar | Use HTTPS: `git clone https://github.com/Davim187/siteParoquial.git /www` |
-| Clone em `/opt/siteParoquial` | O deploy usa `/www`. Remova a pasta errada e clone de novo em `/www` |
-| `POSTGRES_PASSWORD is missing` | Edite `/www/.env.production` (ou `/var/www/.env.production`) e defina a senha |
-| Erro Prisma `debian-openssl-3.0.x` | Rebuild da API: `docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build api` |
+| `POSTGRES_PASSWORD is missing` | Edite `/www/.env.production` e defina a senha |
+| Erro Prisma OpenSSL | Instalar deps: `apt install openssl libheif1 imagemagick` |
 
 ---
 
@@ -415,13 +362,16 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 ```
 /www/
 ├── apps/
-│   ├── api/              # Backend
-│   └── web/              # Frontend (build vai pro container Nginx)
-├── deploy/               # Scripts de deploy
-├── docker-compose.prod.yml
-├── turbo.json
+│   ├── api/              # Backend (PM2 roda dist/server.js)
+│   └── web/
+│       └── dist/         # Build estático servido pelo Apache
+├── deploy/
+│   ├── apache/           # Virtual host
+│   ├── ecosystem.config.cjs  # Config PM2
+│   └── deploy.sh
+├── docker-compose.prod.yml   # Somente Postgres
 ├── .env.production       # Configurações (NÃO commitar)
 └── ...
 ```
 
-O site público é servido pelo **Nginx dentro do Docker** na porta **80**. Não é necessário Apache no servidor.
+O **Apache** serve o frontend e faz proxy de `/api` e `/uploads` para a API no **PM2** (porta 3333).

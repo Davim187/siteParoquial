@@ -1,3 +1,4 @@
+# Produção: apenas Postgres. Web (Apache) e API (PM2) rodam no host.
 services:
   postgres:
     image: postgres:16-alpine
@@ -16,55 +17,5 @@ services:
       timeout: 5s
       retries: 10
 
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    restart: unless-stopped
-    env_file:
-      - .env.production
-    environment:
-      # DATABASE_URL vem do .env.production (não interpolar POSTGRES_PASSWORD aqui:
-      # sem --env-file na CLI a senha fica vazia e a API entra em loop de restart)
-      NODE_ENV: production
-      HOST: 0.0.0.0
-      PORT: 3333
-    volumes:
-      - uploads:/app/apps/api/uploads
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile.web
-      args:
-        VITE_API_URL: ${VITE_API_URL:-}
-    restart: unless-stopped
-    expose:
-      - '80'
-    depends_on:
-      - api
-
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
-      - '443:443/udp'
-    environment:
-      ACME_EMAIL: ${ACME_EMAIL:-secretariaparoquialpnsg.psm@gmail.com}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - web
-
 volumes:
   paroquia_pg:
-  uploads:
-  caddy_data:
-  caddy_config:

@@ -14,7 +14,7 @@ export function SacramentsPage() {
       <PageHeader
         eyebrow="Vida sacramentária"
         title="Sacramentos"
-        description="Conheça o caminho dos sacramentos e como solicitar o acompanhamento na secretaria."
+        description="Conheça cada sacramento, quem pode recebê-lo e como iniciar o processo na nossa paróquia."
       />
       <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
         {isLoading && !data ? <Loading /> : null}

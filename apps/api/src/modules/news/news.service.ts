@@ -191,30 +191,58 @@ export async function updateNews(id: string, body: unknown, userId: string) {
     const exists = await prisma.news.findUnique({ where: { slug } })
     if (exists) throw new AppError(409, 'Já existe uma notícia com este endereço de página.')
   }
-  const { galleryMediaIds, publishedAt: publishedAtInput, ...newsData } = data
-  const status = newsData.status ?? current.status
-  const nextMode = newsData.progressMode ?? current.progressMode
-  if (newsData.progressCurrent !== undefined && nextMode === 'percent') {
-    newsData.progressCurrent = Math.min(100, Math.max(0, newsData.progressCurrent))
+
+  const status = data.status ?? current.status
+  const nextMode = data.progressMode ?? current.progressMode
+  let progressCurrent = data.progressCurrent
+  if (progressCurrent !== undefined && nextMode === 'percent') {
+    progressCurrent = Math.min(100, Math.max(0, progressCurrent))
   }
-  if (newsData.progressMode === 'percent') {
-    newsData.progressGoal = 100
+
+  const updateData: Prisma.NewsUpdateInput = {
+    slug,
+    publishedAt:
+      status === 'PUBLISHED'
+        ? data.publishedAt
+          ? new Date(data.publishedAt)
+          : current.publishedAt ?? new Date()
+        : current.publishedAt,
   }
+
+  if (data.title !== undefined) updateData.title = data.title
+  if (data.subtitle !== undefined) updateData.subtitle = data.subtitle
+  if (data.excerpt !== undefined) updateData.excerpt = data.excerpt
+  if (data.content !== undefined) updateData.content = data.content
+  if (data.status !== undefined) updateData.status = data.status
+  if (data.featured !== undefined) updateData.featured = data.featured
+  if (data.showProgress !== undefined) updateData.showProgress = data.showProgress
+  if (data.progressMode !== undefined) updateData.progressMode = data.progressMode
+  if (data.progressBadge !== undefined) updateData.progressBadge = data.progressBadge
+  if (data.progressLabel !== undefined) updateData.progressLabel = data.progressLabel
+  if (progressCurrent !== undefined) updateData.progressCurrent = progressCurrent
+  if (data.progressMode === 'percent') {
+    updateData.progressGoal = 100
+  } else if (data.progressGoal !== undefined) {
+    updateData.progressGoal = data.progressGoal
+  }
+
+  if (data.coverMediaId !== undefined) {
+    updateData.coverMedia = data.coverMediaId
+      ? { connect: { id: data.coverMediaId } }
+      : { disconnect: true }
+  }
+  if (data.categoryId !== undefined) {
+    updateData.category = data.categoryId
+      ? { connect: { id: data.categoryId } }
+      : { disconnect: true }
+  }
+
   const item = await prisma.news.update({
     where: { id },
-    data: {
-      ...newsData,
-      slug,
-      publishedAt:
-        status === 'PUBLISHED'
-          ? publishedAtInput
-            ? new Date(publishedAtInput)
-            : current.publishedAt ?? new Date()
-          : current.publishedAt,
-    },
+    data: updateData,
     include,
   })
-  await syncGallery(id, galleryMediaIds)
+  await syncGallery(id, data.galleryMediaIds)
   if (item.featured) await ensureSingleFeatured(item.id)
   await logActivity({ userId, action: 'update', entity: 'news', entityId: id })
   return mapNews(await prisma.news.findUniqueOrThrow({ where: { id }, include }))

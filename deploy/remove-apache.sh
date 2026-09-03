@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# Remove Apache (e Nginx do sistema) para liberar a porta 80 ao Docker.
+# DEPRECATED: o deploy atual usa Apache no host. Este script só existe para
+# limpar instalações antigas (Docker/Caddy/Nginx) que ocupavam a porta 80.
 set -euo pipefail
 
-echo "==> Parando serviços web do sistema..."
+echo "AVISO: o deploy atual usa Apache. Este script para serviços conflitantes."
 
-for service in apache2 httpd nginx; do
+echo "==> Parando containers Docker antigos (web/api/caddy)..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="${APP_DIR:-/www}"
+if [ -f "$APP_DIR/docker-compose.prod.yml" ]; then
+  docker compose -f "$APP_DIR/docker-compose.prod.yml" stop 2>/dev/null || true
+fi
+
+echo "==> Parando Nginx do sistema (Apache permanece)..."
+for service in httpd nginx; do
   if systemctl is-active --quiet "$service" 2>/dev/null; then
     echo "   Parando $service..."
     systemctl stop "$service"
@@ -15,25 +24,11 @@ for service in apache2 httpd nginx; do
   fi
 done
 
-echo "==> Removendo pacotes (se instalados)..."
-export DEBIAN_FRONTEND=noninteractive
-
-if command -v apt-get >/dev/null 2>&1; then
-  apt-get remove -y apache2 apache2-utils apache2-bin libapache2-mod-php* 2>/dev/null || true
-  apt-get remove -y nginx nginx-common 2>/dev/null || true
-  apt-get autoremove -y
-elif command -v yum >/dev/null 2>&1; then
-  yum remove -y httpd nginx 2>/dev/null || true
-elif command -v dnf >/dev/null 2>&1; then
-  dnf remove -y httpd nginx 2>/dev/null || true
-fi
-
 echo "==> Verificando porta 80..."
 if ss -tlnp | grep -q ':80 '; then
-  echo "AVISO: a porta 80 ainda está em uso:"
   ss -tlnp | grep ':80 ' || true
 else
-  echo "Porta 80 livre para o Docker."
+  echo "Porta 80 livre."
 fi
 
-echo "==> Apache/Nginx do sistema removidos ou parados."
+echo "==> Concluído."

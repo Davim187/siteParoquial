@@ -8,10 +8,23 @@ REPO_URL="${REPO_URL:-https://github.com/Davim187/siteParoquial.git}"
 echo "==> Instalando dependências do sistema..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y ca-certificates curl git ufw
+apt-get install -y ca-certificates curl git ufw apache2 \
+  openssl libheif1 imagemagick
+
+if ! command -v node >/dev/null 2>&1 || [ "$(node -p "process.versions.node.split('.')[0]")" -lt 20 ]; then
+  echo "==> Instalando Node.js 20..."
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  apt-get install -y nodejs
+fi
+
+if ! command -v pm2 >/dev/null 2>&1; then
+  echo "==> Instalando PM2..."
+  npm install -g pm2
+  pm2 startup systemd -u root --hp /root || true
+fi
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "==> Instalando Docker..."
+  echo "==> Instalando Docker (somente para Postgres)..."
   curl -fsSL https://get.docker.com | sh
   systemctl enable docker
   systemctl start docker
@@ -21,9 +34,6 @@ if ! docker compose version >/dev/null 2>&1; then
   echo "Docker Compose plugin não encontrado. Verifique a instalação do Docker."
   exit 1
 fi
-
-echo "==> Removendo Apache/Nginx do sistema (libera porta 80)..."
-bash "$(dirname "$0")/remove-apache.sh"
 
 echo "==> Firewall (portas 22, 80, 443)..."
 ufw allow OpenSSH || true
@@ -53,6 +63,9 @@ if [ ! -f .env.production ]; then
   echo "  - CORS_ORIGIN e PUBLIC_URL (domínio ou IP público)"
   echo
 fi
+
+echo "==> Configurando Apache..."
+APP_DIR="$APP_DIR" bash deploy/setup-apache.sh
 
 echo "==> Setup concluído."
 echo "Próximo passo: bash deploy/deploy.sh"

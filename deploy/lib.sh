@@ -87,7 +87,27 @@ validate_env_production() {
 
   if ! read_env_value DATABASE_URL "$file" >/dev/null; then
     echo "DATABASE_URL não está definido em $file"
-    echo "Use o mesmo usuário/senha/banco de POSTGRES_* com host postgres (rede Docker)."
+    echo "Use o mesmo usuário/senha/banco de POSTGRES_* com host 127.0.0.1 (Postgres no Docker)."
     exit 1
   fi
+}
+
+load_env_file() {
+  local file="$1"
+  local line key value
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ "$line" != *=* ]] && continue
+
+    key="${line%%=*}"
+    value="${line#*=}"
+    value="${value#\"}"
+    value="${value%\"}"
+    value="${value#\'}"
+    value="${value%\'}"
+
+    export "$key=$value"
+  done < "$file"
 }

@@ -139,12 +139,12 @@ Upload com validação, WebP + thumbnail (`sharp`), biblioteca no admin.
 
 1. Trocar `JWT_SECRET` e senhas
 2. Configurar `CORS_ORIGIN` e `PUBLIC_URL`
-3. `npm run db:migrate` (ou `prisma migrate deploy` no container)
+3. `npm run db:migrate` (ou `prisma migrate deploy` na API)
 4. Não versionar `.env`
 
 **Deploy automático:** [`deploy/DEPLOY.md`](deploy/DEPLOY.md)
 
-O deploy usa Docker + GitHub Actions. O monorepo completo (`apps/api` + `apps/web`) deve estar em `/www` ou `/var/www` no servidor.
+O deploy usa **Apache** (frontend), **PM2** (API) e **Docker** (somente Postgres), com GitHub Actions. O monorepo completo (`apps/api` + `apps/web`) deve estar em `/www` ou `/var/www` no servidor.
 
 ---
 
