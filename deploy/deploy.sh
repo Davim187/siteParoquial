@@ -56,6 +56,22 @@ load_env_file "$ENV_FILE"
 pm2 startOrReload "$APP_DIR/deploy/ecosystem.config.cjs" --update-env
 pm2 save
 
+echo "==> Aguardando API..."
+for attempt in $(seq 1 20); do
+  if curl -fsS http://127.0.0.1:3333/api/health >/dev/null 2>&1; then
+    echo "   API online na porta 3333"
+    break
+  fi
+  if [ "$attempt" -eq 20 ]; then
+    echo "ERRO: API não respondeu após reiniciar o PM2."
+    pm2 logs paroquia-api --lines 50 --nostream 2>/dev/null || true
+    echo "Rode: bash deploy/check-api.sh"
+    exit 1
+  fi
+  echo "   Tentativa ${attempt}/20..."
+  sleep 2
+done
+
 echo "==> Configurando Apache..."
 bash deploy/setup-apache.sh
 
