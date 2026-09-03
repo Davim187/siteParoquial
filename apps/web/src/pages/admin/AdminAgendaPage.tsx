@@ -22,7 +22,7 @@ export function AdminAgendaPage() {
   usePageMeta('Agenda | Admin')
   const { hasPermission } = useAuth()
   const invalidate = useInvalidateQueries()
-  const { data, isLoading, error } = useEventsQuery('todos')
+  const { data, isLoading, error } = useEventsQuery('todos', { admin: true })
   const [editing, setEditing] = useState<(Omit<ParishEvent, 'id'> & { id?: string }) | null>(null)
   const [toDelete, setToDelete] = useState<ParishEvent | null>(null)
 

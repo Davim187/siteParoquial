@@ -161,19 +161,9 @@ export async function deleteAlbumPhoto(albumId: string, photoId: string) {
   await apiRequest(`/api/gallery/albums/${albumId}/photos/${photoId}`, { method: 'DELETE' })
 }
 
-/** @deprecated Mantido para compatibilidade com endpoints legados */
+/** @deprecated Galeria legada removida — use álbuns */
 export async function listGallery() {
-  const albums = await listAlbums({ limit: 40 })
-  return albums.data.flatMap((album) =>
-    (album.photos ?? []).map((photo) => ({
-      id: photo.id,
-      title: photo.title ?? album.title,
-      src: photo.url,
-      alt: photo.title ?? album.title,
-      category: 'eventos' as const,
-      date: album.eventDate,
-    })),
-  )
+  return []
 }
 
 export async function deleteGalleryItem(id: string) {
@@ -181,5 +171,5 @@ export async function deleteGalleryItem(id: string) {
 }
 
 export async function saveGalleryItem(_input: unknown) {
-  throw new Error('Use createAlbum e bulkUploadPhotos para a nova galeria por álbuns.')
+  throw new Error('Use createAlbum e bulkUploadPhotos para a galeria por álbuns.')
 }

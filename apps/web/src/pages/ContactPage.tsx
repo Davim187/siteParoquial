@@ -14,21 +14,28 @@ export function ContactPage() {
   const { data, isLoading, error } = useSettingsQuery()
   const [sent, setSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
+    setSubmitError(null)
     setSubmitting(true)
-    await submitContactMessage({
-      name: String(form.get('name') ?? ''),
-      email: String(form.get('email') ?? ''),
-      phone: String(form.get('phone') ?? ''),
-      subject: String(form.get('subject') ?? ''),
-      message: String(form.get('message') ?? ''),
-    })
-    setSubmitting(false)
-    setSent(true)
-    event.currentTarget.reset()
+    try {
+      await submitContactMessage({
+        name: String(form.get('name') ?? ''),
+        email: String(form.get('email') ?? ''),
+        phone: String(form.get('phone') ?? ''),
+        subject: String(form.get('subject') ?? ''),
+        message: String(form.get('message') ?? ''),
+      })
+      setSent(true)
+      event.currentTarget.reset()
+    } catch (err) {
+      setSubmitError(getErrorMessage(err, 'Não foi possível enviar a mensagem. Tente novamente.'))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -69,6 +76,11 @@ export function ContactPage() {
           {sent ? (
             <p className="rounded-xl bg-marian/10 p-4 text-sm text-marian" role="status">
               Mensagem enviada com sucesso. A secretaria responderá pelos canais oficiais.
+            </p>
+          ) : null}
+          {submitError ? (
+            <p className="rounded-xl bg-red-50 p-4 text-sm text-red-800" role="alert">
+              {submitError}
             </p>
           ) : null}
           <Field label="Nome" name="name" required />

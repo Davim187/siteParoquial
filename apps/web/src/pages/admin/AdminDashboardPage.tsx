@@ -8,7 +8,7 @@ import {
   Plus,
   Users,
 } from 'lucide-react'
-import { Loading, ErrorState } from '@/components/ui/Feedback'
+import { ErrorState, Skeleton } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { useAuth } from '@/contexts/AuthContext'
@@ -21,7 +21,18 @@ export function AdminDashboardPage() {
   const { user, hasPermission } = useAuth()
   const { data, isLoading, error } = useDashboardQuery()
 
-  if (isLoading && !data) return <Loading />
+  if (isLoading && !data) {
+    return (
+      <div className="animate-fade-in space-y-8">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-28 rounded-2xl bg-slate-100" />
+          ))}
+        </div>
+        <Skeleton className="h-64 rounded-2xl bg-slate-100" />
+      </div>
+    )
+  }
   if (error || !data) return <ErrorState message={error instanceof Error ? error.message : 'Erro'} />
 
   const cards = [

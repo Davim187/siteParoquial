@@ -1,29 +1,46 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import type { GalleryCategory, PersonType, Prisma } from '@prisma/client'
+import type { PersonType, Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma.js'
 import { AppError, paginated, parsePagination, slugify } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
 import { authorize, authenticate } from '../../middlewares/authorize.js'
-import { toPublicMediaPath } from '../../lib/media-url.js'
+import { hasPermission, resolveAdminListView, tryOptionalAuth } from '../../lib/access.js'
+import { publicSettingsSelect, updateSettingsSchema } from './settings.schema.js'
+import { getDashboardStats, getNotifications, withImage } from './content.service.js'
+import { getHomeBootstrap } from './home.service.js'
 
-function withImage(item: any) {
-  const imageUrl = toPublicMediaPath(item.image?.url ?? item.photo?.url ?? null)
-  const imageThumbUrl = toPublicMediaPath(item.image?.thumbnailUrl ?? item.photo?.thumbnailUrl ?? null)
-  return {
-    ...item,
-    imageUrl,
-    imageThumbUrl,
-  }
+const FORM_RATE_LIMIT = {
+  config: {
+    rateLimit: {
+      max: 15,
+      timeWindow: '1 minute',
+    },
+  },
 }
 
 export async function contentRoutes(app: FastifyInstance) {
+  app.get('/home', async (_request, reply) => {
+    return reply.send(await getHomeBootstrap())
+  })
+
   // Pastorais
   app.get('/pastorals', async (request, reply) => {
     const query = request.query as Record<string, unknown>
-    const where: Prisma.PastoralWhereInput = query.all === 'true' ? {} : { active: true }
-    const rows = await prisma.pastoral.findMany({ where, include: { image: true }, orderBy: { name: 'asc' } })
-    return reply.send({ data: rows.map(withImage) })
+    const { page, limit, skip } = parsePagination(query)
+    const adminView = await resolveAdminListView(request, 'PASTORALS_MANAGE')
+    const where: Prisma.PastoralWhereInput = adminView ? {} : { active: true }
+    const [total, rows] = await Promise.all([
+      prisma.pastoral.count({ where }),
+      prisma.pastoral.findMany({
+        where,
+        include: { image: true },
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ])
+    return reply.send(paginated(rows.map(withImage), total, page, limit))
   })
   app.get('/pastorals/:slug', async (request, reply) => {
     const { slug } = request.params as { slug: string }
@@ -126,14 +143,21 @@ export async function contentRoutes(app: FastifyInstance) {
   // Pessoas
   app.get('/people', async (request, reply) => {
     const query = request.query as Record<string, unknown>
-    const where: Prisma.PersonWhereInput = query.all === 'true' ? {} : { active: true }
+    const { page, limit, skip } = parsePagination(query)
+    const adminView = await resolveAdminListView(request, 'PEOPLE_MANAGE')
+    const where: Prisma.PersonWhereInput = adminView ? {} : { active: true }
     if (query.type) where.type = String(query.type) as PersonType
-    const rows = await prisma.person.findMany({
-      where,
-      include: { photo: true },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    })
-    return reply.send({ data: rows.map(withImage) })
+    const [total, rows] = await Promise.all([
+      prisma.person.count({ where }),
+      prisma.person.findMany({
+        where,
+        include: { photo: true },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        skip,
+        take: limit,
+      }),
+    ])
+    return reply.send(paginated(rows.map(withImage), total, page, limit))
   })
   app.get('/people/:slug', async (request, reply) => {
     const { slug } = request.params as { slug: string }
@@ -195,69 +219,17 @@ export async function contentRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
-  // Galeria
-  app.get('/gallery', async (request, reply) => {
-    const query = request.query as Record<string, unknown>
-    const { page, limit, skip } = parsePagination(query)
-    const where: Prisma.GalleryItemWhereInput = { active: true }
-    if (query.category) where.category = String(query.category) as GalleryCategory
-    const [total, rows] = await Promise.all([
-      prisma.galleryItem.count({ where }),
-      prisma.galleryItem.findMany({
-        where,
-        include: { media: true },
-        orderBy: { date: 'desc' },
-        skip,
-        take: limit,
-      }),
-    ])
-    return reply.send(
-      paginated(
-        rows.map((item) => ({
-          ...item,
-          src: item.media.url,
-          thumb: item.media.thumbnailUrl ?? item.media.url,
-        })),
-        total,
-        page,
-        limit,
-      ),
-    )
-  })
-  app.post('/gallery', { preHandler: [authorize('GALLERY_MANAGE')] }, async (request, reply) => {
-    const data = z
-      .object({
-        title: z.string().min(2),
-        alt: z.string().min(2),
-        category: z.enum([
-          'MISSAS',
-          'EVENTOS',
-          'FESTA_PADROEIRA',
-          'SEMANA_SANTA',
-          'CATEQUESE',
-          'JUVENTUDE',
-          'PASTORAIS',
-          'ACOES_SOCIAIS',
-        ]),
-        mediaId: z.string(),
-        date: z.string().datetime().optional(),
-        active: z.boolean().default(true),
-      })
-      .parse(request.body)
-    const item = await prisma.galleryItem.create({
-      data: { ...data, date: data.date ? new Date(data.date) : new Date() },
-      include: { media: true },
-    })
-    return reply.status(201).send(item)
-  })
+  // Galeria legada (GalleryItem) — mantida só para limpeza; use /gallery/albums
   app.delete('/gallery/:id', { preHandler: [authorize('GALLERY_MANAGE')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    await prisma.galleryItem.delete({ where: { id } })
+    await prisma.galleryItem.delete({ where: { id } }).catch(() => {
+      throw new AppError(404, 'Item de galeria não encontrado.')
+    })
     return reply.send({ ok: true })
   })
 
   // Orações e contato
-  app.post('/prayers', async (request, reply) => {
+  app.post('/prayers', FORM_RATE_LIMIT, async (request, reply) => {
     const data = z
       .object({
         name: z.string().min(2),
@@ -293,7 +265,7 @@ export async function contentRoutes(app: FastifyInstance) {
     return reply.send(await prisma.prayerRequest.update({ where: { id }, data }))
   })
 
-  app.post('/contact', async (request, reply) => {
+  app.post('/contact', FORM_RATE_LIMIT, async (request, reply) => {
     const data = z
       .object({
         name: z.string().min(2),
@@ -321,124 +293,28 @@ export async function contentRoutes(app: FastifyInstance) {
   })
 
   // Configurações
-  app.get('/settings', async (_request, reply) => {
-    const settings = await prisma.parishSettings.findUnique({ where: { id: 'default' } })
+  app.get('/settings', async (request, reply) => {
+    const authed = await tryOptionalAuth(request)
+    const adminView = authed && hasPermission(request, 'SETTINGS_MANAGE')
+    const settings = await prisma.parishSettings.findUnique({
+      where: { id: 'default' },
+      ...(adminView ? {} : { select: publicSettingsSelect }),
+    })
+    if (!settings) throw new AppError(404, 'Configurações não encontradas.')
     return reply.send(settings)
   })
   app.put('/settings', { preHandler: [authorize('SETTINGS_MANAGE')] }, async (request, reply) => {
-    const data = z.record(z.string(), z.any()).parse(request.body)
+    const data = updateSettingsSchema.parse(request.body)
     const settings = await prisma.parishSettings.update({ where: { id: 'default' }, data })
     await logActivity({ userId: request.authUser!.id, action: 'update', entity: 'settings', entityId: 'default' })
     return reply.send(settings)
   })
 
-  // Dashboard
   app.get('/dashboard', { preHandler: [authorize('DASHBOARD_VIEW')] }, async (_request, reply) => {
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
-    const [
-      publishedNews,
-      activeNotices,
-      eventsThisMonth,
-      masses,
-      prayers,
-      galleryPhotos,
-      galleryAlbums,
-      recentNews,
-      upcomingEvents,
-      activities,
-      pastorals,
-    ] = await Promise.all([
-      prisma.news.count({ where: { status: 'PUBLISHED' } }),
-      prisma.notice.count({
-        where: {
-          active: true,
-          startsAt: { lte: now },
-          OR: [{ endsAt: null }, { endsAt: { gte: now } }],
-        },
-      }),
-      prisma.event.count({ where: { startsAt: { gte: monthStart, lte: monthEnd }, active: true } }),
-      prisma.massSchedule.count({ where: { active: true } }),
-      prisma.prayerRequest.count({ where: { status: 'NEW' } }),
-      prisma.galleryItem.count({ where: { active: true } }),
-      prisma.galleryAlbum.count({ where: { active: true } }),
-      prisma.news.findMany({ orderBy: { createdAt: 'desc' }, take: 5, include: { category: true } }),
-      prisma.event.findMany({
-        where: { active: true, startsAt: { gte: now } },
-        orderBy: { startsAt: 'asc' },
-        take: 5,
-      }),
-      prisma.activityLog.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-        include: { user: { select: { name: true } } },
-      }),
-      prisma.pastoral.count({ where: { active: true } }),
-    ])
-    return reply.send({
-      cards: {
-        publishedNews,
-        activeNotices,
-        eventsThisMonth,
-        upcomingMasses: masses,
-        prayerRequests: prayers,
-        galleryPhotos,
-        galleryAlbums,
-        pastorals,
-      },
-      recentNews,
-      upcomingEventsList: upcomingEvents,
-      upcomingEvents: eventsThisMonth,
-      activities,
-      pastorals,
-      publishedNews,
-      activeNotices,
-      prayerRequests: prayers,
-      galleryPhotos,
-      galleryAlbums,
-      upcomingMasses: masses,
-    })
+    return reply.send(await getDashboardStats())
   })
 
   app.get('/notifications', { preHandler: [authenticate()] }, async (_request, reply) => {
-    const [activities, newPrayers, newMessages] = await Promise.all([
-      prisma.activityLog.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-        include: { user: { select: { name: true } } },
-      }),
-      prisma.prayerRequest.findMany({
-        where: { status: 'NEW' },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      }),
-      prisma.contactMessage.findMany({
-        where: { status: 'NEW' },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      }),
-    ])
-
-    const alerts = [
-      ...newPrayers.map((item) => ({
-        id: `prayer-${item.id}`,
-        type: 'prayer' as const,
-        title: item.anonymous ? 'Novo pedido de oração anônimo' : `Novo pedido de oração de ${item.name}`,
-        createdAt: item.createdAt,
-        href: '/admin/oracoes',
-      })),
-      ...newMessages.map((item) => ({
-        id: `message-${item.id}`,
-        type: 'message' as const,
-        title: `Nova mensagem: ${item.subject}`,
-        createdAt: item.createdAt,
-        href: '/admin/mensagens',
-      })),
-    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-
-    return reply.send({ data: { activities, alerts } })
+    return reply.send({ data: await getNotifications() })
   })
-
-  // Perfis e permissões em users.routes.ts
 }

@@ -12,6 +12,8 @@ import { listPeople } from '@/services/parishService'
 import { listPrayerRequests } from '@/services/prayerService'
 import { listMessages } from '@/services/contactService'
 import { listAlbums } from '@/services/galleryService'
+import { apiRequest } from '@/lib/api-client'
+import { listMedia } from '@/services/mediaService'
 
 const prefetchers: Record<string, () => void> = {
   '/admin': () => {
@@ -42,8 +44,8 @@ const prefetchers: Record<string, () => void> = {
   },
   '/admin/agenda': () => {
     void queryClient.prefetchQuery({
-      queryKey: queryKeys.events.list('todos'),
-      queryFn: () => listEvents('todos'),
+      queryKey: queryKeys.events.list('todos', { admin: true }),
+      queryFn: () => listEvents('todos', { admin: true }),
       staleTime: STALE_TIME.events,
     })
   },
@@ -78,8 +80,8 @@ const prefetchers: Record<string, () => void> = {
   },
   '/admin/pessoas': () => {
     void queryClient.prefetchQuery({
-      queryKey: queryKeys.people.list,
-      queryFn: listPeople,
+      queryKey: queryKeys.people.list({ includeInactive: true }),
+      queryFn: () => listPeople({ includeInactive: true }),
       staleTime: STALE_TIME.people,
     })
   },
@@ -94,6 +96,63 @@ const prefetchers: Record<string, () => void> = {
     void queryClient.prefetchQuery({
       queryKey: queryKeys.messages,
       queryFn: listMessages,
+      staleTime: STALE_TIME.admin,
+    })
+  },
+  '/admin/configuracoes': () => {
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.settings,
+      queryFn: () => import('@/services/parishService').then((m) => m.getAdminSettings()),
+      staleTime: STALE_TIME.settings,
+    })
+  },
+  '/admin/festa': () => {
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.feast,
+      queryFn: () => import('@/services/parishService').then((m) => m.getFeast()),
+      staleTime: STALE_TIME.settings,
+    })
+  },
+  '/admin/midia': () => {
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.media.list({ search: '' }),
+      queryFn: async () => (await listMedia()).data,
+      staleTime: STALE_TIME.admin,
+    })
+  },
+  '/admin/usuarios': () => {
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.users.list,
+      queryFn: async () => (await apiRequest<{ data: unknown[] }>('/api/users?limit=100')).data,
+      staleTime: STALE_TIME.admin,
+    })
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.roles.list,
+      queryFn: async () => (await apiRequest<{ data: unknown[] }>('/api/roles')).data,
+      staleTime: STALE_TIME.admin,
+    })
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.permissions,
+      queryFn: async () => (await apiRequest<{ data: unknown[] }>('/api/permissions')).data,
+      staleTime: STALE_TIME.admin,
+    })
+  },
+  '/admin/perfis': () => {
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.roles.list,
+      queryFn: async () => (await apiRequest<{ data: unknown[] }>('/api/roles')).data,
+      staleTime: STALE_TIME.admin,
+    })
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.permissions,
+      queryFn: async () => (await apiRequest<{ data: unknown[] }>('/api/permissions')).data,
+      staleTime: STALE_TIME.admin,
+    })
+  },
+  '/admin/perfil': () => {
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.profile,
+      queryFn: async () => (await apiRequest<{ data: unknown }>('/api/me/profile')).data,
       staleTime: STALE_TIME.admin,
     })
   },

@@ -10,6 +10,20 @@ import { listMasses, listUpcomingMasses } from '@/services/massesService'
 import { listPastorals, getPastoralBySlug } from '@/services/pastoralService'
 import { listSacraments, getSacramentBySlug } from '@/services/sacramentService'
 import { getPersonBySlug } from '@/services/parishService'
+import { getHomeBootstrap, readHomeCache, type HomeBootstrap } from '@/services/homeService'
+
+export function useHomeQuery() {
+  const cached = typeof window === 'undefined' ? null : readHomeCache()
+  return useQuery<HomeBootstrap>({
+    queryKey: queryKeys.home,
+    queryFn: getHomeBootstrap,
+    staleTime: STALE_TIME.home,
+    gcTime: GC_TIME.long,
+    initialData: cached ?? undefined,
+    initialDataUpdatedAt: cached ? Date.now() - 30_000 : undefined,
+    placeholderData: (previous) => previous ?? cached ?? undefined,
+  })
+}
 
 export function useSettingsQuery() {
   return useQuery<ParishSettings>({
@@ -70,11 +84,11 @@ export function useFeaturedNoticesQuery() {
   })
 }
 
-export function useEventsQuery(category?: EventCategory | 'todos') {
+export function useEventsQuery(category?: EventCategory | 'todos', options?: { admin?: boolean }) {
   return useQuery<ParishEvent[]>({
-    queryKey: queryKeys.events.list(category),
-    queryFn: () => listEvents(category),
-    staleTime: STALE_TIME.events,
+    queryKey: queryKeys.events.list(category, options),
+    queryFn: () => listEvents(category, options),
+    staleTime: options?.admin ? STALE_TIME.admin : STALE_TIME.events,
     placeholderData: (previous) => previous,
   })
 }
@@ -143,10 +157,10 @@ export function useSacramentDetailQuery(slug: string) {
   })
 }
 
-export function usePeopleQuery() {
+export function usePeopleQuery(params?: { includeInactive?: boolean }) {
   return useQuery<Person[]>({
-    queryKey: queryKeys.people.list,
-    queryFn: listPeople,
+    queryKey: queryKeys.people.list(params),
+    queryFn: () => listPeople(params),
     staleTime: STALE_TIME.people,
     placeholderData: (previous) => previous,
   })

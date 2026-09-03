@@ -31,6 +31,8 @@ import { BrandMark } from '@/components/layout/Logo'
 import { getNotifications, type AdminActivityItem, type AdminNotificationAlert } from '@/services/parishService'
 import { prefetchAdminRoute } from '@/lib/admin-prefetch'
 import { formatDateTime } from '@/utils/dates'
+import { ADMIN_ROUTE_PERMISSIONS, permissionsForAdminPath } from '@/constants/admin-routes'
+import { ErrorState } from '@/components/ui/Feedback'
 
 const STORAGE_KEY = 'admin_sidebar_collapsed'
 
@@ -123,7 +125,7 @@ function formatActivityLabel(item: AdminActivityItem) {
 }
 
 export function AdminLayout() {
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, logout, hasAnyPermission } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -181,7 +183,38 @@ export function AdminLayout() {
     void loadNotifications()
     prefetchAdminRoute(location.pathname)
     prefetchAdminRoute('/admin')
-  }, [isAuthenticated, location.pathname])
+
+    const warmRoutes = [
+      '/admin/noticias',
+      '/admin/avisos',
+      '/admin/agenda',
+      '/admin/missas',
+      '/admin/pastorais',
+      '/admin/sacramentos',
+      '/admin/galeria',
+      '/admin/pessoas',
+      '/admin/oracoes',
+      '/admin/mensagens',
+      '/admin/midia',
+      '/admin/usuarios',
+      '/admin/perfis',
+      '/admin/configuracoes',
+      '/admin/festa',
+      '/admin/perfil',
+    ]
+    const warm = () => {
+      for (const route of warmRoutes) {
+        const perms = ADMIN_ROUTE_PERMISSIONS[route]
+        if (!perms || hasAnyPermission(...perms)) prefetchAdminRoute(route)
+      }
+    }
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(warm, { timeout: 3000 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const timer = window.setTimeout(warm, 1500)
+    return () => window.clearTimeout(timer)
+  }, [isAuthenticated, location.pathname, hasAnyPermission])
 
   const initials = useMemo(() => {
     const parts = (user?.name ?? 'A').trim().split(/\s+/)
@@ -189,6 +222,16 @@ export function AdminLayout() {
   }, [user?.name])
 
   if (!isAuthenticated) return <Navigate to="/admin/login" replace />
+
+  const routePermissions = permissionsForAdminPath(location.pathname)
+  const accessDenied =
+    routePermissions !== undefined && !hasAnyPermission(...routePermissions)
+
+  function canAccessAdminPath(path: string) {
+    const perms = ADMIN_ROUTE_PERMISSIONS[path]
+    if (!perms) return true
+    return hasAnyPermission(...perms)
+  }
 
   const roleLabel =
     user?.role === 'ADMIN'
@@ -221,7 +264,7 @@ export function AdminLayout() {
               <div className="mx-auto mb-2 h-px w-6 bg-white/10" aria-hidden />
             ) : null}
             <div className={cn('space-y-1', compact && 'flex flex-col items-center')}>
-              {group.items.map((item) => {
+              {group.items.filter((item) => canAccessAdminPath(item.to)).map((item) => {
                 const Icon = item.icon
                 const link = (
                   <NavLink
@@ -496,7 +539,11 @@ export function AdminLayout() {
         </header>
 
         <main className="p-4 md:p-6 lg:p-8">
-          <Outlet />
+          {accessDenied ? (
+            <ErrorState message="Você não possui permissão para acessar esta página." />
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </div>

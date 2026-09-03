@@ -5,6 +5,7 @@ import { prisma } from '../../lib/prisma.js'
 import { AppError, paginated, parsePagination, slugify } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
 import { authorize } from '../../middlewares/authorize.js'
+import { resolveAdminListView } from '../../lib/access.js'
 import { serializeMedia, toPublicMediaPath } from '../../lib/media-url.js'
 import { createStorageService } from '../../storage/index.js'
 import {
@@ -118,8 +119,8 @@ export async function galleryRoutes(app: FastifyInstance) {
   app.get('/gallery/albums', async (request, reply) => {
     const query = request.query as Record<string, unknown>
     const { page, limit, skip } = parsePagination(query)
-    const where: Prisma.GalleryAlbumWhereInput =
-      query.all === 'true' ? {} : { active: true }
+    const adminView = await resolveAdminListView(request, 'GALLERY_MANAGE')
+    const where: Prisma.GalleryAlbumWhereInput = adminView ? {} : { active: true }
 
     const [total, rows] = await Promise.all([
       prisma.galleryAlbum.count({ where }),
@@ -137,8 +138,7 @@ export async function galleryRoutes(app: FastifyInstance) {
 
   app.get('/gallery/albums/:slug', async (request, reply) => {
     const { slug } = request.params as { slug: string }
-    const query = request.query as Record<string, unknown>
-    const adminView = query.all === 'true'
+    const adminView = await resolveAdminListView(request, 'GALLERY_MANAGE')
 
     const album = await prisma.galleryAlbum.findUnique({
       where: { slug },

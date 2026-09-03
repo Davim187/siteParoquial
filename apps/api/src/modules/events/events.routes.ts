@@ -5,6 +5,7 @@ import { prisma } from '../../lib/prisma.js'
 import { AppError, paginated, parsePagination } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
 import { authorize } from '../../middlewares/authorize.js'
+import { isPublicContentView } from '../../lib/access.js'
 
 const eventSchema = z.object({
   title: z.string().min(3),
@@ -29,7 +30,8 @@ export async function eventsRoutes(app: FastifyInstance) {
     const query = request.query as Record<string, unknown>
     const { page, limit, skip } = parsePagination(query)
     const where: Prisma.EventWhereInput = {}
-    if (query.public === 'true' || !request.headers.authorization) where.active = true
+    const isPublic = await isPublicContentView(request, 'EVENTS_MANAGE')
+    if (isPublic) where.active = true
     if (query.type) where.type = String(query.type) as EventType
     if (query.from || query.to) {
       where.startsAt = {}

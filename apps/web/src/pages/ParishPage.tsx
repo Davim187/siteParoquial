@@ -1,20 +1,40 @@
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionTitle } from '@/components/ui/SectionTitle'
-import { Loading, ErrorState } from '@/components/ui/Feedback'
+import { ErrorState, Skeleton } from '@/components/ui/Feedback'
 import { useSettingsQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import { images } from '@/data/mocks'
+import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
 
 export function ParishPage() {
-  usePageMeta('Nossa Paróquia | Paróquia Nossa Senhora das Graças')
+  usePageMeta(
+    'Nossa Paróquia | Paróquia Nossa Senhora das Graças',
+    'Conheça a história, a missão e a padroeira da Paróquia Nossa Senhora das Graças.',
+  )
   const { data, isLoading, error } = useSettingsQuery()
 
-  if (isLoading && !data) return <Loading />
-  if (error || !data) return <ErrorState message={getErrorMessage(error, 'Erro ao carregar')} />
+  if (error && !data) return <ErrorState message={getErrorMessage(error, 'Erro ao carregar')} />
+
+  if (isLoading && !data) {
+    return (
+      <div className="animate-fade-in">
+        <PageHeader eyebrow="Institucional" title="Nossa Paróquia" description="Carregando informações..." />
+        <div className="mx-auto max-w-6xl space-y-10 px-4 py-14 md:px-6">
+          <Skeleton className="h-40" />
+          <div className="grid gap-6 md:grid-cols-2">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
+          </div>
+          <Skeleton className="h-72" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) return <ErrorState message="Configurações não encontradas." />
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <PageHeader
         eyebrow="Institucional"
         title="Nossa Paróquia"
@@ -37,34 +57,19 @@ export function ParishPage() {
         </section>
         <section id="padroeira" className="grid items-center gap-8 lg:grid-cols-2">
           <img
-            src={data.patroness.image || images.mary}
-            alt="Imagem de Nossa Senhora das Graças — demonstrativa"
-            className="h-full max-h-[520px] w-full rounded-3xl object-cover shadow-lg"
+            src={data.patroness.image || PLACEHOLDER_IMAGES.mary}
+            alt={data.patroness.name}
+            className="aspect-[4/5] w-full rounded-3xl object-cover shadow-lg"
             loading="lazy"
           />
           <div>
             <SectionTitle eyebrow="Padroeira" title={data.patroness.name} />
-            <div className="mt-6 space-y-5 text-sm leading-relaxed text-muted md:text-base">
-              <div>
-                <h3 className="font-serif text-xl text-navy">História</h3>
-                <p className="mt-2">{data.patroness.history}</p>
-              </div>
-              <div>
-                <h3 className="font-serif text-xl text-navy">Devoção</h3>
-                <p className="mt-2">{data.patroness.devotion}</p>
-              </div>
-              <div>
-                <h3 className="font-serif text-xl text-navy">Medalha milagrosa</h3>
-                <p className="mt-2">{data.patroness.medal}</p>
-              </div>
-              <div>
-                <h3 className="font-serif text-xl text-navy">Festa da padroeira</h3>
-                <p className="mt-2">{data.patroness.feast}</p>
-              </div>
-              <div>
-                <h3 className="font-serif text-xl text-navy">Tradições</h3>
-                <p className="mt-2">{data.patroness.traditions}</p>
-              </div>
+            <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
+              <p>{data.patroness.history}</p>
+              <p>{data.patroness.devotion}</p>
+              <p>{data.patroness.medal}</p>
+              <p>{data.patroness.feast}</p>
+              <p>{data.patroness.traditions}</p>
             </div>
           </div>
         </section>

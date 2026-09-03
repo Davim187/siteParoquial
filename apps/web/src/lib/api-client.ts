@@ -45,8 +45,8 @@ async function refreshAccessToken() {
       clearTokens()
       return null
     }
-    const data = (await response.json()) as { accessToken: string }
-    setTokens(data.accessToken)
+    const data = (await response.json()) as { accessToken: string; refreshToken?: string }
+    setTokens(data.accessToken, data.refreshToken)
     return data.accessToken
   } catch {
     return null

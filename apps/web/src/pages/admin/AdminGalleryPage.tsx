@@ -13,6 +13,7 @@ import { MediaPicker } from '@/components/admin/MediaPicker'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { SkeletonGrid } from '@/components/ui/Feedback'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useToast } from '@/components/ui/Toast'
 import { usePageMeta } from '@/hooks/usePageMeta'
@@ -141,7 +142,7 @@ export function AdminGalleryPage() {
         setEditing(emptyForm())
         setFormErrors({})
       }}
-      loading={albumsQuery.isLoading}
+      loading={albumsQuery.isLoading && !albumsQuery.data}
       error={albumsQuery.error ? getErrorMessage(albumsQuery.error) : null}
     >
       <AdminTable
@@ -396,7 +397,9 @@ function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onCl
               }}
             />
 
-            {albumQuery.isLoading ? <p className="text-sm text-muted">Carregando fotos...</p> : null}
+            {albumQuery.isLoading && !albumQuery.data ? (
+              <SkeletonGrid count={8} className="aspect-square h-auto" cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4" />
+            ) : null}
 
             {photos.length || showPlaceholders ? (
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">

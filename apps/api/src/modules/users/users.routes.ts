@@ -3,7 +3,7 @@ import argon2 from 'argon2'
 import { z } from 'zod'
 import type { PermissionCode } from '@prisma/client'
 import { prisma } from '../../lib/prisma.js'
-import { AppError } from '../../lib/http.js'
+import { AppError, paginated, parsePagination } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
 import { authorize, loadAuthUser } from '../../middlewares/authorize.js'
 
@@ -280,15 +280,21 @@ export async function usersRoutes(app: FastifyInstance) {
     return reply.send({ data: permissions })
   })
 
-  app.get('/users', { preHandler: [authorize('USERS_MANAGE')] }, async (_request, reply) => {
-    const users = await prisma.user.findMany({
-      include: {
-        role: true,
-        permissionOverrides: { include: { permission: true } },
-      },
-      orderBy: { name: 'asc' },
-    })
-    return reply.send({ data: users.map(serializeUser) })
+  app.get('/users', { preHandler: [authorize('USERS_MANAGE')] }, async (request, reply) => {
+    const { page, limit, skip } = parsePagination(request.query as Record<string, unknown>)
+    const [total, users] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.findMany({
+        include: {
+          role: true,
+          permissionOverrides: { include: { permission: true } },
+        },
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ])
+    return reply.send(paginated(users.map(serializeUser), total, page, limit))
   })
 
   app.get('/users/:id', { preHandler: [authorize('USERS_MANAGE')] }, async (request, reply) => {

@@ -4,8 +4,9 @@ import { prisma } from '../../lib/prisma.js'
 import { paginated, parsePagination } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
 import { authorize } from '../../middlewares/authorize.js'
+import { isPublicContentView } from '../../lib/access.js'
 
-const WEEKDAYS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+import { WEEKDAYS, decorateMasses, toDbDate } from './masses.helpers.js'
 
 const updateMassSchema = z.object({
   weekday: z.number().int().min(0).max(6).optional().nullable(),
@@ -36,83 +37,12 @@ const massSchema = updateMassSchema
     }
   })
 
-type MassRow = {
-  id: string
-  weekday: number | null
-  date: Date | null
-  time: string
-  type: string
-  location: string
-  notes: string | null
-  active: boolean
-}
-
-function parseLocalDate(date: string, time: string) {
-  const [year, month, day] = date.split('-').map(Number)
-  const [hour, minute] = time.split(':').map(Number)
-  return new Date(year, (month ?? 1) - 1, day ?? 1, hour ?? 0, minute ?? 0, 0, 0)
-}
-
-function formatLocalDate(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function nextOccurrence(weekday: number, time: string, from = new Date()) {
-  const [h, m] = time.split(':').map(Number)
-  const candidate = new Date(from)
-  candidate.setSeconds(0, 0)
-  candidate.setHours(h ?? 0, m ?? 0, 0, 0)
-  const delta = (weekday - candidate.getDay() + 7) % 7
-  candidate.setDate(candidate.getDate() + delta)
-  if (candidate < from) candidate.setDate(candidate.getDate() + 7)
-  return candidate
-}
-
-function getOccursAt(row: MassRow, from = new Date()) {
-  if (row.date) return parseLocalDate(formatLocalDate(row.date), row.time)
-  if (row.weekday !== null && row.weekday !== undefined) return nextOccurrence(row.weekday, row.time, from)
-  return from
-}
-
-function decorate(schedules: MassRow[], from = new Date()) {
-  const now = from
-  const upcoming = schedules
-    .filter((s) => s.active)
-    .map((s) => ({ ...s, occursAt: getOccursAt(s, now) }))
-    .sort((a, b) => a.occursAt.getTime() - b.occursAt.getTime())
-  const nextId = upcoming.find((item) => item.occursAt >= now)?.id
-  const tomorrow = new Date(now)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  return upcoming.map((item) => ({
-    ...item,
-    weekdayLabel:
-      item.weekday !== null && item.weekday !== undefined
-        ? WEEKDAYS[item.weekday]
-        : WEEKDAYS[item.occursAt.getDay()],
-    date: formatLocalDate(item.occursAt),
-    isToday: item.occursAt.toDateString() === now.toDateString(),
-    isTomorrow: item.occursAt.toDateString() === tomorrow.toDateString(),
-    isNext: item.id === nextId,
-    recurring: !item.date,
-  }))
-}
-
-function toDbDate(date?: string | null) {
-  if (!date) return null
-  const [year, month, day] = date.split('-').map(Number)
-  return new Date(year, (month ?? 1) - 1, day ?? 1, 12, 0, 0, 0)
-}
-
 export async function massesRoutes(app: FastifyInstance) {
   app.get('/masses', async (request, reply) => {
     const query = request.query as Record<string, unknown>
     const { page, limit, skip } = parsePagination(query)
-    const where: { active?: boolean; date?: { gte?: Date; lt?: Date } } =
-      query.public === 'false' ? {} : { active: true }
+    const isPublic = await isPublicContentView(request, 'MASSES_MANAGE')
+    const where: { active?: boolean; date?: { gte?: Date; lt?: Date } } = isPublic ? { active: true } : {}
 
     if (query.month && typeof query.month === 'string') {
       const [year, month] = query.month.split('-').map(Number)
@@ -124,19 +54,18 @@ export async function massesRoutes(app: FastifyInstance) {
       }
     }
 
-    const [total, rows] = await Promise.all([
-      prisma.massSchedule.count({ where }),
-      prisma.massSchedule.findMany({
-        where,
-        orderBy: [{ date: 'asc' }, { weekday: 'asc' }, { time: 'asc' }],
-        skip,
-        take: limit,
-      }),
-    ])
+    const rows = await prisma.massSchedule.findMany({
+      where,
+      orderBy: [{ date: 'asc' }, { weekday: 'asc' }, { time: 'asc' }],
+    })
 
-    const decorated = decorate(rows)
-    const sorted = query.month ? decorated : decorated.filter((item) => item.recurring || item.occursAt >= new Date())
-    return reply.send(paginated(sorted, total, page, limit))
+    const decorated = decorateMasses(rows)
+    const sorted = query.month
+      ? decorated
+      : decorated.filter((item) => item.recurring || item.occursAt >= new Date())
+    const total = sorted.length
+    const pageItems = sorted.slice(skip, skip + limit)
+    return reply.send(paginated(pageItems, total, page, limit))
   })
 
   app.get('/masses/upcoming', async (request, reply) => {
@@ -144,7 +73,7 @@ export async function massesRoutes(app: FastifyInstance) {
     const rows = await prisma.massSchedule.findMany({ where: { active: true } })
     const now = new Date()
     return reply.send({
-      data: decorate(rows)
+      data: decorateMasses(rows)
         .filter((item) => item.occursAt >= now)
         .slice(0, limit),
     })

@@ -1,4 +1,5 @@
 import { apiRequest, mediaUrl } from '@/lib/api-client'
+import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
 import type { NewsArticle } from '@/types'
 
 type ApiNews = {
@@ -37,7 +38,7 @@ function mapNews(item: ApiNews): NewsArticle & { categoryId?: string | null; cov
     content: item.content ?? '',
     author: item.authorName ?? '[EQUIPE DE COMUNICAÇÃO]',
     date: (item.publishedAt ?? item.createdAt).slice(0, 10),
-    image: mediaUrl(item.coverUrl) || 'https://images.unsplash.com/photo-1519491050282-cf00c82424b4?auto=format&fit=crop&w=1200&q=80',
+    image: mediaUrl(item.coverUrl) || PLACEHOLDER_IMAGES.news,
     category: item.categoryName ?? 'Comunidade',
     categoryId: item.categoryId ?? null,
     coverMediaId: item.coverMediaId ?? null,

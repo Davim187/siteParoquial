@@ -6,6 +6,7 @@ import { logActivity } from '../../lib/activity.js'
 import { createStorageService } from '../../storage/index.js'
 import { authorize, authorizeAny } from '../../middlewares/authorize.js'
 import { serializeMedia } from '../../lib/media-url.js'
+import { sanitizeUploadFolder } from '../../lib/upload-folders.js'
 
 const storage = createStorageService()
 
@@ -29,7 +30,8 @@ export async function mediaRoutes(app: FastifyInstance) {
     const file = await request.file()
     if (!file) throw new AppError(400, 'Nenhuma imagem enviada.')
     const buffer = await file.toBuffer()
-    const folder = (request.query as { folder?: string }).folder ?? 'general'
+    const rawFolder = (request.query as { folder?: string }).folder ?? 'general'
+    const folder = sanitizeUploadFolder(rawFolder)
     try {
       const stored = await storage.upload(buffer, file.filename, file.mimetype, folder)
       const media = await prisma.media.create({
@@ -60,8 +62,44 @@ export async function mediaRoutes(app: FastifyInstance) {
 
   app.delete('/media/:id', { preHandler: [authorize('MEDIA_MANAGE')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const media = await prisma.media.findUnique({ where: { id } })
+    const media = await prisma.media.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            newsCovers: true,
+            newsGallery: true,
+            noticeImages: true,
+            eventImages: true,
+            pastoralImages: true,
+            sacramentImages: true,
+            personPhotos: true,
+            galleryItems: true,
+            galleryPhotos: true,
+            albumCovers: true,
+          },
+        },
+      },
+    })
     if (!media) throw new AppError(404, 'Mídia não encontrada.')
+
+    const refs = media._count
+    const inUse =
+      refs.newsCovers +
+        refs.newsGallery +
+        refs.noticeImages +
+        refs.eventImages +
+        refs.pastoralImages +
+        refs.sacramentImages +
+        refs.personPhotos +
+        refs.galleryItems +
+        refs.galleryPhotos +
+        refs.albumCovers >
+      0
+    if (inUse) {
+      throw new AppError(409, 'Esta mídia está em uso e não pode ser excluída.')
+    }
+
     await storage.delete(media.fileName)
     await prisma.media.delete({ where: { id } })
     await logActivity({ userId: request.authUser!.id, action: 'delete', entity: 'media', entityId: id })
@@ -70,8 +108,14 @@ export async function mediaRoutes(app: FastifyInstance) {
 
   app.patch('/media/:id', { preHandler: [authorizeAny('MEDIA_MANAGE')] }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const body = z.object({ folder: z.string().optional(), originalName: z.string().optional() }).parse(request.body)
-    const media = await prisma.media.update({ where: { id }, data: body })
+    const body = z
+      .object({ folder: z.string().optional(), originalName: z.string().optional() })
+      .parse(request.body)
+    const data = {
+      ...body,
+      ...(body.folder !== undefined ? { folder: sanitizeUploadFolder(body.folder) } : {}),
+    }
+    const media = await prisma.media.update({ where: { id }, data })
     return reply.send(serializeMedia(media))
   })
 }

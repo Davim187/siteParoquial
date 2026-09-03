@@ -3,6 +3,7 @@ import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
 import { env } from '../config/env.js'
+import { sanitizeUploadFolder } from '../lib/upload-folders.js'
 import { normalizeUploadImage } from './normalize-image.js'
 import type { StorageService, StoredObject } from './types.js'
 
@@ -18,6 +19,7 @@ export class LocalStorageService implements StorageService {
   }
 
   async upload(buffer: Buffer, originalName: string, mimeType: string, folder = 'general'): Promise<StoredObject> {
+    const safeFolder = sanitizeUploadFolder(folder)
     const maxBytes = env.MAX_UPLOAD_MB * 1024 * 1024
     if (buffer.byteLength > maxBytes) {
       throw new Error(`Arquivo excede o limite de ${env.MAX_UPLOAD_MB}MB.`)
@@ -25,12 +27,12 @@ export class LocalStorageService implements StorageService {
 
     const normalized = await normalizeUploadImage(buffer, mimeType, originalName)
 
-    await mkdir(path.join(this.root, folder), { recursive: true })
+    await mkdir(path.join(this.root, safeFolder), { recursive: true })
 
     const hash = createHash('sha1').update(normalized).digest('hex').slice(0, 8)
     const base = `${Date.now()}-${randomUUID().slice(0, 8)}-${hash}`
-    const fileName = `${folder}/${base}.webp`
-    const thumbName = `${folder}/${base}-thumb.webp`
+    const fileName = `${safeFolder}/${base}.webp`
+    const thumbName = `${safeFolder}/${base}-thumb.webp`
 
     const image = sharp(normalized).rotate()
     const meta = await image.metadata()

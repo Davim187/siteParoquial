@@ -6,6 +6,7 @@ import { type MediaItem } from '@/services/mediaService'
 import { useMediaLibrary } from '@/hooks/useMediaLibrary'
 import { useToast } from '@/components/ui/Toast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { SkeletonGrid } from '@/components/ui/Feedback'
 import { mediaPreviewSrc } from '@/utils/media'
 
 export function MediaPicker({
@@ -80,7 +81,9 @@ export function MediaPicker({
             />
           </label>
         </div>
-        {loading ? <p className="py-10 text-center text-sm text-muted">Carregando biblioteca...</p> : null}
+        {loading ? (
+          <SkeletonGrid count={8} className="aspect-square h-auto" cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4" />
+        ) : null}
         {!loading && items.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted">Nenhuma imagem encontrada. Envie a primeira.</p>
         ) : null}

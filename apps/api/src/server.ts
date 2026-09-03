@@ -54,27 +54,29 @@ async function buildServer() {
     prefix: '/uploads/',
   })
 
-  await app.register(swagger, {
-    openapi: {
-      info: {
-        title: 'API Paróquia Nossa Senhora das Graças',
-        description: 'API oficial do site e do painel administrativo',
-        version: '1.0.0',
-      },
-      components: {
-        securitySchemes: {
-          bearerAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
+  if (env.NODE_ENV !== 'production') {
+    await app.register(swagger, {
+      openapi: {
+        info: {
+          title: 'API Paróquia Nossa Senhora das Graças',
+          description: 'API oficial do site e do painel administrativo',
+          version: '1.0.0',
+        },
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+            },
           },
         },
       },
-    },
-  })
-  await app.register(swaggerUi, {
-    routePrefix: '/api/docs',
-  })
+    })
+    await app.register(swaggerUi, {
+      routePrefix: '/api/docs',
+    })
+  }
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
@@ -137,4 +139,4 @@ async function buildServer() {
 
 const app = await buildServer()
 await app.listen({ port: env.PORT, host: env.HOST })
-app.log.info(`API em http://${env.HOST}:${env.PORT} | docs em /api/docs`)
+app.log.info(`API em http://${env.HOST}:${env.PORT}${env.NODE_ENV !== 'production' ? ' | docs em /api/docs' : ''}`)

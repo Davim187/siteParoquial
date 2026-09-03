@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { Eye, Pencil, ShieldPlus, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -9,7 +9,7 @@ import {
 } from '@/components/admin/AdminUi'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Loading, ErrorState } from '@/components/ui/Feedback'
+import { ErrorState, SkeletonTable } from '@/components/ui/Feedback'
 import { Modal } from '@/components/ui/Modal'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useToast } from '@/components/ui/Toast'
@@ -17,18 +17,13 @@ import { PERMISSION_GROUPS, slugifyRoleCode } from '@/constants/permissions'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { apiRequest } from '@/lib/api-client'
+import {
+  useAdminPermissionsQuery,
+  useAdminRolesQuery,
+  useInvalidateAdminAccessQueries,
+  type AdminRoleRow as RoleRow,
+} from '@/hooks/queries/useAdminAccessQueries'
 import { IconButton } from '@/components/ui/IconButton'
-
-type RoleRow = {
-  id: string
-  code: string
-  name: string
-  description?: string | null
-  permissions: string[]
-  permissionDetails?: Array<{ code: string; name: string }>
-  userCount: number
-  isSystem?: boolean
-}
 
 type PermissionItem = { id: string; code: string; name: string }
 
@@ -43,10 +38,18 @@ export function AdminRolesPage() {
   usePageMeta('Perfis | Admin')
   const toast = useToast()
   const { hasPermission } = useAuth()
-  const [roles, setRoles] = useState<RoleRow[]>([])
-  const [permissions, setPermissions] = useState<PermissionItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const rolesQuery = useAdminRolesQuery()
+  const permissionsQuery = useAdminPermissionsQuery()
+  const invalidateAccess = useInvalidateAdminAccessQueries()
+  const roles = rolesQuery.data ?? []
+  const permissions = (permissionsQuery.data ?? []) as PermissionItem[]
+  const loading = (rolesQuery.isLoading || permissionsQuery.isLoading) && !rolesQuery.data
+  const error =
+    rolesQuery.error instanceof Error
+      ? rolesQuery.error.message
+      : permissionsQuery.error instanceof Error
+        ? permissionsQuery.error.message
+        : null
   const [formOpen, setFormOpen] = useState(false)
   const [viewRole, setViewRole] = useState<RoleRow | null>(null)
   const [editing, setEditing] = useState<RoleRow | null>(null)
@@ -55,25 +58,9 @@ export function AdminRolesPage() {
   const [saving, setSaving] = useState(false)
   const [codeTouched, setCodeTouched] = useState(false)
 
-  async function load() {
-    try {
-      setError(null)
-      const [rolesRes, permsRes] = await Promise.all([
-        apiRequest<{ data: RoleRow[] }>('/api/roles'),
-        apiRequest<{ data: PermissionItem[] }>('/api/permissions'),
-      ])
-      setRoles(rolesRes.data)
-      setPermissions(permsRes.data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível carregar perfis.')
-    } finally {
-      setLoading(false)
-    }
+  async function reload() {
+    await Promise.all([invalidateAccess.roles(), invalidateAccess.permissions()])
   }
-
-  useEffect(() => {
-    void load()
-  }, [])
 
   const permissionMap = useMemo(
     () => new Map(permissions.map((item) => [item.code, item.name])),
@@ -151,7 +138,7 @@ export function AdminRolesPage() {
         toast.push('Perfil criado.')
       }
       setFormOpen(false)
-      await load()
+      await reload()
     } catch (err) {
       toast.push(err instanceof Error ? err.message : 'Erro ao salvar perfil.', 'error')
     } finally {
@@ -162,8 +149,8 @@ export function AdminRolesPage() {
   if (!hasPermission('USERS_MANAGE')) {
     return <ErrorState message="Você não tem permissão para gerenciar perfis." />
   }
-  if (loading) return <Loading />
-  if (error) return <ErrorState message={error} />
+  if (loading) return <SkeletonTable cols={4} rows={8} />
+  if (error && !roles.length) return <ErrorState message={error} />
 
   return (
     <div className="space-y-6">
@@ -417,7 +404,7 @@ export function AdminRolesPage() {
             await apiRequest(`/api/roles/${toDelete.code}`, { method: 'DELETE' })
             toast.push('Perfil excluído.')
             setToDelete(null)
-            await load()
+            await reload()
           } catch (err) {
             toast.push(err instanceof Error ? err.message : 'Erro ao excluir perfil.', 'error')
           } finally {

@@ -5,6 +5,7 @@ import { prisma } from '../../lib/prisma.js'
 import { AppError, paginated, parsePagination } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
 import { authorize } from '../../middlewares/authorize.js'
+import { isPublicContentView } from '../../lib/access.js'
 
 const noticeSchema = z.object({
   title: z.string().min(3),
@@ -28,7 +29,7 @@ export async function noticesRoutes(app: FastifyInstance) {
     const { page, limit, skip } = parsePagination(query)
     const now = new Date()
     const where: Prisma.NoticeWhereInput = {}
-    const isPublic = !request.headers.authorization || query.public === 'true'
+    const isPublic = await isPublicContentView(request, 'NOTICES_MANAGE')
     if (isPublic) {
       where.active = true
       where.startsAt = { lte: now }

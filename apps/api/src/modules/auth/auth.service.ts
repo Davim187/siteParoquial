@@ -16,6 +16,23 @@ function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex')
 }
 
+async function issueTokens(app: FastifyInstance, userId: string, email: string) {
+  const accessToken = await app.jwt.sign({ sub: userId, email }, { expiresIn: env.JWT_EXPIRES_IN })
+  const refreshToken = randomBytes(48).toString('hex')
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + env.REFRESH_EXPIRES_DAYS)
+
+  await prisma.refreshToken.create({
+    data: {
+      userId,
+      tokenHash: hashToken(refreshToken),
+      expiresAt,
+    },
+  })
+
+  return { accessToken, refreshToken }
+}
+
 export async function login(app: FastifyInstance, body: unknown) {
   const data = loginSchema.parse(body)
   const user = await prisma.user.findUnique({
@@ -26,44 +43,62 @@ export async function login(app: FastifyInstance, body: unknown) {
   const valid = await argon2.verify(user.passwordHash, data.password)
   if (!valid) throw new AppError(401, 'E-mail ou senha inválidos.')
 
-  const accessToken = await app.jwt.sign(
-    { sub: user.id, email: user.email },
-    { expiresIn: env.JWT_EXPIRES_IN },
-  )
-  const refreshToken = randomBytes(48).toString('hex')
-  const expiresAt = new Date()
-  expiresAt.setDate(expiresAt.getDate() + env.REFRESH_EXPIRES_DAYS)
-
-  await prisma.refreshToken.create({
-    data: {
-      userId: user.id,
-      tokenHash: hashToken(refreshToken),
-      expiresAt,
-    },
-  })
+  const tokens = await issueTokens(app, user.id, user.email)
   await prisma.user.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date() },
   })
 
   const authUser = await loadAuthUser(user.id)
-  return { accessToken, refreshToken, user: authUser }
+  return { ...tokens, user: authUser }
 }
 
 export async function refresh(app: FastifyInstance, body: unknown) {
   const data = z.object({ refreshToken: z.string().min(20) }).parse(body)
   const tokenHash = hashToken(data.refreshToken)
-  const stored = await prisma.refreshToken.findFirst({
-    where: { tokenHash, revokedAt: null },
+
+  const result = await prisma.$transaction(async (tx) => {
+    const stored = await tx.refreshToken.findFirst({
+      where: { tokenHash, revokedAt: null },
+    })
+    if (!stored || stored.expiresAt < new Date()) {
+      throw new AppError(401, 'Sessão expirada. Faça login novamente.')
+    }
+
+    await tx.refreshToken.update({
+      where: { id: stored.id },
+      data: { revokedAt: new Date() },
+    })
+
+    const user = await tx.user.findUnique({ where: { id: stored.userId } })
+    if (!user || !user.active) {
+      throw new AppError(401, 'Sessão inválida ou usuário inativo.')
+    }
+
+    const accessToken = await app.jwt.sign(
+      { sub: user.id, email: user.email },
+      { expiresIn: env.JWT_EXPIRES_IN },
+    )
+    const refreshToken = randomBytes(48).toString('hex')
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + env.REFRESH_EXPIRES_DAYS)
+
+    await tx.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashToken(refreshToken),
+        expiresAt,
+      },
+    })
+
+    return { accessToken, refreshToken, userId: user.id }
   })
-  if (!stored || stored.expiresAt < new Date()) {
-    throw new AppError(401, 'Refresh token inválido ou expirado.')
+
+  return {
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    user: await loadAuthUser(result.userId),
   }
-  const accessToken = await app.jwt.sign(
-    { sub: stored.userId, email: (await prisma.user.findUniqueOrThrow({ where: { id: stored.userId } })).email },
-    { expiresIn: env.JWT_EXPIRES_IN },
-  )
-  return { accessToken, user: await loadAuthUser(stored.userId) }
 }
 
 export async function logout(body: unknown) {

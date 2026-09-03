@@ -1,12 +1,12 @@
 import { Button } from '@/components/ui/Button'
-import { heroImage } from '@/data/mocks'
+import { HERO_IMAGE } from '@/constants/placeholders'
 import type { ParishSettings } from '@/types'
 
 export function Hero({ settings }: { settings: ParishSettings }) {
   return (
     <section className="relative min-h-[min(92vh,52rem)] overflow-hidden text-white">
       <img
-        src={heroImage}
+        src={HERO_IMAGE}
         alt="Interior de uma igreja católica, imagem demonstrativa da paróquia"
         className="absolute inset-0 h-full w-full scale-105 object-cover"
       />

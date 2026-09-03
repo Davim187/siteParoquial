@@ -1,4 +1,5 @@
 export const queryKeys = {
+  home: ['home'] as const,
   settings: ['settings'] as const,
   news: {
     all: ['news'] as const,
@@ -14,7 +15,7 @@ export const queryKeys = {
   },
   events: {
     all: ['events'] as const,
-    list: (category?: string) => ['events', 'list', category] as const,
+    list: (category?: string, params?: { admin?: boolean }) => ['events', 'list', category, params] as const,
     upcoming: (limit?: number) => ['events', 'upcoming', limit] as const,
   },
   masses: {
@@ -35,15 +36,31 @@ export const queryKeys = {
   },
   people: {
     all: ['people'] as const,
-    list: ['people', 'list'] as const,
+    list: (params?: { includeInactive?: boolean }) => ['people', 'list', params] as const,
     detail: (slug: string) => ['people', 'detail', slug] as const,
   },
   gallery: {
-    albums: (params?: { all?: boolean; page?: number }) => ['gallery', 'albums', params] as const,
+    albums: (params?: { all?: boolean; page?: number; limit?: number }) =>
+      ['gallery', 'albums', params] as const,
     album: (slug: string, params?: { all?: boolean }) => ['gallery', 'album', slug, params] as const,
   },
   dashboard: ['dashboard'] as const,
   feast: ['feast'] as const,
   prayers: ['prayers'] as const,
   messages: ['messages'] as const,
+  users: {
+    all: ['users'] as const,
+    list: ['users', 'list'] as const,
+  },
+  roles: {
+    all: ['roles'] as const,
+    list: ['roles', 'list'] as const,
+    options: ['roles', 'options'] as const,
+  },
+  permissions: ['permissions'] as const,
+  profile: ['profile'] as const,
+  media: {
+    all: ['media'] as const,
+    list: (params?: { search?: string }) => ['media', 'list', params] as const,
+  },
 }

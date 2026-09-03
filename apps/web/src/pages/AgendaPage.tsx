@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Calendar } from '@/components/events/Calendar'
 import { EventCard } from '@/components/events/EventCard'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Loading, ErrorState, EmptyState } from '@/components/ui/Feedback'
+import { ErrorState, EmptyState, SkeletonGrid } from '@/components/ui/Feedback'
 import { useEventsQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
@@ -24,15 +24,19 @@ const filters: Array<EventCategory | 'todos'> = [
 ]
 
 export function AgendaPage() {
-  usePageMeta('Agenda | Paróquia Nossa Senhora das Graças')
+  usePageMeta(
+    'Agenda | Paróquia Nossa Senhora das Graças',
+    'Agenda de missas, eventos e celebrações da Paróquia Nossa Senhora das Graças.',
+  )
   const [category, setCategory] = useState<EventCategory | 'todos'>('todos')
   const [view, setView] = useState<'lista' | 'calendario'>('lista')
   const { data, isLoading, error } = useEventsQuery(category)
   const allForCalendar = useEventsQuery('todos')
   const calendarEvents = useMemo(() => allForCalendar.data ?? [], [allForCalendar.data])
+  const showSkeleton = isLoading && !data
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <PageHeader
         eyebrow="Comunidade"
         title="Agenda paroquial"
@@ -59,14 +63,20 @@ export function AgendaPage() {
         <div className="mt-6 flex gap-2">
           <button
             type="button"
-            className={cn('rounded-full px-4 py-2 text-sm', view === 'lista' ? 'bg-navy text-white' : 'bg-white border border-line')}
+            className={cn(
+              'rounded-full px-4 py-2 text-sm',
+              view === 'lista' ? 'bg-navy text-white' : 'border border-line bg-white',
+            )}
             onClick={() => setView('lista')}
           >
             Lista de eventos
           </button>
           <button
             type="button"
-            className={cn('rounded-full px-4 py-2 text-sm', view === 'calendario' ? 'bg-navy text-white' : 'bg-white border border-line')}
+            className={cn(
+              'rounded-full px-4 py-2 text-sm',
+              view === 'calendario' ? 'bg-navy text-white' : 'border border-line bg-white',
+            )}
             onClick={() => setView('calendario')}
           >
             Calendário mensal
@@ -75,22 +85,24 @@ export function AgendaPage() {
         <div className="mt-8">
           {view === 'calendario' ? (
             allForCalendar.isLoading && !calendarEvents.length ? (
-              <Loading />
+              <SkeletonGrid count={1} className="h-80" cols="grid-cols-1" />
             ) : (
               <Calendar events={calendarEvents} />
             )
           ) : (
             <>
-              {isLoading && !data ? <Loading /> : null}
-              {error ? <ErrorState message={getErrorMessage(error)} /> : null}
-              {!isLoading && data?.length === 0 ? (
+              {error && !data ? <ErrorState message={getErrorMessage(error)} /> : null}
+              {showSkeleton ? <SkeletonGrid count={6} className="h-52" /> : null}
+              {!showSkeleton && data?.length === 0 ? (
                 <EmptyState title="Nenhum evento nesta categoria" />
               ) : null}
-              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {data?.map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
-              </div>
+              {data?.length ? (
+                <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                  {data.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              ) : null}
             </>
           )}
         </div>

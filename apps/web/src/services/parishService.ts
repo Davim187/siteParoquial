@@ -1,9 +1,10 @@
 import { apiRequest, mediaUrl } from '@/lib/api-client'
+import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
 import type { ParishSettings, Person, PatronFeast } from '@/types'
 import { cleanMapsUrl } from '@/utils/maps'
 
-export async function getSettings(): Promise<ParishSettings> {
-  const s = await apiRequest<any>('/api/settings', { auth: false })
+async function fetchSettings(admin: boolean): Promise<ParishSettings> {
+  const s = await apiRequest<any>('/api/settings', { auth: admin })
   return {
     name: s.name,
     slogan: s.slogan,
@@ -27,15 +28,37 @@ export async function getSettings(): Promise<ParishSettings> {
   }
 }
 
+export async function getSettings(): Promise<ParishSettings> {
+  return fetchSettings(false)
+}
+
+export async function getAdminSettings(): Promise<ParishSettings> {
+  return fetchSettings(true)
+}
+
 export async function saveSettings(settings: ParishSettings) {
-  const current = await apiRequest<any>('/api/settings')
   return apiRequest('/api/settings', {
     method: 'PUT',
     json: {
-      ...current,
-      ...settings,
+      name: settings.name,
+      slogan: settings.slogan,
+      welcomeText: settings.welcomeText,
+      address: settings.address,
+      phone: settings.phone,
+      whatsapp: settings.whatsapp,
+      email: settings.email,
+      instagram: settings.instagram,
+      facebook: settings.facebook,
+      youtube: settings.youtube,
+      secretaryHours: settings.secretaryHours,
       mapsUrl: cleanMapsUrl(settings.mapsUrl),
-      patroness: settings.patroness ?? current.patroness,
+      pixKey: settings.pixKey,
+      bankDetails: settings.bankDetails,
+      streamingUrl: settings.streamingUrl,
+      history: settings.history,
+      mission: settings.mission,
+      vision: settings.vision,
+      patroness: settings.patroness,
     },
   })
 }
@@ -46,12 +69,15 @@ export async function getFeast(): Promise<PatronFeast> {
 }
 
 export async function saveFeast(feast: PatronFeast) {
-  const current = await apiRequest<any>('/api/settings')
-  return apiRequest('/api/settings', { method: 'PUT', json: { ...current, feast } })
+  return apiRequest('/api/settings', { method: 'PUT', json: { feast } })
 }
 
-export async function listPeople(): Promise<Person[]> {
-  const result = await apiRequest<{ data: any[] }>('/api/people', { auth: false })
+export async function listPeople(options?: { includeInactive?: boolean }): Promise<Person[]> {
+  const params = new URLSearchParams({ limit: '100' })
+  if (options?.includeInactive) params.set('all', 'true')
+  const result = await apiRequest<{ data: any[] }>(`/api/people?${params}`, {
+    auth: Boolean(options?.includeInactive),
+  })
   return result.data.map(
     (item): Person => ({
       id: item.id,
@@ -59,8 +85,7 @@ export async function listPeople(): Promise<Person[]> {
       name: item.name,
       role: item.roleTitle,
       photo:
-        mediaUrl(item.imageUrl) ||
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+        mediaUrl(item.imageUrl) || PLACEHOLDER_IMAGES.person,
       photoId: item.photoId ?? null,
       bio: item.bio,
       quote: item.quote ?? undefined,
@@ -78,9 +103,7 @@ export async function getPersonBySlug(slug: string) {
     slug: item.slug,
     name: item.name,
     role: item.roleTitle,
-    photo:
-      mediaUrl(item.imageUrl) ||
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+    photo: mediaUrl(item.imageUrl) || PLACEHOLDER_IMAGES.person,
     photoId: item.photoId ?? null,
     bio: item.bio,
     quote: item.quote ?? undefined,

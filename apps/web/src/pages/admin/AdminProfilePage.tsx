@@ -1,30 +1,30 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { AdminInput, FormSection } from '@/components/admin/AdminUi'
 import { Button } from '@/components/ui/Button'
-import { Loading, ErrorState } from '@/components/ui/Feedback'
+import { ErrorState, Skeleton } from '@/components/ui/Feedback'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/contexts/AuthContext'
+import {
+  useAdminProfileQuery,
+  useInvalidateAdminAccessQueries,
+} from '@/hooks/queries/useAdminAccessQueries'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { apiRequest } from '@/lib/api-client'
+import { queryClient } from '@/lib/query-client'
+import { queryKeys } from '@/lib/query-keys'
 import { formatDateTime } from '@/utils/dates'
 
 export function AdminProfilePage() {
   usePageMeta('Meu perfil | Admin')
   const toast = useToast()
   const { user, refreshUser } = useAuth()
-  const [loading, setLoading] = useState(true)
+  const profileQuery = useAdminProfileQuery()
+  const invalidateAccess = useInvalidateAdminAccessQueries()
+  const profile = profileQuery.data ?? null
+  const loading = profileQuery.isLoading && !profile
+  const error = profileQuery.error instanceof Error ? profileQuery.error.message : null
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [profile, setProfile] = useState<{
-    name: string
-    email: string
-    role: string
-    roleName?: string
-    lastLoginAt?: string | null
-    avatarUrl?: string | null
-    permissions: string[]
-  } | null>(null)
   const [name, setName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -32,20 +32,10 @@ export function AdminProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('')
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await apiRequest<{ data: any }>('/api/me/profile')
-        setProfile(res.data)
-        setName(res.data.name)
-        setAvatarUrl(res.data.avatarUrl ?? '')
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Não foi possível carregar o perfil.')
-      } finally {
-        setLoading(false)
-      }
-    }
-    void load()
-  }, [])
+    if (!profile) return
+    setName(profile.name)
+    setAvatarUrl(profile.avatarUrl ?? '')
+  }, [profile])
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
@@ -65,7 +55,8 @@ export function AdminProfilePage() {
           confirmPassword: newPassword ? confirmPassword : undefined,
         },
       })
-      setProfile(res.data)
+      queryClient.setQueryData(queryKeys.profile, res.data)
+      void invalidateAccess.profile()
       await refreshUser()
       setCurrentPassword('')
       setNewPassword('')
@@ -78,13 +69,20 @@ export function AdminProfilePage() {
     }
   }
 
-  if (loading) return <Loading />
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <Skeleton className="h-28" />
+        <Skeleton className="h-72" />
+      </div>
+    )
+  }
   if (error || !profile) return <ErrorState message={error ?? 'Erro'} />
 
   const initials = (profile.name || 'A')
     .split(/\s+/)
     .slice(0, 2)
-    .map((part) => part[0])
+    .map((part: string) => part[0])
     .join('')
     .toUpperCase()
 
@@ -152,7 +150,7 @@ export function AdminProfilePage() {
 
         <FormSection title="Permissões efetivas">
           <ul className="grid gap-2 sm:grid-cols-2">
-            {(profile.permissions ?? []).map((code) => (
+            {(profile.permissions ?? []).map((code: string) => (
               <li key={code} className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
                 {code}
               </li>

@@ -2,13 +2,22 @@ import type { FastifyInstance } from 'fastify'
 import { authenticate } from '../../middlewares/authorize.js'
 import * as authService from './auth.service.js'
 
+const AUTH_RATE_LIMIT = {
+  config: {
+    rateLimit: {
+      max: 10,
+      timeWindow: '1 minute',
+    },
+  },
+}
+
 export async function authRoutes(app: FastifyInstance) {
-  app.post('/auth/login', async (request, reply) => {
+  app.post('/auth/login', AUTH_RATE_LIMIT, async (request, reply) => {
     const result = await authService.login(app, request.body)
     return reply.send(result)
   })
 
-  app.post('/auth/refresh', async (request, reply) => {
+  app.post('/auth/refresh', AUTH_RATE_LIMIT, async (request, reply) => {
     const result = await authService.refresh(app, request.body)
     return reply.send(result)
   })

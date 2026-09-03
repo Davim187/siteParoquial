@@ -12,21 +12,21 @@ import { PastoralCard } from '@/components/pastorals/PastoralCard'
 import { AlbumGrid } from '@/components/gallery/AlbumGrid'
 import { SectionTitle } from '@/components/ui/SectionTitle'
 import { Button } from '@/components/ui/Button'
-import { Loading, ErrorState } from '@/components/ui/Feedback'
+import { ErrorState, EmptyState, Skeleton } from '@/components/ui/Feedback'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import {
-  useCampaignNewsQuery,
-  useFeaturedNoticesQuery,
-  useNewsQuery,
-  usePastoralsQuery,
-  usePeopleQuery,
-  useSettingsQuery,
-  useUpcomingEventsQuery,
-  useUpcomingMassesQuery,
-} from '@/hooks/queries/usePublicQueries'
-import { useGalleryAlbumsQuery } from '@/hooks/queries/useGalleryQueries'
+import { useHomeQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
 import { MapEmbed } from '@/components/ui/MapEmbed'
+
+function CardSkeletonGrid({ count, className = 'h-48' }: { count: number; className?: string }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={i} className={className} />
+      ))}
+    </div>
+  )
+}
 
 export function HomePage() {
   usePageMeta(
@@ -34,34 +34,35 @@ export function HomePage() {
     'Portal oficial da Paróquia Nossa Senhora das Graças. Missas, avisos, notícias e vida em comunidade.',
   )
 
-  const settings = useSettingsQuery()
-  const campaign = useCampaignNewsQuery()
-  const notices = useFeaturedNoticesQuery()
-  const masses = useUpcomingMassesQuery(4)
-  const events = useUpcomingEventsQuery(3)
-  const news = useNewsQuery()
-  const people = usePeopleQuery()
-  const pastorals = usePastoralsQuery()
-  const gallery = useGalleryAlbumsQuery({ limit: 3 })
+  const home = useHomeQuery()
+  const data = home.data
 
-  const campaignNews = campaign.data ?? undefined
-  const featuredNews = news.data?.find((article) => article.featured && article.id !== campaignNews?.id)
-  const newsPreview = (news.data ?? [])
+  const campaignNews = data?.campaign ?? undefined
+  const featuredNews = data?.news.find((article) => article.featured && article.id !== campaignNews?.id)
+  const newsPreview = (data?.news ?? [])
     .filter((article) => article.id !== featuredNews?.id && article.id !== campaignNews?.id)
     .slice(0, 3)
-  const pastoralsPreview = pastorals.data?.slice(0, 3) ?? []
-  const galleryPreview = gallery.data?.data ?? []
+  const pastoralsPreview = data?.pastorals.slice(0, 3) ?? []
+  const galleryPreview = data?.gallery ?? []
+  const masses = data?.masses ?? []
+  const events = data?.events.slice(0, 3) ?? []
+  const people = data?.people ?? []
+  const showSkeletons = home.isLoading && !data
 
-  if (settings.isError && !settings.data) {
-    return <ErrorState message={getErrorMessage(settings.error, 'Não foi possível carregar as informações da paróquia.')} />
+  if (home.isError && !data) {
+    return (
+      <ErrorState
+        message={getErrorMessage(home.error, 'Não foi possível carregar as informações da paróquia.')}
+      />
+    )
   }
 
   return (
     <div className="animate-fade-in">
-      {settings.data ? (
-        <Hero settings={settings.data} />
+      {data?.settings ? (
+        <Hero settings={data.settings} />
       ) : (
-        <div className="min-h-[min(92vh,52rem)] bg-navy-deep" aria-hidden />
+        <Skeleton className="min-h-[min(92vh,52rem)] rounded-none bg-navy-deep/80" />
       )}
       {campaignNews ? <CampaignBanner article={campaignNews} /> : null}
 
@@ -76,18 +77,20 @@ export function HomePage() {
             Ver todos os horários
           </Button>
         </div>
-        {masses.isLoading && !masses.data ? (
-          <Loading />
-        ) : (
+        {showSkeletons ? (
+          <CardSkeletonGrid count={4} className="h-36" />
+        ) : masses.length ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {masses.data?.map((mass) => (
+            {masses.map((mass) => (
               <MassCard key={mass.id} mass={mass} />
             ))}
           </div>
+        ) : (
+          <EmptyState title="Horários em atualização" description="Consulte a secretaria ou volte em breve." />
         )}
       </section>
 
-      <FeaturedNotice notices={notices.data ?? undefined} />
+      <FeaturedNotice notices={data?.notices} />
       <QuickLinks />
 
       <section className="bg-white py-16">
@@ -98,14 +101,20 @@ export function HomePage() {
               Ver agenda completa
             </Button>
           </div>
-          {events.isLoading && !events.data ? (
-            <Loading />
-          ) : (
+          {showSkeletons ? (
             <div className="grid gap-5 md:grid-cols-3">
-              {events.data?.map((event) => (
+              <Skeleton className="h-56" />
+              <Skeleton className="h-56" />
+              <Skeleton className="h-56" />
+            </div>
+          ) : events.length ? (
+            <div className="grid gap-5 md:grid-cols-3">
+              {events.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
             </div>
+          ) : (
+            <EmptyState title="Nenhum evento próximo" description="Acompanhe a agenda paroquial para novidades." />
           )}
         </div>
       </section>
@@ -117,9 +126,14 @@ export function HomePage() {
             Ver todas as notícias →
           </Button>
         </div>
-        {news.isLoading && !featuredNews && !newsPreview.length ? (
-          <Loading />
-        ) : (
+        {showSkeletons ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <Skeleton className="h-64 sm:col-span-2 lg:col-span-3" />
+            <Skeleton className="h-52" />
+            <Skeleton className="h-52" />
+            <Skeleton className="h-52" />
+          </div>
+        ) : featuredNews || newsPreview.length ? (
           <div className="space-y-6">
             {featuredNews ? <NewsCard article={featuredNews} featured /> : null}
             {newsPreview.length ? (
@@ -130,6 +144,8 @@ export function HomePage() {
               </div>
             ) : null}
           </div>
+        ) : (
+          <EmptyState title="Sem notícias no momento" description="Novidades da paróquia aparecerão aqui." />
         )}
       </section>
 
@@ -143,9 +159,14 @@ export function HomePage() {
           description="Informações oficiais serão publicadas pela paróquia."
         />
         <div className="mt-10 grid gap-6 md:grid-cols-2">
-          {people.data?.map((person) => (
-            <PersonCard key={person.id} person={person} />
-          ))}
+          {showSkeletons ? (
+            <>
+              <Skeleton className="h-72" />
+              <Skeleton className="h-72" />
+            </>
+          ) : (
+            people.map((person) => <PersonCard key={person.id} person={person} />)
+          )}
         </div>
       </section>
 
@@ -158,9 +179,11 @@ export function HomePage() {
             </Button>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
-            {pastoralsPreview.map((pastoral) => (
-              <PastoralCard key={pastoral.id} pastoral={pastoral} />
-            ))}
+            {showSkeletons
+              ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-56" />)
+              : pastoralsPreview.map((pastoral) => (
+                  <PastoralCard key={pastoral.id} pastoral={pastoral} />
+                ))}
           </div>
         </div>
       </section>
@@ -172,32 +195,42 @@ export function HomePage() {
             Ver galeria
           </Button>
         </div>
-        {galleryPreview.length ? <AlbumGrid albums={galleryPreview} /> : null}
+        {showSkeletons ? (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Skeleton className="aspect-[4/3]" />
+            <Skeleton className="aspect-[4/3]" />
+            <Skeleton className="aspect-[4/3]" />
+          </div>
+        ) : galleryPreview.length ? (
+          <AlbumGrid albums={galleryPreview} />
+        ) : (
+          <EmptyState title="Galeria em construção" description="Em breve, fotos dos momentos da comunidade." />
+        )}
       </section>
 
-      {settings.data ? <SocialFollow settings={settings.data} /> : null}
+      {data?.settings ? <SocialFollow settings={data.settings} /> : null}
       <DonateTeaser />
 
-      {settings.data ? (
-      <section className="bg-cream-dark py-16">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-2 md:px-6">
-          <div>
-            <SectionTitle eyebrow="Contato" title="Como chegar" />
-            <p className="mt-4 flex items-start gap-2 text-sm text-muted">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              {settings.data.address}
-            </p>
-            <Button href="/contato" className="mt-6">
-              Fale conosco
-            </Button>
+      {data?.settings ? (
+        <section className="bg-cream-dark py-16">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-2 md:px-6">
+            <div>
+              <SectionTitle eyebrow="Contato" title="Como chegar" />
+              <p className="mt-4 flex items-start gap-2 text-sm text-muted">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                {data.settings.address}
+              </p>
+              <Button href="/contato" className="mt-6">
+                Fale conosco
+              </Button>
+            </div>
+            <MapEmbed
+              mapsUrl={data.settings.mapsUrl}
+              address={data.settings.address}
+              className="aspect-[4/3] min-h-[280px]"
+            />
           </div>
-          <MapEmbed
-            mapsUrl={settings.data.mapsUrl}
-            address={settings.data.address}
-            className="aspect-[4/3] min-h-[280px]"
-          />
-        </div>
-      </section>
+        </section>
       ) : null}
     </div>
   )

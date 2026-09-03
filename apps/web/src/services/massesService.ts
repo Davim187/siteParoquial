@@ -20,7 +20,7 @@ function buildMassesUrl(options?: { month?: string; admin?: boolean; limit?: num
   const params = new URLSearchParams()
   params.set('limit', String(options?.limit ?? 100))
   if (options?.month) params.set('month', options.month)
-  params.set('public', options?.admin ? 'false' : 'true')
+  if (!options?.admin) params.set('public', 'true')
   return `/api/masses?${params.toString()}`
 }
 

@@ -2,26 +2,36 @@ import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
-import { queryClient } from '@/lib/query-client'
-import { queryKeys } from '@/lib/query-keys'
-import { STALE_TIME, GC_TIME } from '@/lib/query-client'
-import { getCampaignNews } from '@/services/newsService'
-import { getSettings } from '@/services/parishService'
+import { hydrateHomeFromSession, prefetchHome } from '@/services/homeService'
+import { prefetchPublicRoute } from '@/lib/public-prefetch'
+
+const WARM_ROUTES = [
+  '/noticias',
+  '/avisos',
+  '/missas',
+  '/agenda',
+  '/pastorais',
+  '/sacramentos',
+  '/galeria',
+  '/nossa-paroquia',
+]
 
 export function PublicLayout() {
   useEffect(() => {
-    void queryClient.prefetchQuery({
-      queryKey: queryKeys.news.campaign,
-      queryFn: getCampaignNews,
-      staleTime: STALE_TIME.news,
-      gcTime: GC_TIME.long,
-    })
-    void queryClient.prefetchQuery({
-      queryKey: queryKeys.settings,
-      queryFn: getSettings,
-      staleTime: STALE_TIME.settings,
-      gcTime: GC_TIME.long,
-    })
+    hydrateHomeFromSession()
+    void prefetchHome()
+
+    const warm = () => {
+      for (const route of WARM_ROUTES) prefetchPublicRoute(route)
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(warm, { timeout: 2500 })
+      return () => window.cancelIdleCallback(id)
+    }
+
+    const timer = window.setTimeout(warm, 1200)
+    return () => window.clearTimeout(timer)
   }, [])
 
   return (

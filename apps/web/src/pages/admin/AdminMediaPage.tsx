@@ -6,7 +6,7 @@ import { type MediaItem } from '@/services/mediaService'
 import { useMediaLibrary } from '@/hooks/useMediaLibrary'
 import { useToast } from '@/components/ui/Toast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Loading, EmptyState } from '@/components/ui/Feedback'
+import { EmptyState, SkeletonGrid } from '@/components/ui/Feedback'
 import { useAuth } from '@/contexts/AuthContext'
 import { mediaPreviewSrc } from '@/utils/media'
 
@@ -17,14 +17,13 @@ export function AdminMediaPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [toDelete, setToDelete] = useState<MediaItem | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const { items, loading, uploading, load, upload, remove } = useMediaLibrary()
+  const { items, loading, uploading, upload, remove } = useMediaLibrary()
 
   async function onUpload(file: File | null) {
     if (!file) return
     try {
       await upload(file)
       toast.push('Imagem enviada com sucesso.')
-      await load()
     } catch (error) {
       toast.push(error instanceof Error ? error.message : 'Falha no upload', 'error')
     } finally {
@@ -50,30 +49,32 @@ export function AdminMediaPage() {
           </label>
         ) : null}
       </div>
-      {loading ? <Loading /> : null}
+      {loading ? <SkeletonGrid count={10} className="aspect-square h-auto" cols="grid-cols-2 md:grid-cols-4 lg:grid-cols-5" /> : null}
       {!loading && items.length === 0 ? (
         <EmptyState title="Nenhuma imagem" description="Envie imagens para reutilizar em notícias, eventos e avisos." />
       ) : null}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
-        {items.map((item) => (
-          <article key={item.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            <img
-              src={mediaPreviewSrc(item)}
-              alt={item.originalName}
-              className="aspect-square w-full object-cover"
-              loading="lazy"
-            />
-            <div className="flex items-center justify-between gap-2 p-3">
-              <p className="truncate text-xs text-slate-500">{item.originalName}</p>
-              {hasPermission('MEDIA_MANAGE') ? (
-                <IconButton label="Excluir imagem" tone="danger" onClick={() => setToDelete(item)}>
-                  <Trash2 size={15} />
-                </IconButton>
-              ) : null}
-            </div>
-          </article>
-        ))}
-      </div>
+      {!loading ? (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
+          {items.map((item) => (
+            <article key={item.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+              <img
+                src={mediaPreviewSrc(item)}
+                alt={item.originalName}
+                className="aspect-square w-full object-cover"
+                loading="lazy"
+              />
+              <div className="flex items-center justify-between gap-2 p-3">
+                <p className="truncate text-xs text-slate-500">{item.originalName}</p>
+                {hasPermission('MEDIA_MANAGE') ? (
+                  <IconButton label="Excluir imagem" tone="danger" onClick={() => setToDelete(item)}>
+                    <Trash2 size={15} />
+                  </IconButton>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
       <ConfirmDialog
         open={Boolean(toDelete)}
         title="Excluir imagem?"

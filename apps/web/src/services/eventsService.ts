@@ -13,8 +13,12 @@ const typeToCategory: Record<string, EventCategory> = {
   OUTRO: 'evento',
 }
 
-export async function listEvents(category?: EventCategory | 'todos'): Promise<ParishEvent[]> {
-  const params = new URLSearchParams({ public: 'true', limit: '50' })
+export async function listEvents(
+  category?: EventCategory | 'todos',
+  options?: { admin?: boolean },
+): Promise<ParishEvent[]> {
+  const params = new URLSearchParams({ limit: '50' })
+  if (!options?.admin) params.set('public', 'true')
   if (category && category !== 'todos') {
     const map: Record<string, string> = {
       missa: 'MISSA',
@@ -29,7 +33,9 @@ export async function listEvents(category?: EventCategory | 'todos'): Promise<Pa
     }
     params.set('type', map[category] ?? 'OUTRO')
   }
-  const result = await apiRequest<{ data: any[] }>(`/api/events?${params}`, { auth: false })
+  const result = await apiRequest<{ data: any[] }>(`/api/events?${params}`, {
+    auth: Boolean(options?.admin),
+  })
   return result.data.map(
     (item): ParishEvent => ({
       id: item.id,

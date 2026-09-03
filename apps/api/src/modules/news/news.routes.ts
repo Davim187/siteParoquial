@@ -1,18 +1,18 @@
 import type { FastifyInstance } from 'fastify'
-import { authenticate, authorize, authorizeAny } from '../../middlewares/authorize.js'
+import { authorize, authorizeAny } from '../../middlewares/authorize.js'
+import { tryOptionalAuth, hasAnyPermission } from '../../lib/access.js'
 import * as newsService from './news.service.js'
 
 export async function newsRoutes(app: FastifyInstance) {
   app.get('/news', async (request, reply) => {
-    const hasAuth = Boolean(request.headers.authorization)
-    if (hasAuth) {
-      try {
-        await authenticate()(request)
-      } catch {
-        // público
-      }
-    }
-    const publicOnly = !request.authUser
+    await tryOptionalAuth(request)
+    const publicOnly = !hasAnyPermission(
+      request,
+      'NEWS_VIEW',
+      'NEWS_MANAGE',
+      'NEWS_CREATE',
+      'NEWS_EDIT',
+    )
     const result = await newsService.listNews(request.query as Record<string, unknown>, { publicOnly })
     return reply.send(result)
   })
