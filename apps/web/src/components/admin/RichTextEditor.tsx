@@ -9,15 +9,17 @@ import { useEffect } from 'react'
 export function RichTextEditor({
   value,
   onChange,
+  placeholder = 'Escreva o conteúdo...',
 }: {
   value: string
   onChange: (html: string) => void
+  placeholder?: string
 }) {
   const editor = useEditor({
     extensions: [
       StarterKit,
       Link.configure({ openOnClick: false }),
-      Placeholder.configure({ placeholder: 'Escreva o conteúdo da notícia...' }),
+      Placeholder.configure({ placeholder }),
     ],
     content: value || '<p></p>',
     onUpdate: ({ editor: current }) => onChange(current.getHTML()),
@@ -43,6 +45,9 @@ export function RichTextEditor({
         </ToolbarButton>
         <ToolbarButton active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label="Título">
           <Heading2 size={15} />
+        </ToolbarButton>
+        <ToolbarButton active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} label="Subtítulo">
+          <span className="text-[11px] font-bold">H3</span>
         </ToolbarButton>
         <ToolbarButton active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} label="Lista">
           <List size={15} />

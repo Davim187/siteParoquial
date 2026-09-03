@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { Check, Link2, Share2 } from 'lucide-react'
+import { Check, Link2, Share2, X } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { NewsCard } from '@/components/news/NewsCard'
 import { Badge, PageHeader } from '@/components/ui/PageHeader'
 import { Loading, ErrorState, EmptyState } from '@/components/ui/Feedback'
+import { Button } from '@/components/ui/Button'
+import { ProseHtml } from '@/components/ui/ProseHtml'
+import { ProgressBar } from '@/components/ui/ProgressBar'
 import { useToast } from '@/components/ui/Toast'
 import { useQuery } from '@tanstack/react-query'
 import { useNewsDetailQuery } from '@/hooks/queries/usePublicQueries'
@@ -34,6 +37,7 @@ export function NewsDetailPage() {
   const { slug = '' } = useParams()
   const toast = useToast()
   const [copied, setCopied] = useState(false)
+  const [lightbox, setLightbox] = useState<string | null>(null)
   const articleQuery = useNewsDetailQuery(slug)
   const relatedQuery = useQuery({
     queryKey: [...queryKeys.news.detail(slug), 'related'],
@@ -58,6 +62,7 @@ export function NewsDetailPage() {
 
   const article = articleQuery.data
   const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const gallery = article.gallery ?? []
 
   async function handleCopyLink() {
     const ok = await copyToClipboard(shareUrl)
@@ -97,15 +102,36 @@ export function NewsDetailPage() {
       </PageHeader>
       <article className="mx-auto max-w-3xl px-4 py-12 md:px-6">
         <img src={article.image} alt="" className="mb-8 w-full rounded-2xl object-cover" />
-        <div
-          className="space-y-4 leading-relaxed text-ink [&_p]:text-muted"
-          dangerouslySetInnerHTML={{ __html: article.content }}
-        />
-        {article.gallery?.length ? (
-          <div className="mt-10 grid grid-cols-2 gap-3">
-            {article.gallery.map((src) => (
-              <img key={src} src={src} alt="" className="h-40 w-full rounded-xl object-cover" loading="lazy" />
-            ))}
+        {article.showProgress ? (
+          <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-gold/40 bg-gold/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <ProgressBar
+                current={article.progressCurrent}
+                goal={article.progressGoal}
+                label={article.progressLabel || 'Arrecadação para o novo Centro Pastoral'}
+              />
+            </div>
+            <Button href="/dizimo" size="sm" className="shrink-0">
+              Quero contribuir
+            </Button>
+          </div>
+        ) : null}
+        <ProseHtml html={article.content} />
+        {gallery.length ? (
+          <div className="mt-10">
+            <h2 className="mb-4 font-serif text-2xl text-navy">Galeria</h2>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {gallery.map((src) => (
+                <button
+                  key={src}
+                  type="button"
+                  className="overflow-hidden rounded-xl"
+                  onClick={() => setLightbox(src)}
+                >
+                  <img src={src} alt="" className="h-40 w-full object-cover transition hover:scale-105" loading="lazy" />
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
         <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-6">
@@ -140,6 +166,24 @@ export function NewsDetailPage() {
             </div>
           </div>
         </section>
+      ) : null}
+      {lightbox ? (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-navy-deep/80 p-4" onClick={() => setLightbox(null)}>
+          <button
+            type="button"
+            className="absolute top-4 right-4 rounded-full bg-white/90 p-2 text-navy"
+            aria-label="Fechar imagem"
+            onClick={() => setLightbox(null)}
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={lightbox}
+            alt=""
+            className="max-h-[90vh] max-w-full rounded-2xl object-contain"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
       ) : null}
     </div>
   )

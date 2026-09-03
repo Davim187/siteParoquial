@@ -273,6 +273,11 @@ export const seedNews: NewsArticle[] = [
     gallery: [img.nave, img.candles],
     relatedIds: ['news-2', 'news-3'],
     status: 'published',
+    featured: true,
+    galleryMediaIds: [],
+    showProgress: false,
+    progressCurrent: 0,
+    progressGoal: 0,
   },
   {
     id: 'news-2',
@@ -287,6 +292,7 @@ export const seedNews: NewsArticle[] = [
     category: 'Formação',
     relatedIds: ['news-1', 'news-4'],
     status: 'published',
+    featured: false,
   },
   {
     id: 'news-3',
@@ -301,6 +307,7 @@ export const seedNews: NewsArticle[] = [
     category: 'Sacramentos',
     relatedIds: ['news-5'],
     status: 'published',
+    featured: false,
   },
   {
     id: 'news-4',
@@ -315,6 +322,7 @@ export const seedNews: NewsArticle[] = [
     category: 'Juventude',
     relatedIds: ['news-2'],
     status: 'published',
+    featured: false,
   },
   {
     id: 'news-5',
@@ -329,6 +337,7 @@ export const seedNews: NewsArticle[] = [
     category: 'Ação social',
     relatedIds: ['news-1'],
     status: 'published',
+    featured: false,
   },
   {
     id: 'news-6',
@@ -343,6 +352,7 @@ export const seedNews: NewsArticle[] = [
     category: 'Sacramentos',
     relatedIds: ['news-3'],
     status: 'published',
+    featured: false,
   },
 ]
 

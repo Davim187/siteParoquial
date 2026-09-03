@@ -3,14 +3,13 @@ import { GC_TIME, STALE_TIME } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
 import type { EventCategory, NewsArticle, Notice, ParishEvent, Mass, Pastoral, Person, Sacrament, ParishSettings } from '@/types'
 import { getSettings, listPeople } from '@/services/parishService'
-import { listNews } from '@/services/newsService'
+import { getCampaignNews, getNewsBySlug, listNews, readCampaignCache } from '@/services/newsService'
 import { getFeaturedNotices, listNotices } from '@/services/noticesService'
 import { listEvents, listUpcomingEvents } from '@/services/eventsService'
 import { listMasses, listUpcomingMasses } from '@/services/massesService'
 import { listPastorals, getPastoralBySlug } from '@/services/pastoralService'
 import { listSacraments, getSacramentBySlug } from '@/services/sacramentService'
 import { getPersonBySlug } from '@/services/parishService'
-import { getNewsBySlug } from '@/services/newsService'
 
 export function useSettingsQuery() {
   return useQuery<ParishSettings>({
@@ -26,8 +25,21 @@ export function useNewsQuery(params?: { includeDrafts?: boolean }) {
   return useQuery<NewsArticle[]>({
     queryKey: queryKeys.news.list(params),
     queryFn: () => listNews(params),
-    staleTime: STALE_TIME.news,
+    staleTime: params?.includeDrafts ? STALE_TIME.admin : STALE_TIME.news,
     placeholderData: (previous) => previous,
+  })
+}
+
+export function useCampaignNewsQuery() {
+  const cached = typeof window === 'undefined' ? null : readCampaignCache()
+  return useQuery<NewsArticle | null>({
+    queryKey: queryKeys.news.campaign,
+    queryFn: getCampaignNews,
+    staleTime: STALE_TIME.news,
+    gcTime: GC_TIME.long,
+    initialData: cached ?? undefined,
+    initialDataUpdatedAt: cached ? 1 : undefined,
+    placeholderData: (previous) => previous ?? cached,
   })
 }
 

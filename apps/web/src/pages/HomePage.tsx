@@ -2,6 +2,7 @@ import { MapPin } from 'lucide-react'
 import { Hero } from '@/components/home/Hero'
 import { FeaturedNotice } from '@/components/home/FeaturedNotice'
 import { QuickLinks } from '@/components/home/QuickLinks'
+import { CampaignBanner } from '@/components/home/CampaignBanner'
 import { DonateTeaser, JoinCommunity, SocialFollow } from '@/components/home/CommunityBlocks'
 import { MassCard } from '@/components/events/MassCard'
 import { EventCard } from '@/components/events/EventCard'
@@ -14,6 +15,7 @@ import { Button } from '@/components/ui/Button'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import {
+  useCampaignNewsQuery,
   useFeaturedNoticesQuery,
   useNewsQuery,
   usePastoralsQuery,
@@ -24,7 +26,7 @@ import {
 } from '@/hooks/queries/usePublicQueries'
 import { useGalleryAlbumsQuery } from '@/hooks/queries/useGalleryQueries'
 import { getErrorMessage } from '@/lib/api-error'
-import { mapsEmbedSrc } from '@/utils/maps'
+import { MapEmbed } from '@/components/ui/MapEmbed'
 
 export function HomePage() {
   usePageMeta(
@@ -33,6 +35,7 @@ export function HomePage() {
   )
 
   const settings = useSettingsQuery()
+  const campaign = useCampaignNewsQuery()
   const notices = useFeaturedNoticesQuery()
   const masses = useUpcomingMassesQuery(4)
   const events = useUpcomingEventsQuery(3)
@@ -41,21 +44,26 @@ export function HomePage() {
   const pastorals = usePastoralsQuery()
   const gallery = useGalleryAlbumsQuery({ limit: 3 })
 
-  if (settings.isLoading && !settings.data) {
-    return <Loading />
-  }
-
-  if (settings.isError || !settings.data) {
-    return <ErrorState message={getErrorMessage(settings.error, 'Não foi possível carregar as informações da paróquia.')} />
-  }
-
-  const newsPreview = news.data?.slice(0, 3) ?? []
+  const campaignNews = campaign.data ?? undefined
+  const featuredNews = news.data?.find((article) => article.featured && article.id !== campaignNews?.id)
+  const newsPreview = (news.data ?? [])
+    .filter((article) => article.id !== featuredNews?.id && article.id !== campaignNews?.id)
+    .slice(0, 3)
   const pastoralsPreview = pastorals.data?.slice(0, 3) ?? []
   const galleryPreview = gallery.data?.data ?? []
 
+  if (settings.isError && !settings.data) {
+    return <ErrorState message={getErrorMessage(settings.error, 'Não foi possível carregar as informações da paróquia.')} />
+  }
+
   return (
     <div className="animate-fade-in">
-      <Hero settings={settings.data} />
+      {settings.data ? (
+        <Hero settings={settings.data} />
+      ) : (
+        <div className="min-h-[min(92vh,52rem)] bg-navy-deep" aria-hidden />
+      )}
+      {campaignNews ? <CampaignBanner article={campaignNews} /> : null}
 
       <section className="mx-auto max-w-6xl px-4 py-12 md:px-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -109,13 +117,18 @@ export function HomePage() {
             Ver todas as notícias →
           </Button>
         </div>
-        {news.isLoading && !newsPreview.length ? (
+        {news.isLoading && !featuredNews && !newsPreview.length ? (
           <Loading />
         ) : (
-          <div className="grid gap-6 md:grid-cols-3">
-            {newsPreview.map((article) => (
-              <NewsCard key={article.id} article={article} />
-            ))}
+          <div className="space-y-6">
+            {featuredNews ? <NewsCard article={featuredNews} featured /> : null}
+            {newsPreview.length ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {newsPreview.map((article) => (
+                  <NewsCard key={article.id} article={article} />
+                ))}
+              </div>
+            ) : null}
           </div>
         )}
       </section>
@@ -162,9 +175,10 @@ export function HomePage() {
         {galleryPreview.length ? <AlbumGrid albums={galleryPreview} /> : null}
       </section>
 
-      <SocialFollow settings={settings.data} />
+      {settings.data ? <SocialFollow settings={settings.data} /> : null}
       <DonateTeaser />
 
+      {settings.data ? (
       <section className="bg-cream-dark py-16">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-2 md:px-6">
           <div>
@@ -177,17 +191,14 @@ export function HomePage() {
               Fale conosco
             </Button>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-line shadow-sm">
-            <iframe
-              title="Mapa da paróquia"
-              src={mapsEmbedSrc(settings.data.mapsUrl, settings.data.address)}
-              className="aspect-[4/3] w-full border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          </div>
+          <MapEmbed
+            mapsUrl={settings.data.mapsUrl}
+            address={settings.data.address}
+            className="aspect-[4/3] min-h-[280px]"
+          />
         </div>
       </section>
+      ) : null}
     </div>
   )
 }

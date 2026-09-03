@@ -1,5 +1,6 @@
 import { cn } from '@/utils/cn'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { LoaderCircle } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
 
 type Tone = 'default' | 'primary' | 'danger' | 'dangerSolid' | 'success' | 'muted'
@@ -17,20 +18,24 @@ export function IconButton({
   label,
   tone = 'default',
   showTooltip = true,
+  loading = false,
   className,
   children,
+  disabled,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string
   tone?: Tone
   showTooltip?: boolean
+  loading?: boolean
   children: ReactNode
 }) {
   const button = (
     <button
       type="button"
-      aria-label={label}
+      aria-label={loading ? `${label} (carregando)` : label}
       title={label}
+      disabled={disabled || loading}
       className={cn(
         'inline-flex h-9 w-9 items-center justify-center rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marian/40 disabled:opacity-40',
         tones[tone],
@@ -38,7 +43,7 @@ export function IconButton({
       )}
       {...props}
     >
-      {children}
+      {loading ? <LoaderCircle size={16} className="animate-spin" /> : children}
     </button>
   )
 

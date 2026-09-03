@@ -2,10 +2,30 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { STALE_TIME } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
 import { getDashboardStats, getFeast, getSettings } from '@/services/parishService'
-import { listNewsCategories } from '@/services/newsService'
+import { listNewsCategories, writeCampaignCache } from '@/services/newsService'
 import { listPrayerRequests } from '@/services/prayerService'
 import { listMessages } from '@/services/contactService'
 import type { NewsArticle, ParishSettings } from '@/types'
+
+function syncCampaignCache(client: ReturnType<typeof useQueryClient>, updated?: NewsArticle, removedId?: string) {
+  client.setQueryData<NewsArticle | null>(queryKeys.news.campaign, (current) => {
+    if (removedId && current?.id === removedId) {
+      writeCampaignCache(null)
+      return null
+    }
+    if (!updated) return current
+    const isLive = updated.showProgress && updated.status === 'published'
+    if (isLive) {
+      writeCampaignCache(updated)
+      return updated
+    }
+    if (current?.id === updated.id) {
+      writeCampaignCache(null)
+      return null
+    }
+    return current
+  })
+}
 
 function patchNewsListCache(client: ReturnType<typeof useQueryClient>, removedId: string) {
   client.setQueriesData<NewsArticle[]>(
@@ -14,6 +34,24 @@ function patchNewsListCache(client: ReturnType<typeof useQueryClient>, removedId
       predicate: (query) => query.queryKey[1] === 'list',
     },
     (old) => (old ? old.filter((item) => item.id !== removedId) : old),
+  )
+}
+
+function upsertNewsInListCache(client: ReturnType<typeof useQueryClient>, updated: NewsArticle) {
+  client.setQueriesData<NewsArticle[]>(
+    {
+      queryKey: queryKeys.news.all,
+      predicate: (query) => query.queryKey[1] === 'list',
+    },
+    (old) => {
+      if (!old) return old
+      const exists = old.some((item) => item.id === updated.id)
+      const next = exists
+        ? old.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
+        : [updated, ...old]
+      if (!updated.featured) return next
+      return next.map((item) => (item.id === updated.id ? item : { ...item, featured: false }))
+    },
   )
 }
 
@@ -74,9 +112,21 @@ export function useAdminSettingsQuery() {
 export function useInvalidateQueries() {
   const client = useQueryClient()
   return {
-    news: async (removedId?: string) => {
+    news: (removedId?: string, updated?: NewsArticle) => {
       if (removedId) patchNewsListCache(client, removedId)
-      await client.invalidateQueries({ queryKey: queryKeys.news.all })
+      if (updated) upsertNewsInListCache(client, updated)
+      syncCampaignCache(client, updated, removedId)
+      void client.invalidateQueries({ queryKey: queryKeys.news.all })
+    },
+    patchNews: (updated: NewsArticle) => {
+      void client.cancelQueries({ queryKey: queryKeys.news.all })
+      upsertNewsInListCache(client, updated)
+      syncCampaignCache(client, updated)
+    },
+    removeNews: (id: string) => {
+      void client.cancelQueries({ queryKey: queryKeys.news.all })
+      patchNewsListCache(client, id)
+      syncCampaignCache(client, undefined, id)
     },
     notices: () => client.invalidateQueries({ queryKey: queryKeys.notices.all }),
     events: () => client.invalidateQueries({ queryKey: queryKeys.events.all }),

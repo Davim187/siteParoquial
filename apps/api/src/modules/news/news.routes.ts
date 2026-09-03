@@ -21,6 +21,10 @@ export async function newsRoutes(app: FastifyInstance) {
     return reply.send({ data: await newsService.listCategories() })
   })
 
+  app.get('/news/campaign', async (_request, reply) => {
+    return reply.send({ data: await newsService.getCampaignNews() })
+  })
+
   app.get('/news/:slug', async (request, reply) => {
     const { slug } = request.params as { slug: string }
     const result = await newsService.getNewsBySlug(slug, true)

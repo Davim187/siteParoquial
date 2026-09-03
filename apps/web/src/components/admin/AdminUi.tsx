@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from 'react'
-import { Eye, Pencil, Send, Trash2 } from 'lucide-react'
+import { Eye, Copy, Pencil, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
 import { Loading, ErrorState } from '@/components/ui/Feedback'
@@ -94,24 +94,30 @@ export function RowActions({
   entityLabel = 'registro',
   onView,
   onEdit,
+  onDuplicate,
   onDelete,
   onToggle,
   toggleLabel,
   canView,
   canEdit,
+  canDuplicate,
   canDelete,
   canToggle,
+  duplicating = false,
 }: {
   entityLabel?: string
   onView?: () => void
   onEdit?: () => void
+  onDuplicate?: () => void
   onDelete?: () => void
   onToggle?: () => void
   toggleLabel?: string
   canView?: boolean
   canEdit?: boolean
+  canDuplicate?: boolean
   canDelete?: boolean
   canToggle?: boolean
+  duplicating?: boolean
 }) {
   return (
     <div className="flex items-center justify-center gap-1.5">
@@ -123,6 +129,16 @@ export function RowActions({
       {onEdit && canEdit !== false ? (
         <IconButton label={`Editar ${entityLabel}`} onClick={onEdit} tone="primary" showTooltip={false}>
           <Pencil size={16} />
+        </IconButton>
+      ) : null}
+      {onDuplicate && canDuplicate !== false ? (
+        <IconButton
+          label={duplicating ? 'Duplicando notícia...' : `Duplicar ${entityLabel}`}
+          onClick={onDuplicate}
+          loading={duplicating}
+          showTooltip={false}
+        >
+          <Copy size={16} />
         </IconButton>
       ) : null}
       {onToggle && canToggle !== false ? (

@@ -6,7 +6,8 @@ import { useSettingsQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { submitContactMessage } from '@/services/contactService'
-import { mapsEmbedSrc } from '@/utils/maps'
+import { MapEmbed } from '@/components/ui/MapEmbed'
+import { mapsOpenUrl } from '@/utils/maps'
 
 export function ContactPage() {
   usePageMeta('Contato | Paróquia Nossa Senhora das Graças')
@@ -51,15 +52,13 @@ export function ContactPage() {
               <p><strong className="text-navy">Facebook:</strong> {data.facebook}</p>
               <p><strong className="text-navy">YouTube:</strong> {data.youtube}</p>
               <p><strong className="text-navy">Secretaria:</strong> {data.secretaryHours}</p>
-              <div className="overflow-hidden rounded-xl pt-2">
-                <iframe
-                  title="Mapa"
-                  className="h-56 w-full border-0"
-                  loading="lazy"
-                  src={mapsEmbedSrc(data.mapsUrl, data.address)}
-                />  
-              </div>
-              <Button href={data.mapsUrl} variant="outline" className="mt-2">
+              <MapEmbed
+                mapsUrl={data.mapsUrl}
+                address={data.address}
+                title="Mapa"
+                className="mt-2 aspect-[16/10] min-h-[260px]"
+              />
+              <Button href={mapsOpenUrl(data.mapsUrl, data.address)} variant="outline" className="mt-2">
                 Como chegar
               </Button>
             </div>

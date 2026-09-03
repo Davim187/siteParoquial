@@ -136,13 +136,14 @@ export function MediaPicker({
         title="Excluir imagem?"
         description="Essa ação não poderá ser desfeita. A imagem deixará de estar disponível na biblioteca."
         loading={deleting}
-        onClose={() => !deleting && setToDelete(null)}
+        onClose={() => setToDelete(null)}
         onConfirm={async () => {
           if (!toDelete) return
           setDeleting(true)
           try {
             await remove(toDelete.id)
             if (selected?.id === toDelete.id) setSelected(null)
+            setToDelete(null)
             toast.push('Imagem excluída.')
           } catch (error) {
             toast.push(error instanceof Error ? error.message : 'Falha ao excluir imagem', 'error')

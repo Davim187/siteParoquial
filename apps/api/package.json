@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "predev": "bash ../../scripts/ensure-db-tunnel.sh",
+    "predev": "node ../../scripts/ensure-db-tunnel.mjs",
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
     "start": "node dist/server.js",
@@ -15,9 +15,9 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:reset": "prisma migrate reset --force",
-    "db:tunnel": "bash ../../scripts/db-tunnel.sh",
+    "db:tunnel": "node ../../scripts/db-tunnel.mjs",
     "db:check": "tsx scripts/db-check.ts",
-    "db:studio": "dotenv -e .env.production.local -- prisma studio --hostname 127.0.0.1 --port 5555"
+    "db:studio": "node ../../scripts/db-studio.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

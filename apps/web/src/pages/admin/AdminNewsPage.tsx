@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import {
@@ -42,7 +42,14 @@ const empty: NewsForm = {
   category: 'Comunidade',
   categoryId: null,
   status: 'draft',
+  featured: false,
   coverMediaId: null,
+  gallery: [],
+  galleryMediaIds: [],
+  showProgress: false,
+  progressLabel: 'Arrecadação para o novo Centro Pastoral',
+  progressCurrent: 0,
+  progressGoal: 0,
 }
 
 export function AdminNewsPage() {
@@ -55,8 +62,11 @@ export function AdminNewsPage() {
   const [editing, setEditing] = useState<NewsForm | null>(null)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerMode, setPickerMode] = useState<'cover' | 'gallery'>('cover')
   const [toDelete, setToDelete] = useState<NewsArticle | null>(null)
   const [saving, setSaving] = useState(false)
+  const togglingIds = useRef(new Set<string>())
+  const [duplicatingIds, setDuplicatingIds] = useState<Set<string>>(() => new Set())
 
   const categories = categoriesQuery.data ?? []
 
@@ -67,14 +77,14 @@ export function AdminNewsPage() {
     setFormErrors({})
     try {
       const selectedCategory = categories.find((item) => item.id === editing.categoryId)
-      await saveNews({
+      const saved = await saveNews({
         ...editing,
         categoryId: editing.categoryId ?? null,
         category: selectedCategory?.name ?? editing.category,
       })
       toast.push('Notícia salva com sucesso.')
       setEditing(null)
-      invalidate.news()
+      invalidate.patchNews(saved)
     } catch (error) {
       setFormErrors(getFieldErrors(error))
       toast.push(formatValidationSummary(error, 'Não foi possível salvar a notícia.'), 'error')
@@ -100,7 +110,7 @@ export function AdminNewsPage() {
       error={error instanceof Error ? error.message : null}
     >
       <AdminTable
-        headers={['Título', 'Categoria', 'Status', 'Data', 'Ações']}
+        headers={['Título', 'Categoria', 'Status', 'Destaque', 'Data', 'Ações']}
         rows={data?.map((item) => [
           item.title,
           item.category,
@@ -110,6 +120,7 @@ export function AdminNewsPage() {
               item.status === 'published' ? 'published' : item.status === 'archived' ? 'archived' : 'draft'
             }
           />,
+          item.featured ? 'Sim' : 'Não',
           formatDate(item.date),
           <RowActions
             key={item.id}
@@ -119,36 +130,54 @@ export function AdminNewsPage() {
             canToggle={hasAnyPermission('NEWS_EDIT', 'NEWS_MANAGE')}
             onEdit={() => {
               setFormErrors({})
-              setEditing(item as NewsForm)
+              setEditing({
+                ...empty,
+                ...item,
+                gallery: item.gallery ?? [],
+                galleryMediaIds: item.galleryMediaIds ?? [],
+                progressLabel: item.progressLabel || empty.progressLabel,
+              })
             }}
             onDelete={() => setToDelete(item)}
-            onToggle={async () => {
-              await setNewsStatus(item.id, item.status === 'published' ? 'DRAFT' : 'PUBLISHED')
-              toast.push(item.status === 'published' ? 'Notícia despublicada.' : 'Notícia publicada.')
-              invalidate.news()
+            canDuplicate={hasAnyPermission('NEWS_CREATE', 'NEWS_MANAGE')}
+            duplicating={duplicatingIds.has(item.id)}
+            onDuplicate={() => {
+              if (duplicatingIds.has(item.id)) return
+              setDuplicatingIds((current) => new Set(current).add(item.id))
+              void duplicateNews(item.id)
+                .then((copy) => {
+                  invalidate.patchNews(copy)
+                  toast.push('Notícia duplicada como rascunho.')
+                })
+                .catch((error) => {
+                  toast.push(getErrorMessage(error, 'Não foi possível duplicar a notícia.'), 'error')
+                })
+                .finally(() => {
+                  setDuplicatingIds((current) => {
+                    const next = new Set(current)
+                    next.delete(item.id)
+                    return next
+                  })
+                })
+            }}
+            onToggle={() => {
+              if (togglingIds.current.has(item.id)) return
+              togglingIds.current.add(item.id)
+              const nextStatus = item.status === 'published' ? 'draft' : 'published'
+              invalidate.patchNews({ ...item, status: nextStatus })
+              toast.push(nextStatus === 'published' ? 'Notícia publicada.' : 'Notícia despublicada.')
+              void setNewsStatus(item.id, nextStatus === 'published' ? 'PUBLISHED' : 'DRAFT')
+                .then((updated) => invalidate.patchNews(updated))
+                .catch((error) => {
+                  invalidate.patchNews(item)
+                  toast.push(getErrorMessage(error, 'Não foi possível atualizar o status.'), 'error')
+                })
+                .finally(() => togglingIds.current.delete(item.id))
             }}
             toggleLabel={item.status === 'published' ? 'Despublicar notícia' : 'Publicar notícia'}
           />,
         ])}
       />
-      {hasAnyPermission('NEWS_CREATE', 'NEWS_MANAGE') ? (
-        <div className="mt-3">
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={!data?.[0]}
-            onClick={async () => {
-              const first = data?.[0]
-              if (!first) return
-              await duplicateNews(first.id)
-              toast.push('Notícia duplicada como rascunho.')
-              invalidate.news()
-            }}
-          >
-            Duplicar primeira da lista
-          </Button>
-        </div>
-      ) : null}
 
       <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title={editing?.id ? 'Editar notícia' : 'Nova notícia'}>
         {editing ? (
@@ -212,14 +241,57 @@ export function AdminNewsPage() {
                 ) : null}
               </div>
             </FormSection>
-            <FormSection title="Imagem">
+            <FormSection title="Imagens">
               <div className="flex flex-wrap items-center gap-3">
                 {editing.image ? (
                   <img src={editing.image} alt="" className="h-20 w-28 rounded-lg object-cover" />
                 ) : null}
-                <Button type="button" variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setPickerMode('cover')
+                    setPickerOpen(true)
+                  }}
+                >
                   Escolher imagem de capa
                 </Button>
+              </div>
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium text-slate-700">Galeria da notícia</p>
+                <p className="mb-3 text-xs text-slate-500">Adicione várias fotos da obra, da campanha ou do evento.</p>
+                <div className="flex flex-wrap gap-2">
+                  {(editing.gallery ?? []).map((src, index) => (
+                    <div key={`${src}-${index}`} className="relative">
+                      <img src={src} alt="" className="h-20 w-24 rounded-lg object-cover" />
+                      <button
+                        type="button"
+                        className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+                        onClick={() =>
+                          setEditing({
+                            ...editing,
+                            gallery: (editing.gallery ?? []).filter((_, i) => i !== index),
+                            galleryMediaIds: (editing.galleryMediaIds ?? []).filter((_, i) => i !== index),
+                          })
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setPickerMode('gallery')
+                      setPickerOpen(true)
+                    }}
+                  >
+                    + Adicionar imagem
+                  </Button>
+                </div>
               </div>
             </FormSection>
             <FormSection title="Publicação">
@@ -244,6 +316,57 @@ export function AdminNewsPage() {
                   <option value="archived">Arquivado</option>
                 </select>
               </label>
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={Boolean(editing.featured)}
+                  onChange={(e) => setEditing({ ...editing, featured: e.target.checked })}
+                />
+                <span>
+                  <span className="font-medium text-slate-700">Destaque na home e na listagem</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">
+                    Apenas uma notícia fica em destaque. Ao marcar esta, as outras deixam de ser destaque.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={Boolean(editing.showProgress)}
+                  onChange={(e) => setEditing({ ...editing, showProgress: e.target.checked })}
+                />
+                <span>
+                  <span className="font-medium text-slate-700">Barra de progresso (obra / arrecadação)</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">
+                    Use para campanhas como a construção do novo Centro Pastoral. A campanha aparece em destaque na home.
+                  </span>
+                </span>
+              </label>
+              {editing.showProgress ? (
+                <div className="grid gap-3 rounded-xl border border-gold/30 bg-gold/5 p-3">
+                  <AdminInput
+                    label="Título da campanha"
+                    value={editing.progressLabel ?? ''}
+                    onChange={(progressLabel) => setEditing({ ...editing, progressLabel })}
+                  />
+                  <AdminInput
+                    label="Valor arrecadado (R$)"
+                    type="number"
+                    value={String(editing.progressCurrent ?? 0)}
+                    onChange={(progressCurrent) =>
+                      setEditing({ ...editing, progressCurrent: Number(progressCurrent) || 0 })
+                    }
+                  />
+                  <AdminInput
+                    label="Meta (R$)"
+                    type="number"
+                    value={String(editing.progressGoal ?? 0)}
+                    onChange={(progressGoal) => setEditing({ ...editing, progressGoal: Number(progressGoal) || 0 })}
+                  />
+                </div>
+              ) : null}
             </FormSection>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setEditing(null)}>
@@ -262,11 +385,23 @@ export function AdminNewsPage() {
         onClose={() => setPickerOpen(false)}
         onSelect={(media) => {
           if (!editing) return
-          setEditing({
-            ...editing,
-            image: media.url,
-            coverMediaId: media.id,
-          })
+          if (pickerMode === 'gallery') {
+            if ((editing.galleryMediaIds ?? []).includes(media.id)) {
+              setPickerOpen(false)
+              return
+            }
+            setEditing({
+              ...editing,
+              gallery: [...(editing.gallery ?? []), media.url],
+              galleryMediaIds: [...(editing.galleryMediaIds ?? []), media.id],
+            })
+          } else {
+            setEditing({
+              ...editing,
+              image: media.url,
+              coverMediaId: media.id,
+            })
+          }
           setPickerOpen(false)
         }}
       />
@@ -276,18 +411,19 @@ export function AdminNewsPage() {
         title="Excluir notícia?"
         description={`Você está prestes a excluir "${toDelete?.title ?? ''}". Essa ação não poderá ser desfeita.`}
         onClose={() => setToDelete(null)}
-        onConfirm={async () => {
+        onConfirm={() => {
           if (!toDelete) return
-          const { id } = toDelete
-          try {
-            await deleteNews(id)
-            await invalidate.news(id)
-            invalidate.dashboard()
-            toast.push('Notícia excluída.')
-          } catch (error) {
-            toast.push(getErrorMessage(error, 'Não foi possível excluir a notícia.'), 'error')
-            throw error
-          }
+          const snapshot = toDelete
+          invalidate.removeNews(snapshot.id)
+          void deleteNews(snapshot.id)
+            .then(() => {
+              invalidate.dashboard()
+              toast.push('Notícia excluída.')
+            })
+            .catch((error) => {
+              invalidate.patchNews(snapshot)
+              toast.push(getErrorMessage(error, 'Não foi possível excluir a notícia.'), 'error')
+            })
         }}
       />
     </AdminCrudShell>

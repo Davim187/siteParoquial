@@ -3,6 +3,7 @@ export const queryKeys = {
   news: {
     all: ['news'] as const,
     list: (params?: { includeDrafts?: boolean }) => ['news', 'list', params] as const,
+    campaign: ['news', 'campaign'] as const,
     detail: (slug: string) => ['news', 'detail', slug] as const,
     categories: ['news', 'categories'] as const,
   },

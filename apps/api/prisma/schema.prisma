@@ -171,6 +171,7 @@ model Media {
   createdBy        User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt        DateTime @default(now())
   newsCovers       News[]   @relation("NewsCover")
+  newsGallery      NewsImage[] @relation("NewsGallery")
   noticeImages     Notice[]
   eventImages      Event[]
   pastoralImages   Pastoral[]
@@ -208,12 +209,29 @@ model News {
   category    NewsCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   status      ContentStatus @default(DRAFT)
   featured    Boolean       @default(false)
+  showProgress    Boolean @default(false)
+  progressLabel   String?
+  progressCurrent Float   @default(0)
+  progressGoal    Float   @default(0)
   publishedAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  galleryImages NewsImage[]
 
   @@index([status, publishedAt])
   @@index([title])
+  @@index([showProgress])
+}
+
+model NewsImage {
+  id        String @id @default(cuid())
+  newsId    String
+  news      News   @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     Media  @relation("NewsGallery", fields: [mediaId], references: [id], onDelete: Cascade)
+  sortOrder Int    @default(0)
+
+  @@index([newsId, sortOrder])
 }
 
 model Notice {

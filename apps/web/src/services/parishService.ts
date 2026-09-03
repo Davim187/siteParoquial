@@ -1,5 +1,6 @@
 import { apiRequest, mediaUrl } from '@/lib/api-client'
 import type { ParishSettings, Person, PatronFeast } from '@/types'
+import { cleanMapsUrl } from '@/utils/maps'
 
 export async function getSettings(): Promise<ParishSettings> {
   const s = await apiRequest<any>('/api/settings', { auth: false })
@@ -15,7 +16,7 @@ export async function getSettings(): Promise<ParishSettings> {
     facebook: s.facebook,
     youtube: s.youtube,
     secretaryHours: s.secretaryHours,
-    mapsUrl: s.mapsUrl,
+    mapsUrl: cleanMapsUrl(s.mapsUrl),
     pixKey: s.pixKey,
     bankDetails: s.bankDetails,
     streamingUrl: s.streamingUrl,
@@ -33,6 +34,7 @@ export async function saveSettings(settings: ParishSettings) {
     json: {
       ...current,
       ...settings,
+      mapsUrl: cleanMapsUrl(settings.mapsUrl),
       patroness: settings.patroness ?? current.patroness,
     },
   })

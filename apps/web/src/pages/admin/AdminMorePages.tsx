@@ -10,6 +10,7 @@ import {
 } from '@/components/admin/AdminUi'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { MediaPicker } from '@/components/admin/MediaPicker'
+import { RichTextEditor } from '@/components/admin/RichTextEditor'
 import { useToast } from '@/components/ui/Toast'
 import { uploadMedia } from '@/services/mediaService'
 import { usePageMeta } from '@/hooks/usePageMeta'
@@ -77,7 +78,7 @@ export function AdminPastoralsPage() {
       onCreate={() =>
         setEditing({
           name: '',
-          description: '',
+          description: '<p></p>',
           image: '',
           imageId: null,
           responsible: '[RESPONSÁVEL]',
@@ -131,11 +132,17 @@ export function AdminPastoralsPage() {
             }}
           >
             <AdminInput label="Nome" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
-            <AdminTextarea
-              label="Descrição"
-              value={editing.description}
-              onChange={(description) => setEditing({ ...editing, description })}
-            />
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-slate-700">Descrição</p>
+              <p className="mb-2 text-xs text-slate-500">
+                Use títulos, listas e negrito para organizar o texto da pastoral.
+              </p>
+              <RichTextEditor
+                value={editing.description}
+                onChange={(description) => setEditing({ ...editing, description })}
+                placeholder="Apresente a missão, as atividades e como participar..."
+              />
+            </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-slate-700">Imagem</p>
               <div className="flex flex-wrap items-center gap-3">
@@ -749,7 +756,7 @@ export function AdminSettingsPage() {
           label="URL do mapa"
           value={current.mapsUrl}
           onChange={(mapsUrl) => setSettings({ ...current, mapsUrl })}
-          hint="Link do Google Maps usado no botão Como chegar (página de contato)."
+          hint="Cole o link do Google Maps ou só a URL de incorporar (src do iframe). Não cole o código HTML inteiro."
         />
         <AdminInput label="Telefone" value={current.phone} onChange={(phone) => setSettings({ ...current, phone })} />
         <AdminInput

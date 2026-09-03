@@ -77,9 +77,15 @@ export interface NewsArticle {
   date: string
   image: string
   category: string
-  gallery?: string[]
   relatedIds?: string[]
   status: ContentStatus
+  featured: boolean
+  gallery?: string[]
+  galleryMediaIds?: string[]
+  showProgress?: boolean
+  progressLabel?: string
+  progressCurrent?: number
+  progressGoal?: number
 }
 
 export interface Person {

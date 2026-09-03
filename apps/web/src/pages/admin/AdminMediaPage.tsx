@@ -79,12 +79,13 @@ export function AdminMediaPage() {
         title="Excluir imagem?"
         description={`Você está prestes a excluir "${toDelete?.originalName ?? ''}". Essa ação não poderá ser desfeita.`}
         loading={deleting}
-        onClose={() => !deleting && setToDelete(null)}
+        onClose={() => setToDelete(null)}
         onConfirm={async () => {
           if (!toDelete) return
           setDeleting(true)
           try {
             await remove(toDelete.id)
+            setToDelete(null)
             toast.push('Imagem excluída.')
           } catch (error) {
             toast.push(error instanceof Error ? error.message : 'Falha ao excluir imagem', 'error')

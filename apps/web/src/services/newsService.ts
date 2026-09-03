@@ -7,7 +7,7 @@ type ApiNews = {
   title: string
   subtitle?: string | null
   excerpt: string
-  content: string
+  content?: string
   coverUrl?: string | null
   authorName?: string | null
   categoryName?: string | null
@@ -17,6 +17,12 @@ type ApiNews = {
   featured: boolean
   coverMediaId?: string | null
   categoryId?: string | null
+  gallery?: Array<string | null>
+  galleryMediaIds?: string[]
+  showProgress?: boolean
+  progressLabel?: string | null
+  progressCurrent?: number
+  progressGoal?: number
 }
 
 function mapNews(item: ApiNews): NewsArticle & { categoryId?: string | null; coverMediaId?: string | null } {
@@ -26,7 +32,7 @@ function mapNews(item: ApiNews): NewsArticle & { categoryId?: string | null; cov
     title: item.title,
     subtitle: item.subtitle ?? undefined,
     excerpt: item.excerpt,
-    content: item.content,
+    content: item.content ?? '',
     author: item.authorName ?? '[EQUIPE DE COMUNICAÇÃO]',
     date: (item.publishedAt ?? item.createdAt).slice(0, 10),
     image: mediaUrl(item.coverUrl) || 'https://images.unsplash.com/photo-1519491050282-cf00c82424b4?auto=format&fit=crop&w=1200&q=80',
@@ -34,6 +40,13 @@ function mapNews(item: ApiNews): NewsArticle & { categoryId?: string | null; cov
     categoryId: item.categoryId ?? null,
     coverMediaId: item.coverMediaId ?? null,
     status: item.status === 'PUBLISHED' ? 'published' : item.status === 'ARCHIVED' ? 'archived' : 'draft',
+    featured: Boolean(item.featured),
+    gallery: (item.gallery ?? []).filter((src): src is string => Boolean(src)).map((src) => mediaUrl(src) || src),
+    galleryMediaIds: item.galleryMediaIds ?? [],
+    showProgress: Boolean(item.showProgress),
+    progressLabel: item.progressLabel ?? undefined,
+    progressCurrent: Number(item.progressCurrent ?? 0),
+    progressGoal: Number(item.progressGoal ?? 0),
   }
 }
 
@@ -49,6 +62,33 @@ export async function listNews(options?: { includeDrafts?: boolean; search?: str
   const items = result.data.map(mapNews)
   if (options?.includeDrafts) return items
   return items.filter((item) => item.status === 'published')
+}
+
+export async function getCampaignNews(): Promise<NewsArticle | null> {
+  const result = await apiRequest<{ data: ApiNews | null }>('/api/news/campaign', { auth: false })
+  const item = result.data ? mapNews(result.data) : null
+  writeCampaignCache(item)
+  return item
+}
+
+const CAMPAIGN_CACHE_KEY = 'paroquia.campaign.v1'
+
+export function readCampaignCache(): NewsArticle | null {
+  try {
+    const raw = sessionStorage.getItem(CAMPAIGN_CACHE_KEY)
+    return raw ? (JSON.parse(raw) as NewsArticle) : null
+  } catch {
+    return null
+  }
+}
+
+export function writeCampaignCache(article: NewsArticle | null) {
+  try {
+    if (article) sessionStorage.setItem(CAMPAIGN_CACHE_KEY, JSON.stringify(article))
+    else sessionStorage.removeItem(CAMPAIGN_CACHE_KEY)
+  } catch {
+    /* ignore quota / private mode */
+  }
 }
 
 export async function getNewsBySlug(slug: string) {
@@ -70,7 +110,12 @@ export async function saveNews(input: Partial<NewsArticle> & { title: string; ex
     coverMediaId: input.coverMediaId ?? null,
     categoryId: input.categoryId ?? null,
     status: input.status === 'published' ? 'PUBLISHED' : input.status === 'archived' ? 'ARCHIVED' : 'DRAFT',
-    featured: false,
+    featured: Boolean(input.featured),
+    galleryMediaIds: input.galleryMediaIds ?? [],
+    showProgress: Boolean(input.showProgress),
+    progressLabel: input.progressLabel || null,
+    progressCurrent: Number(input.progressCurrent ?? 0),
+    progressGoal: Number(input.progressGoal ?? 0),
   }
   if (input.id) {
     return mapNews(await apiRequest<ApiNews>(`/api/news/${input.id}`, { method: 'PUT', json: payload }))
