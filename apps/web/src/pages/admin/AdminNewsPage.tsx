@@ -47,7 +47,8 @@ const empty: NewsForm = {
   galleryMediaIds: [],
   showProgress: false,
   progressMode: 'amount',
-  progressLabel: 'Arrecadação para o novo Centro Pastoral',
+  progressBadge: 'Em destaque',
+  progressLabel: 'Progresso',
   progressCurrent: 0,
   progressGoal: 0,
 }
@@ -136,6 +137,7 @@ export function AdminNewsPage() {
                 gallery: item.gallery ?? [],
                 galleryMediaIds: item.galleryMediaIds ?? [],
                 progressLabel: item.progressLabel || empty.progressLabel,
+                progressBadge: item.progressBadge || empty.progressBadge,
                 progressMode: item.progressMode === 'percent' ? 'percent' : 'amount',
               })
             }}
@@ -271,7 +273,7 @@ export function AdminNewsPage() {
               </div>
               <div className="mt-4">
                 <p className="mb-2 text-sm font-medium text-slate-700">Galeria da notícia</p>
-                <p className="mb-3 text-xs text-slate-500">Adicione várias fotos da obra, da campanha ou do evento.</p>
+                <p className="mb-3 text-xs text-slate-500">Adicione várias fotos da campanha, do evento ou do conteúdo.</p>
                 <div className="flex flex-wrap gap-2">
                   {(editing.gallery ?? []).map((src, index) => (
                     <div key={`${src}-${index}`} className="relative">
@@ -349,18 +351,25 @@ export function AdminNewsPage() {
                   onChange={(e) => setEditing({ ...editing, showProgress: e.target.checked })}
                 />
                 <span>
-                  <span className="font-medium text-slate-700">Barra de progresso (obra / arrecadação)</span>
+                  <span className="font-medium text-slate-700">Barra de progresso em destaque</span>
                   <span className="mt-0.5 block text-xs text-slate-500">
-                    Use para campanhas como a construção do novo Centro Pastoral. A campanha aparece em destaque na home.
+                    Use para qualquer campanha com progresso (arrecadação, obra, meta comunitária etc.). Aparece em destaque na home.
                   </span>
                 </span>
               </label>
               {editing.showProgress ? (
                 <div className="grid gap-3 rounded-xl border border-gold/30 bg-gold/5 p-3">
                   <AdminInput
-                    label="Título da campanha"
+                    label="Rótulo do destaque"
+                    value={editing.progressBadge ?? ''}
+                    onChange={(progressBadge) => setEditing({ ...editing, progressBadge })}
+                    hint="Ex.: Campanha, Obra, Ação solidária, Em andamento."
+                  />
+                  <AdminInput
+                    label="Título da barra"
                     value={editing.progressLabel ?? ''}
                     onChange={(progressLabel) => setEditing({ ...editing, progressLabel })}
+                    hint="Texto acima da barra de progresso."
                   />
                   <AdminSelect
                     label="Tipo de progresso"
@@ -376,7 +385,7 @@ export function AdminNewsPage() {
                       { value: 'amount', label: 'Por valores (R$)' },
                       { value: 'percent', label: 'Por porcentagem (%)' },
                     ]}
-                    hint="Escolha se a barra usa arrecadação em reais ou apenas o percentual concluído."
+                    hint="Em valores, o botão de contribuir aparece no destaque. Em porcentagem, só o progresso."
                   />
                   {editing.progressMode === 'percent' ? (
                     <AdminInput

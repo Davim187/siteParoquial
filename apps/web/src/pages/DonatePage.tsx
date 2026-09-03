@@ -31,19 +31,21 @@ export function DonatePage() {
             {campaign ? (
               <div className="flex flex-col gap-3 rounded-2xl border border-gold/40 bg-gold/10 p-4 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-dark">Obra da paróquia</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-dark">
+                    {campaign.progressBadge?.trim() || 'Em destaque'}
+                  </p>
                   <h2 className="mt-1 font-serif text-xl text-navy">{campaign.title}</h2>
                   <div className="mt-3">
                     <ProgressBar
                       current={campaign.progressCurrent}
                       goal={campaign.progressGoal}
                       mode={campaign.progressMode}
-                      label={campaign.progressLabel || 'Arrecadação para o novo Centro Pastoral'}
+                      label={campaign.progressLabel?.trim() || 'Progresso'}
                     />
                   </div>
                 </div>
                 <Button href={`/noticias/${campaign.slug}`} variant="outline" size="sm" className="shrink-0">
-                  Acompanhar a obra
+                  Saiba mais
                 </Button>
               </div>
             ) : null}

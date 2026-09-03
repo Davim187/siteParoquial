@@ -84,6 +84,7 @@ export interface NewsArticle {
   galleryMediaIds?: string[]
   showProgress?: boolean
   progressMode?: 'amount' | 'percent'
+  progressBadge?: string
   progressLabel?: string
   progressCurrent?: number
   progressGoal?: number

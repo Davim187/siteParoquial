@@ -110,12 +110,14 @@ export function NewsDetailPage() {
                 current={article.progressCurrent}
                 goal={article.progressGoal}
                 mode={article.progressMode}
-                label={article.progressLabel || 'Arrecadação para o novo Centro Pastoral'}
+                label={article.progressLabel?.trim() || 'Progresso'}
               />
             </div>
-            <Button href="/dizimo" size="sm" className="shrink-0">
-              Quero contribuir
-            </Button>
+            {article.progressMode !== 'percent' ? (
+              <Button href="/dizimo" size="sm" className="shrink-0">
+                Quero contribuir
+              </Button>
+            ) : null}
           </div>
         ) : null}
         <ProseHtml html={article.content} />
