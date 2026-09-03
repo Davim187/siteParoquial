@@ -14,7 +14,7 @@ export function NoticesPage() {
   const showSkeleton = isLoading && !data
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
         eyebrow="Comunicados"
         title="Avisos"

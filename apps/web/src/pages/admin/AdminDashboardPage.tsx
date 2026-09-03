@@ -23,7 +23,7 @@ export function AdminDashboardPage() {
 
   if (isLoading && !data) {
     return (
-      <div className="animate-fade-in space-y-8">
+      <div className="space-y-8">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-28 rounded-2xl bg-slate-100" />

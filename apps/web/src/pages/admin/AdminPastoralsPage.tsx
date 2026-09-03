@@ -9,7 +9,7 @@ import {
 } from '@/components/admin/AdminUi'
 import { AdminDeleteConfirm } from '@/components/admin/AdminDeleteConfirm'
 import { MediaPicker } from '@/components/admin/MediaPicker'
-import { RichTextEditor } from '@/components/admin/RichTextEditor'
+import { LazyRichTextEditor } from '@/components/admin/LazyRichTextEditor'
 import { useToast } from '@/components/ui/Toast'
 import { uploadMedia } from '@/services/mediaService'
 import { usePageMeta } from '@/hooks/usePageMeta'
@@ -99,7 +99,7 @@ export function AdminPastoralsPage() {
               <p className="mb-2 text-xs text-slate-500">
                 Use títulos, listas e negrito para organizar o texto da pastoral.
               </p>
-              <RichTextEditor
+              <LazyRichTextEditor
                 value={editing.description}
                 onChange={(description) => setEditing({ ...editing, description })}
                 placeholder="Apresente a missão, as atividades e como participar..."

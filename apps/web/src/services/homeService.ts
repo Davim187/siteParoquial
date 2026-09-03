@@ -48,7 +48,19 @@ function mapSettings(s: any): ParishSettings {
     history: s.history,
     mission: s.mission,
     vision: s.vision,
-    patroness: s.patroness,
+    patroness: {
+      name: s.patroness?.name ?? '',
+      history: s.patroness?.history ?? '',
+      devotion: s.patroness?.devotion ?? '',
+      medal: s.patroness?.medal ?? '',
+      feast: s.patroness?.feast ?? '',
+      traditions: s.patroness?.traditions ?? '',
+      image: mediaUrl(
+        typeof s.patroness?.image === 'string'
+          ? s.patroness.image
+          : s.patroness?.image?.url ?? s.patroness?.image?.thumbnailUrl ?? '',
+      ),
+    },
   }
 }
 
@@ -220,8 +232,17 @@ export function writeHomeCache(data: HomeBootstrap) {
 }
 
 /** Popula caches do React Query para navegação instantânea nas demais páginas. */
-export function seedQueryCachesFromHome(data: HomeBootstrap) {
-  queryClient.setQueryData(queryKeys.settings, data.settings)
+export function seedQueryCachesFromHome(data: HomeBootstrap, opts?: { overwriteSettings?: boolean }) {
+  const currentSettings = queryClient.getQueryData<ParishSettings>(queryKeys.settings)
+  const incomingImage = data.settings?.patroness?.image
+  const currentImage = currentSettings?.patroness?.image
+  if (
+    opts?.overwriteSettings ||
+    !currentSettings ||
+    (incomingImage && incomingImage !== currentImage)
+  ) {
+    queryClient.setQueryData(queryKeys.settings, data.settings)
+  }
   queryClient.setQueryData(queryKeys.news.campaign, data.campaign)
   queryClient.setQueryData(queryKeys.notices.featured, data.notices)
   queryClient.setQueryData(queryKeys.masses.upcoming(4), data.masses)
@@ -239,7 +260,7 @@ export async function getHomeBootstrap(): Promise<HomeBootstrap> {
   const raw = await apiRequest<any>('/api/home', { auth: false })
   const data = mapHomePayload(raw)
   writeHomeCache(data)
-  seedQueryCachesFromHome(data)
+  seedQueryCachesFromHome(data, { overwriteSettings: true })
   return data
 }
 

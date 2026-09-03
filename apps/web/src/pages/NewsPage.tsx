@@ -19,7 +19,7 @@ export function NewsPage() {
   const showSkeleton = isLoading && !data
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
         eyebrow="Comunicação"
         title="Notícias da Paróquia"

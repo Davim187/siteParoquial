@@ -43,7 +43,7 @@ export async function eventsRoutes(app: FastifyInstance) {
       prisma.event.count({ where }),
       prisma.event.findMany({
         where,
-        include: { image: true },
+        include: { image: { select: { url: true, thumbnailUrl: true } } },
         orderBy: { startsAt: 'asc' },
         skip,
         take: limit,

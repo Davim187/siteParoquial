@@ -15,7 +15,7 @@ export function GalleryPage() {
   const showSkeleton = isLoading && !albums.length
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
         eyebrow="Memória"
         title="Galeria"

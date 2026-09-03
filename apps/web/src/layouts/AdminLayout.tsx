@@ -30,6 +30,7 @@ import { BRAND } from '@/config/brand'
 import { BrandMark } from '@/components/layout/Logo'
 import { getNotifications, type AdminActivityItem, type AdminNotificationAlert } from '@/services/parishService'
 import { prefetchAdminRoute } from '@/lib/admin-prefetch'
+import { scheduleIdleTasks } from '@/lib/idle-prefetch'
 import { formatDateTime } from '@/utils/dates'
 import { ADMIN_ROUTE_PERMISSIONS, permissionsForAdminPath } from '@/constants/admin-routes'
 import { ErrorState } from '@/components/ui/Feedback'
@@ -181,10 +182,17 @@ export function AdminLayout() {
   useEffect(() => {
     if (!isAuthenticated) return
     void loadNotifications()
-    prefetchAdminRoute(location.pathname)
-    prefetchAdminRoute('/admin')
+  }, [isAuthenticated])
 
+  useEffect(() => {
+    if (!isAuthenticated) return
+    prefetchAdminRoute(location.pathname)
+  }, [isAuthenticated, location.pathname])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
     const warmRoutes = [
+      '/admin',
       '/admin/noticias',
       '/admin/avisos',
       '/admin/agenda',
@@ -195,26 +203,16 @@ export function AdminLayout() {
       '/admin/pessoas',
       '/admin/oracoes',
       '/admin/mensagens',
-      '/admin/midia',
-      '/admin/usuarios',
-      '/admin/perfis',
-      '/admin/configuracoes',
-      '/admin/festa',
-      '/admin/perfil',
     ]
-    const warm = () => {
-      for (const route of warmRoutes) {
-        const perms = ADMIN_ROUTE_PERMISSIONS[route]
-        if (!perms || hasAnyPermission(...perms)) prefetchAdminRoute(route)
-      }
-    }
-    if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(warm, { timeout: 3000 })
-      return () => window.cancelIdleCallback(id)
-    }
-    const timer = window.setTimeout(warm, 1500)
-    return () => window.clearTimeout(timer)
-  }, [isAuthenticated, location.pathname, hasAnyPermission])
+    return scheduleIdleTasks(
+      warmRoutes
+        .filter((route) => {
+          const perms = ADMIN_ROUTE_PERMISSIONS[route]
+          return !perms || hasAnyPermission(...perms)
+        })
+        .map((route) => () => prefetchAdminRoute(route)),
+    )
+  }, [isAuthenticated, hasAnyPermission])
 
   const initials = useMemo(() => {
     const parts = (user?.name ?? 'A').trim().split(/\s+/)

@@ -1,6 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { GalleryPhoto } from '@/types'
+
+function preload(url?: string) {
+  if (!url) return
+  const image = new Image()
+  image.src = url
+}
 
 export function PhotoLightbox({
   photos,
@@ -12,7 +18,10 @@ export function PhotoLightbox({
   onClose: () => void
 }) {
   const [index, setIndex] = useState(initialIndex)
-  const current = photos[index]
+  const [shownIndex, setShownIndex] = useState(initialIndex)
+  const shown = photos[shownIndex]
+  const pending = photos[index]
+  const touchStartX = useRef<number | null>(null)
 
   const goPrev = useCallback(() => {
     setIndex((value) => (value === 0 ? photos.length - 1 : value - 1))
@@ -21,6 +30,26 @@ export function PhotoLightbox({
   const goNext = useCallback(() => {
     setIndex((value) => (value === photos.length - 1 ? 0 : value + 1))
   }, [photos.length])
+
+  useEffect(() => {
+    const photo = photos[index]
+    if (!photo) return
+
+    const image = new Image()
+    const reveal = () => setShownIndex(index)
+    image.onload = reveal
+    image.onerror = reveal
+    image.src = photo.url
+    if (image.complete) reveal()
+
+    preload(photos[(index + 1) % photos.length]?.url)
+    preload(photos[(index - 1 + photos.length) % photos.length]?.url)
+
+    return () => {
+      image.onload = null
+      image.onerror = null
+    }
+  }, [index, photos])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -32,7 +61,7 @@ export function PhotoLightbox({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [goNext, goPrev, onClose])
 
-  if (!current) return null
+  if (!shown || !pending) return null
 
   return (
     <div
@@ -40,6 +69,19 @@ export function PhotoLightbox({
       role="dialog"
       aria-modal="true"
       aria-label="Visualização ampliada"
+      onTouchStart={(event) => {
+        touchStartX.current = event.changedTouches[0]?.clientX ?? null
+      }}
+      onTouchEnd={(event) => {
+        const start = touchStartX.current
+        const end = event.changedTouches[0]?.clientX
+        touchStartX.current = null
+        if (start == null || end == null) return
+        const delta = end - start
+        if (Math.abs(delta) < 40) return
+        if (delta > 0) goPrev()
+        else goNext()
+      }}
     >
       <button
         type="button"
@@ -73,14 +115,14 @@ export function PhotoLightbox({
 
       <div className="flex max-h-[90vh] max-w-5xl flex-col items-center">
         <img
-          src={current.url}
-          alt={current.title ?? current.originalName ?? 'Foto da galeria'}
+          src={shown.url}
+          alt={shown.title ?? shown.originalName ?? 'Foto da galeria'}
           className="max-h-[75vh] max-w-full rounded-lg object-contain"
         />
         <div className="mt-3 text-center text-white">
-          {current.title ? <p className="font-medium">{current.title}</p> : null}
+          {shown.title ? <p className="font-medium">{shown.title}</p> : null}
           <p className="text-sm text-white/70">
-            {index + 1} de {photos.length}
+            {shownIndex + 1} de {photos.length}
           </p>
         </div>
       </div>

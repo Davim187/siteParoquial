@@ -5,6 +5,7 @@ import { useSettingsQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
+import { mediaUrl } from '@/lib/api-client'
 
 export function ParishPage() {
   usePageMeta(
@@ -17,7 +18,7 @@ export function ParishPage() {
 
   if (isLoading && !data) {
     return (
-      <div className="animate-fade-in">
+      <div>
         <PageHeader eyebrow="Institucional" title="Nossa Paróquia" description="Carregando informações..." />
         <div className="mx-auto max-w-6xl space-y-10 px-4 py-14 md:px-6">
           <Skeleton className="h-40" />
@@ -34,7 +35,7 @@ export function ParishPage() {
   if (!data) return <ErrorState message="Configurações não encontradas." />
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
         eyebrow="Institucional"
         title="Nossa Paróquia"
@@ -57,7 +58,7 @@ export function ParishPage() {
         </section>
         <section id="padroeira" className="grid items-center gap-8 lg:grid-cols-2">
           <img
-            src={data.patroness.image || PLACEHOLDER_IMAGES.mary}
+            src={mediaUrl(data.patroness?.image) || PLACEHOLDER_IMAGES.mary}
             alt={data.patroness.name}
             className="aspect-[4/5] w-full rounded-3xl object-cover shadow-lg"
             loading="lazy"

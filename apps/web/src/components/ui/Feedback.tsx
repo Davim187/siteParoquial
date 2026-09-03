@@ -1,3 +1,17 @@
+export function PageSkeleton() {
+  return (
+    <div className="mx-auto max-w-6xl space-y-4 px-4 py-8 md:px-6" role="status" aria-label="Carregando página">
+      <Skeleton className="h-10 w-64" />
+      <Skeleton className="h-40" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-48" />
+        <Skeleton className="h-48" />
+        <Skeleton className="h-48" />
+      </div>
+    </div>
+  )
+}
+
 export function Loading({ label = 'Carregando...' }: { label?: string }) {
   return (
     <div className="flex items-center justify-center gap-3 py-16 text-muted" role="status">

@@ -8,6 +8,7 @@ import { usePageMeta } from '@/hooks/usePageMeta'
 import { useAdminSettingsQuery, useInvalidateQueries } from '@/hooks/queries/useAdminQueries'
 import { saveSettings } from '@/services/parishService'
 import { ErrorState, Skeleton } from '@/components/ui/Feedback'
+import { mediaUrl } from '@/lib/api-client'
 
 export function AdminSettingsPage() {
   usePageMeta('Configurações | Admin')
@@ -63,6 +64,11 @@ export function AdminSettingsPage() {
           try {
             await saveSettings(current)
             invalidate.settings()
+            try {
+              sessionStorage.removeItem('paroquia.home.v2')
+            } catch {
+              /* ignore */
+            }
             toast.push('Configurações salvas.')
           } catch (err) {
             toast.push(err instanceof Error ? err.message : 'Não foi possível salvar.', 'error')
@@ -183,7 +189,7 @@ export function AdminSettingsPage() {
           <p className="text-sm font-medium text-slate-700">Imagem da padroeira</p>
           <div className="flex flex-wrap items-center gap-3">
             {patroness.image ? (
-              <img src={patroness.image} alt="" className="h-24 w-20 rounded-lg border object-cover" />
+              <img src={mediaUrl(patroness.image)} alt="" className="h-24 w-20 rounded-lg border object-cover" />
             ) : null}
             <label className="inline-flex cursor-pointer items-center rounded-full border border-line px-4 py-2 text-sm">
               {uploadingPatroness ? 'Enviando...' : 'Enviar imagem'}

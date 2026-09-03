@@ -36,7 +36,7 @@ export function AgendaPage() {
   const showSkeleton = isLoading && !data
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
         eyebrow="Comunidade"
         title="Agenda paroquial"

@@ -9,7 +9,7 @@ import {
   FormSection,
   RowActions,
 } from '@/components/admin/AdminUi'
-import { RichTextEditor } from '@/components/admin/RichTextEditor'
+import { LazyRichTextEditor } from '@/components/admin/LazyRichTextEditor'
 import { MediaPicker } from '@/components/admin/MediaPicker'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -19,7 +19,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useInvalidateQueries, useNewsCategoriesQuery } from '@/hooks/queries/useAdminQueries'
 import { useNewsQuery } from '@/hooks/queries/usePublicQueries'
 import { formatValidationSummary, getErrorMessage, getFieldErrors } from '@/lib/api-error'
-import { deleteNews, duplicateNews, saveNews, setNewsStatus } from '@/services/newsService'
+import { deleteNews, duplicateNews, getAdminNews, saveNews, setNewsStatus } from '@/services/newsService'
 import type { NewsArticle } from '@/types'
 import { formatDate } from '@/utils/dates'
 
@@ -66,6 +66,7 @@ export function AdminNewsPage() {
   const [pickerMode, setPickerMode] = useState<'cover' | 'gallery'>('cover')
   const [toDelete, setToDelete] = useState<NewsArticle | null>(null)
   const [saving, setSaving] = useState(false)
+  const [loadingEdit, setLoadingEdit] = useState(false)
   const togglingIds = useRef(new Set<string>())
   const [duplicatingIds, setDuplicatingIds] = useState<Set<string>>(() => new Set())
 
@@ -131,6 +132,7 @@ export function AdminNewsPage() {
             canToggle={hasAnyPermission('NEWS_EDIT', 'NEWS_MANAGE')}
             onEdit={() => {
               setFormErrors({})
+              setLoadingEdit(true)
               setEditing({
                 ...empty,
                 ...item,
@@ -140,6 +142,22 @@ export function AdminNewsPage() {
                 progressBadge: item.progressBadge || empty.progressBadge,
                 progressMode: item.progressMode === 'percent' ? 'percent' : 'amount',
               })
+              void getAdminNews(item.id)
+                .then((full) => {
+                  setEditing({
+                    ...empty,
+                    ...full,
+                    gallery: full.gallery ?? [],
+                    galleryMediaIds: full.galleryMediaIds ?? [],
+                    progressLabel: full.progressLabel || empty.progressLabel,
+                    progressBadge: full.progressBadge || empty.progressBadge,
+                    progressMode: full.progressMode === 'percent' ? 'percent' : 'amount',
+                  })
+                })
+                .catch((err) => {
+                  toast.push(getErrorMessage(err, 'Não foi possível carregar a notícia.'), 'error')
+                })
+                .finally(() => setLoadingEdit(false))
             }}
             onDelete={() => setToDelete(item)}
             canDuplicate={hasAnyPermission('NEWS_CREATE', 'NEWS_MANAGE')}
@@ -231,7 +249,7 @@ export function AdminNewsPage() {
                 <p className="mb-2 text-xs text-slate-500">
                   Texto curto exibido nos cards. Use negrito, itálico e quebras de linha conforme digitado.
                 </p>
-                <RichTextEditor
+                <LazyRichTextEditor
                   compact
                   value={editing.excerpt}
                   onChange={(excerpt) => setEditing({ ...editing, excerpt })}
@@ -245,7 +263,7 @@ export function AdminNewsPage() {
                 <p className="mb-1.5 text-sm font-medium text-slate-700">
                   Conteúdo <span className="text-red-500">*</span>
                 </p>
-                <RichTextEditor
+                <LazyRichTextEditor
                   value={editing.content}
                   onChange={(content) => setEditing({ ...editing, content })}
                 />
@@ -431,7 +449,7 @@ export function AdminNewsPage() {
               <Button type="button" variant="secondary" onClick={() => setEditing(null)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || loadingEdit}>
                 {saving ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>

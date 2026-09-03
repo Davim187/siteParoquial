@@ -2,6 +2,28 @@ import { apiRequest, mediaUrl } from '@/lib/api-client'
 import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
 import type { ParishSettings, Person, PatronFeast } from '@/types'
 import { cleanMapsUrl } from '@/utils/maps'
+import { queryClient } from '@/lib/query-client'
+import { queryKeys } from '@/lib/query-keys'
+import { writeHomeCache, type HomeBootstrap } from '@/services/homeService'
+
+function mapPatroness(raw: any): ParishSettings['patroness'] {
+  const imageValue = raw?.image
+  const image =
+    typeof imageValue === 'string'
+      ? imageValue
+      : imageValue && typeof imageValue === 'object'
+        ? String(imageValue.url ?? imageValue.thumbnailUrl ?? '')
+        : ''
+  return {
+    name: raw?.name ?? '',
+    history: raw?.history ?? '',
+    devotion: raw?.devotion ?? '',
+    medal: raw?.medal ?? '',
+    feast: raw?.feast ?? '',
+    traditions: raw?.traditions ?? '',
+    image: mediaUrl(image),
+  }
+}
 
 async function fetchSettings(admin: boolean): Promise<ParishSettings> {
   const s = await apiRequest<any>('/api/settings', { auth: admin })
@@ -24,7 +46,7 @@ async function fetchSettings(admin: boolean): Promise<ParishSettings> {
     history: s.history,
     mission: s.mission,
     vision: s.vision,
-    patroness: s.patroness,
+    patroness: mapPatroness(s.patroness),
   }
 }
 
@@ -37,7 +59,7 @@ export async function getAdminSettings(): Promise<ParishSettings> {
 }
 
 export async function saveSettings(settings: ParishSettings) {
-  return apiRequest('/api/settings', {
+  await apiRequest('/api/settings', {
     method: 'PUT',
     json: {
       name: settings.name,
@@ -58,9 +80,26 @@ export async function saveSettings(settings: ParishSettings) {
       history: settings.history,
       mission: settings.mission,
       vision: settings.vision,
-      patroness: settings.patroness,
+      patroness: {
+        ...settings.patroness,
+        image: settings.patroness?.image
+          ? settings.patroness.image.replace(/^https?:\/\/[^/]+/, '')
+          : '',
+      },
     },
   })
+  const nextSettings: ParishSettings = {
+    ...settings,
+    patroness: mapPatroness(settings.patroness),
+  }
+  queryClient.setQueryData(queryKeys.settings, nextSettings)
+  const home = queryClient.getQueryData<HomeBootstrap>(queryKeys.home)
+  if (home) {
+    const nextHome = { ...home, settings: nextSettings }
+    queryClient.setQueryData(queryKeys.home, nextHome)
+    writeHomeCache(nextHome)
+  }
+  return nextSettings
 }
 
 export async function getFeast(): Promise<PatronFeast> {

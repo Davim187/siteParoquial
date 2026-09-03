@@ -12,7 +12,7 @@ export const STALE_TIME = {
   sacraments: 15 * 60_000,
   people: 10 * 60_000,
   gallery: 5 * 60_000,
-  admin: 30_000,
+  admin: 2 * 60_000,
 } as const
 
 export const GC_TIME = {

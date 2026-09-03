@@ -31,6 +31,7 @@ export function useSettingsQuery() {
     queryFn: getSettings,
     staleTime: STALE_TIME.settings,
     gcTime: GC_TIME.long,
+    refetchOnMount: 'always',
     placeholderData: (previous) => previous,
   })
 }

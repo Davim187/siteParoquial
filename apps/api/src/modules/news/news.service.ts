@@ -74,19 +74,34 @@ export async function listNews(query: Record<string, unknown>, opts?: { publicOn
       ? [{ title: 'asc' }]
       : [{ showProgress: 'desc' }, { featured: 'desc' }, { publishedAt: 'desc' }]
 
-  const listInclude = opts?.publicOnly
-    ? {
-        coverMedia: true,
-        author: { select: { id: true, name: true, email: true } },
-        category: true,
-      }
-    : include
+  const listSelect = {
+    id: true,
+    slug: true,
+    title: true,
+    subtitle: true,
+    excerpt: true,
+    status: true,
+    featured: true,
+    publishedAt: true,
+    createdAt: true,
+    coverMediaId: true,
+    categoryId: true,
+    showProgress: true,
+    progressMode: true,
+    progressBadge: true,
+    progressLabel: true,
+    progressCurrent: true,
+    progressGoal: true,
+    coverMedia: { select: { url: true, thumbnailUrl: true } },
+    author: { select: { name: true } },
+    category: { select: { name: true } },
+  } satisfies Prisma.NewsSelect
 
   const [total, rows] = await Promise.all([
     prisma.news.count({ where }),
-    prisma.news.findMany({ where, include: listInclude, orderBy, skip, take: limit }),
+    prisma.news.findMany({ where, select: listSelect, orderBy, skip, take: limit }),
   ])
-  return paginated(rows.map(mapNews), total, page, limit)
+  return paginated(rows.map((row) => mapNews({ ...row, content: '', galleryImages: [] })), total, page, limit)
 }
 
 export async function getCampaignNews() {

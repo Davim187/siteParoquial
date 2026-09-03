@@ -24,6 +24,8 @@ export function RichTextEditor({
       Placeholder.configure({ placeholder }),
     ],
     content: value || '<p></p>',
+    immediatelyRender: false,
+    shouldRerenderOnTransaction: false,
     onUpdate: ({ editor: current }) => onChange(current.getHTML()),
   })
 

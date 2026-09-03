@@ -134,7 +134,10 @@ export function useInvalidateQueries() {
     pastorals: () => client.invalidateQueries({ queryKey: queryKeys.pastorals.all }),
     sacraments: () => client.invalidateQueries({ queryKey: queryKeys.sacraments.all }),
     people: () => client.invalidateQueries({ queryKey: queryKeys.people.all }),
-    settings: () => client.invalidateQueries({ queryKey: queryKeys.settings }),
+    settings: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.settings })
+      void client.invalidateQueries({ queryKey: queryKeys.home })
+    },
     dashboard: () => client.invalidateQueries({ queryKey: queryKeys.dashboard }),
     prayers: () => client.invalidateQueries({ queryKey: queryKeys.prayers }),
     messages: () => client.invalidateQueries({ queryKey: queryKeys.messages }),

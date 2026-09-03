@@ -58,7 +58,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="animate-fade-in">
+    <div>
       {data?.settings ? (
         <Hero settings={data.settings} />
       ) : (

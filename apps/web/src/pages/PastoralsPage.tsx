@@ -14,7 +14,7 @@ export function PastoralsPage() {
   const showSkeleton = isLoading && !data
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
         eyebrow="Serviço"
         title="Pastorais e movimentos"

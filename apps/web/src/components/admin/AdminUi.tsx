@@ -28,7 +28,7 @@ export function AdminCrudShell({
   const canCreate = !createPermission || hasPermission(createPermission)
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-500">{title}</p>
         {onCreate && canCreate ? (

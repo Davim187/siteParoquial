@@ -14,7 +14,7 @@ export function SacramentsPage() {
   const showSkeleton = isLoading && !data
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
         eyebrow="Vida sacramentária"
         title="Sacramentos"

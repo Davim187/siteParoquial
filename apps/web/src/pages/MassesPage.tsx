@@ -17,7 +17,7 @@ export function MassesPage() {
   const showSkeleton = masses.isLoading && !masses.data
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <PageHeader
         eyebrow="Liturgia"
         title="Agenda de missas"

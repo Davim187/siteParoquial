@@ -1,7 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { z } from 'zod'
-import { BulkPhotoUpload } from '@/components/admin/BulkPhotoUpload'
 import {
   AdminCrudShell,
   AdminInput,
@@ -13,7 +12,7 @@ import { MediaPicker } from '@/components/admin/MediaPicker'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { SkeletonGrid } from '@/components/ui/Feedback'
+import { Skeleton, SkeletonGrid } from '@/components/ui/Feedback'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useToast } from '@/components/ui/Toast'
 import { usePageMeta } from '@/hooks/usePageMeta'
@@ -31,6 +30,10 @@ import { getErrorMessage, getFieldErrors, formatValidationSummary } from '@/lib/
 import { formatDate } from '@/utils/dates'
 import type { GalleryAlbum } from '@/types'
 import { uploadMedia } from '@/services/mediaService'
+
+const BulkPhotoUpload = lazy(() =>
+  import('@/components/admin/BulkPhotoUpload').then((mod) => ({ default: mod.BulkPhotoUpload })),
+)
 
 const albumFormSchema = z.object({
   title: z.string().trim().min(2, 'O título do álbum é obrigatório.').max(150, 'O título deve ter no máximo 150 caracteres.'),
@@ -373,6 +376,7 @@ function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onCl
       <Modal open={Boolean(album)} onClose={onClose} title={album ? `Fotos — ${album.title}` : 'Fotos'}>
         {album ? (
           <div className="space-y-4">
+            <Suspense fallback={<Skeleton className="h-36" />}>
             <BulkPhotoUpload
               disabled={bulkMutation.isPending}
               onUpload={async (files) => {
@@ -396,6 +400,7 @@ function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onCl
                 }
               }}
             />
+            </Suspense>
 
             {albumQuery.isLoading && !albumQuery.data ? (
               <SkeletonGrid count={8} className="aspect-square h-auto" cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4" />

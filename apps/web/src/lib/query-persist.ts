@@ -3,6 +3,11 @@ import { queryKeys } from '@/lib/query-keys'
 
 const PREFIX = 'paroquia.q.'
 
+function restoreStale(queryKey: readonly unknown[], data: unknown) {
+  queryClient.setQueryData(queryKey, data)
+  queryClient.getQueryCache().find({ queryKey: [...queryKey] })?.setState({ dataUpdatedAt: 1 })
+}
+
 function asParams(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined
 }
@@ -17,7 +22,7 @@ const SPECS: PersistSpec[] = [
   {
     storageKey: 'settings',
     matches: (key) => key[0] === 'settings',
-    restore: (data) => queryClient.setQueryData(queryKeys.settings, data),
+    restore: (data) => restoreStale(queryKeys.settings, data),
   },
   {
     storageKey: 'news-list',
@@ -139,19 +144,32 @@ const SPECS: PersistSpec[] = [
     matches: (key) => key[0] === 'profile',
     restore: (data) => queryClient.setQueryData(queryKeys.profile, data),
   },
-  {
-    storageKey: 'media',
-    matches: (key) => key[0] === 'media' && key[1] === 'list',
-    restore: (data) => queryClient.setQueryData(queryKeys.media.list({ search: '' }), data),
-  },
 ]
+
+const MAX_PERSIST_BYTES = 120_000
+const persistQueue = new Map<string, unknown>()
+let persistTimer: number | null = null
 
 function write(storageKey: string, data: unknown) {
   try {
-    sessionStorage.setItem(PREFIX + storageKey, JSON.stringify(data))
+    const raw = JSON.stringify(data)
+    if (raw.length > MAX_PERSIST_BYTES) return
+    sessionStorage.setItem(PREFIX + storageKey, raw)
   } catch {
     /* ignore */
   }
+}
+
+function flushPersistQueue() {
+  persistTimer = null
+  for (const [key, data] of persistQueue) write(key, data)
+  persistQueue.clear()
+}
+
+function queueWrite(storageKey: string, data: unknown) {
+  persistQueue.set(storageKey, data)
+  if (persistTimer != null) return
+  persistTimer = window.setTimeout(flushPersistQueue, 400)
 }
 
 function read(storageKey: string): unknown | null {
@@ -170,7 +188,7 @@ export function installQueryPersistence() {
     if (query.state.status !== 'success' || query.state.data === undefined) return
     const key = query.queryKey
     for (const spec of SPECS) {
-      if (spec.matches(key)) write(spec.storageKey, query.state.data)
+      if (spec.matches(key)) queueWrite(spec.storageKey, query.state.data)
     }
   })
 }

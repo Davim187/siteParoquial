@@ -97,6 +97,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
 export function mediaUrl(url?: string | null) {
   if (!url) return ''
+  if (url.startsWith('/uploads/')) return `${API_URL}${url}`
+  const uploaded = url.match(/\/uploads\/.+$/)
+  if (uploaded) return `${API_URL}${uploaded[0]}`
   if (url.startsWith('http')) return url
   return `${API_URL}${url}`
 }

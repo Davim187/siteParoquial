@@ -43,7 +43,7 @@ export async function noticesRoutes(app: FastifyInstance) {
       prisma.notice.count({ where }),
       prisma.notice.findMany({
         where,
-        include: { image: true },
+        include: { image: { select: { url: true, thumbnailUrl: true } } },
         orderBy: [{ featured: 'desc' }, { priority: 'desc' }, { startsAt: 'desc' }],
         skip,
         take: limit,

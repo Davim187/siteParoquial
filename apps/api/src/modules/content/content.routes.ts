@@ -7,8 +7,21 @@ import { logActivity } from '../../lib/activity.js'
 import { authorize, authenticate } from '../../middlewares/authorize.js'
 import { hasPermission, resolveAdminListView, tryOptionalAuth } from '../../lib/access.js'
 import { publicSettingsSelect, updateSettingsSchema } from './settings.schema.js'
+import { toPublicMediaPath } from '../../lib/media-url.js'
 import { getDashboardStats, getNotifications, withImage } from './content.service.js'
 import { getHomeBootstrap } from './home.service.js'
+
+function withPatronessImage<T extends { patroness?: unknown }>(settings: T): T {
+  const patroness = settings.patroness as { image?: string } | null | undefined
+  if (!patroness || typeof patroness !== 'object') return settings
+  return {
+    ...settings,
+    patroness: {
+      ...patroness,
+      image: toPublicMediaPath(patroness.image) ?? patroness.image ?? '',
+    },
+  }
+}
 
 const FORM_RATE_LIMIT = {
   config: {
@@ -34,7 +47,7 @@ export async function contentRoutes(app: FastifyInstance) {
       prisma.pastoral.count({ where }),
       prisma.pastoral.findMany({
         where,
-        include: { image: true },
+        include: { image: { select: { url: true, thumbnailUrl: true } } },
         orderBy: { name: 'asc' },
         skip,
         take: limit,
@@ -107,7 +120,7 @@ export async function contentRoutes(app: FastifyInstance) {
   app.get('/sacraments', async (_request, reply) => {
     const rows = await prisma.sacrament.findMany({
       where: { active: true },
-      include: { image: true },
+      include: { image: { select: { url: true, thumbnailUrl: true } } },
       orderBy: { sortOrder: 'asc' },
     })
     return reply.send({ data: rows.map(withImage) })
@@ -151,7 +164,7 @@ export async function contentRoutes(app: FastifyInstance) {
       prisma.person.count({ where }),
       prisma.person.findMany({
         where,
-        include: { photo: true },
+        include: { photo: { select: { url: true, thumbnailUrl: true } } },
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
         skip,
         take: limit,
@@ -301,13 +314,19 @@ export async function contentRoutes(app: FastifyInstance) {
       ...(adminView ? {} : { select: publicSettingsSelect }),
     })
     if (!settings) throw new AppError(404, 'Configurações não encontradas.')
-    return reply.send(settings)
+    return reply.send(withPatronessImage(settings))
   })
   app.put('/settings', { preHandler: [authorize('SETTINGS_MANAGE')] }, async (request, reply) => {
     const data = updateSettingsSchema.parse(request.body)
+    if (data.patroness?.image) {
+      data.patroness = {
+        ...data.patroness,
+        image: toPublicMediaPath(data.patroness.image) ?? data.patroness.image,
+      }
+    }
     const settings = await prisma.parishSettings.update({ where: { id: 'default' }, data })
     await logActivity({ userId: request.authUser!.id, action: 'update', entity: 'settings', entityId: 'default' })
-    return reply.send(settings)
+    return reply.send(withPatronessImage(settings))
   })
 
   app.get('/dashboard', { preHandler: [authorize('DASHBOARD_VIEW')] }, async (_request, reply) => {

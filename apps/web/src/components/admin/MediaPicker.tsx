@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
 import { Search, Upload } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -20,11 +20,15 @@ export function MediaPicker({
 }) {
   const toast = useToast()
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
   const [selected, setSelected] = useState<MediaItem | null>(null)
   const [toDelete, setToDelete] = useState<MediaItem | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [uploadLabel, setUploadLabel] = useState('Enviando...')
-  const { items, loading, uploading, load, upload, remove } = useMediaLibrary({ enabled: open, search })
+  const { items, loading, uploading, load, upload, remove } = useMediaLibrary({
+    enabled: open,
+    search: deferredSearch,
+  })
 
   useEffect(() => {
     if (!open) {

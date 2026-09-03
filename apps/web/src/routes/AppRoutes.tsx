@@ -2,7 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { PublicLayout } from '@/layouts/PublicLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
-import { Loading } from '@/components/ui/Feedback'
+import { PageSkeleton } from '@/components/ui/Feedback'
 
 const HomePage = lazy(() => import('@/pages/HomePage').then((m) => ({ default: m.HomePage })))
 const ParishPage = lazy(() => import('@/pages/ParishPage').then((m) => ({ default: m.ParishPage })))
@@ -98,7 +98,7 @@ const AdminProfilePage = lazy(() =>
 )
 
 function Suspend({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<Loading label="Carregando página..." />}>{children}</Suspense>
+  return <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
 }
 
 export function AppRoutes() {

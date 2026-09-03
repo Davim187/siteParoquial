@@ -147,5 +147,5 @@ export async function listNewsCategories() {
 }
 
 export async function getAdminNews(id: string) {
-  return apiRequest<ApiNews>(`/api/admin/news/${id}`)
+  return mapNews(await apiRequest<ApiNews>(`/api/admin/news/${id}`))
 }
