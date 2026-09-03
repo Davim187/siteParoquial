@@ -22,7 +22,7 @@ a2enmod proxy proxy_http rewrite headers ssl
 
 disable_default_apache_sites
 
-DOMAIN="$(domain_from_env "$ENV_FILE" 2>/dev/null || true)"
+DOMAIN="$(domain_from_env "$ENV_FILE" 2>/dev/null || host_from_env "$ENV_FILE" 2>/dev/null || true)"
 if [ -z "$DOMAIN" ]; then
   DOMAIN="paroquiansdasgracas.com.br"
 fi

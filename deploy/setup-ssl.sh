@@ -22,17 +22,26 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-DOMAIN="$(domain_from_env "$ENV_FILE" || true)"
+DOMAIN="$(domain_from_env "$ENV_FILE" 2>/dev/null || true)"
 ACME_EMAIL="$(read_env_value ACME_EMAIL "$ENV_FILE" 2>/dev/null || true)"
+PUBLIC_URL_VAL="$(read_env_value PUBLIC_URL "$ENV_FILE" 2>/dev/null || true)"
 
 if [ -z "$DOMAIN" ]; then
-  echo "PUBLIC_URL ou CORS_ORIGIN não definido em $ENV_FILE — HTTPS ignorado."
-  exit 0
+  echo "ERRO: PUBLIC_URL/CORS_ORIGIN estão com IP ou vazios."
+  echo ""
+  echo "Valor atual de PUBLIC_URL: ${PUBLIC_URL_VAL:-(vazio)}"
+  echo ""
+  echo "Let's Encrypt não emite certificado para IP. Edite $ENV_FILE:"
+  echo "  PUBLIC_URL=https://paroquiansdasgracas.com.br"
+  echo "  CORS_ORIGIN=https://paroquiansdasgracas.com.br"
+  echo ""
+  echo "Depois rode novamente: bash deploy/setup-ssl.sh"
+  exit 1
 fi
 
 if [[ "$DOMAIN" =~ ^[0-9.]+$ ]]; then
-  echo "Domínio é um IP ($DOMAIN). HTTPS com Let's Encrypt exige um domínio válido."
-  exit 0
+  echo "ERRO: domínio resolvido como IP ($DOMAIN). Use o nome do domínio no .env.production."
+  exit 1
 fi
 
 if [ -z "$ACME_EMAIL" ]; then

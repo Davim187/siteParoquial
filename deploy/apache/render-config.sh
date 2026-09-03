@@ -1,20 +1,58 @@
 #!/usr/bin/env bash
 
+host_from_url() {
+  printf '%s\n' "$1" | sed -E 's|^https?://||' | sed 's|/.*||' | sed 's|:.*||'
+}
+
+is_ip_address() {
+  [[ "$1" =~ ^[0-9]+(\.[0-9]+){3}$ ]]
+}
+
+# Prefer domínio (não IP). Let's Encrypt não emite certificado para IP comum.
 domain_from_env() {
   local file="$1"
-  local url
+  local key url host
 
-  url="$(read_env_value PUBLIC_URL "$file" 2>/dev/null || read_env_value CORS_ORIGIN "$file" 2>/dev/null || true)"
-  url="${url#\"}"
-  url="${url%\"}"
-  url="${url#\'}"
-  url="${url%\'}"
-
-  if [ -z "$url" ]; then
-    return 1
+  if host="$(read_env_value SITE_DOMAIN "$file" 2>/dev/null || true)" && [ -n "$host" ]; then
+    host="$(host_from_url "$host")"
+    if ! is_ip_address "$host"; then
+      printf '%s\n' "$host"
+      return 0
+    fi
   fi
 
-  printf '%s\n' "$url" | sed -E 's|^https?://||' | sed 's|/.*||'
+  for key in PUBLIC_URL CORS_ORIGIN; do
+    url="$(read_env_value "$key" "$file" 2>/dev/null || true)"
+    [ -z "$url" ] && continue
+    host="$(host_from_url "$url")"
+    if ! is_ip_address "$host"; then
+      printf '%s\n' "$host"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+# Qualquer host configurado (inclui IP) — útil para Apache em HTTP.
+host_from_env() {
+  local file="$1"
+  local key url
+
+  if host="$(read_env_value SITE_DOMAIN "$file" 2>/dev/null || true)" && [ -n "$host" ]; then
+    host_from_url "$host"
+    return 0
+  fi
+
+  for key in PUBLIC_URL CORS_ORIGIN; do
+    url="$(read_env_value "$key" "$file" 2>/dev/null || true)"
+    if [ -n "$url" ]; then
+      host_from_url "$url"
+      return 0
+    fi
+  done
+
+  return 1
 }
 
 ssl_cert_exists() {
