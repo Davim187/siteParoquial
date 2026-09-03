@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Biblioteca compartilhada — carrega todos os módulos de deploy.
 
-DEPLOY_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEPLOY_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/lib" && pwd)"
 
 # shellcheck source=lib/common.sh
 source "$DEPLOY_LIB_DIR/common.sh"
