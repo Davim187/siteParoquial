@@ -27,7 +27,7 @@ import { usersRoutes } from './modules/users/users.routes.js'
 async function buildServer() {
   const uploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024
   const app = Fastify({
-    bodyLimit: 512 * 1024 * 1024,
+    bodyLimit: 1024 * 1024 * 1024,
     requestTimeout: 600_000,
     connectionTimeout: 30_000,
     logger: {
