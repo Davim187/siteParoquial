@@ -129,6 +129,17 @@ host_from_env() {
   return 1
 }
 
+ensure_max_upload_mb() {
+  local file="$1"
+  local desired="${2:-15}"
+
+  if grep -qE '^MAX_UPLOAD_MB=' "$file"; then
+    sed -i "s/^MAX_UPLOAD_MB=.*/MAX_UPLOAD_MB=${desired}/" "$file"
+  else
+    printf '\nMAX_UPLOAD_MB=%s\n' "$desired" >> "$file"
+  fi
+}
+
 validate_env_production() {
   local file="$1"
 
@@ -146,6 +157,8 @@ validate_env_production() {
   if [[ "$db_url" == *"@postgres:"* ]]; then
     deploy_die "DATABASE_URL usa host 'postgres' — troque por 127.0.0.1 no $file"
   fi
+
+  ensure_max_upload_mb "$file" 15
 }
 
 git_sync_branch() {
