@@ -144,6 +144,8 @@ export type BulkUploadFileEvent = {
   error?: string
 }
 
+const UPLOAD_BATCH_SIZE = 5
+
 export async function bulkUploadPhotos(
   albumId: string,
   files: File[],
@@ -152,9 +154,9 @@ export async function bulkUploadPhotos(
 ): Promise<BulkUploadResult> {
   const succeeded: BulkUploadResult['succeeded'] = []
   const failed: BulkUploadResult['failed'] = []
+  let completed = 0
 
-  for (let index = 0; index < files.length; index += 1) {
-    const file = files[index]
+  async function uploadOne(file: File, index: number) {
     onFile?.({ index, fileName: file.name, status: 'start' })
     try {
       const media = await uploadMedia(file, 'gallery')
@@ -169,7 +171,13 @@ export async function bulkUploadPhotos(
       })
       onFile?.({ index, fileName: file.name, status: 'error', error: message })
     }
-    onProgress?.(index + 1, files.length)
+    completed += 1
+    onProgress?.(completed, files.length)
+  }
+
+  for (let start = 0; start < files.length; start += UPLOAD_BATCH_SIZE) {
+    const batch = files.slice(start, start + UPLOAD_BATCH_SIZE)
+    await Promise.all(batch.map((file, offset) => uploadOne(file, start + offset)))
   }
 
   const message = [

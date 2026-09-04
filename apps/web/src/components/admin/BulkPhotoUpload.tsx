@@ -143,7 +143,7 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
     if (!pendingFiles.length || uploading) return
     const queue = items.filter((item) => item.status === 'pending' || item.status === 'error')
     setUploading(true)
-    setSummary(`Enviando 1 de ${queue.length}...`)
+    setSummary(`Enviando de 5 em 5... 0 de ${queue.length}.`)
 
     let sent = 0
     let failedCount = 0
@@ -156,7 +156,8 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
           setItems((current) =>
             current.map((item) => (item.id === target.id ? { ...item, status: 'uploading', error: undefined } : item)),
           )
-          setSummary(`Enviando ${event.index + 1} de ${queue.length}...`)
+          const remaining = queue.length - sent - failedCount
+          setSummary(`Enviando de 5 em 5... ${sent} de ${queue.length}.${remaining ? ` ${remaining} na fila.` : ''}`)
           return
         }
         if (event.status === 'success') {
@@ -172,12 +173,13 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
             ),
           )
         }
+        const remaining = queue.length - sent - failedCount
         const parts = [
-          sent ? `${sent} enviada(s)` : null,
-          failedCount ? `${failedCount} com erro` : null,
-          event.index + 1 < queue.length ? `${queue.length - event.index - 1} na fila` : null,
+          `Enviando de 5 em 5... ${sent} de ${queue.length}.`,
+          failedCount ? `${failedCount} com erro.` : null,
+          remaining ? `${remaining} na fila.` : null,
         ].filter(Boolean)
-        setSummary(parts.join(' · '))
+        setSummary(parts.join(' '))
       })
       const message = [
         result.succeeded.length ? `${result.succeeded.length} foto(s) enviada(s) com sucesso.` : null,
@@ -248,7 +250,7 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
 
       <p className="text-xs text-muted">
         Selecione várias imagens de uma vez (JPG, PNG, WebP ou HEIC). Máximo {MAX_FILES} arquivos, {MAX_FILE_MB} MB
-        cada.
+        cada. O envio acontece de 5 em 5.
       </p>
 
       {preparingCount ? (
