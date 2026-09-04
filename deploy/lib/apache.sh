@@ -58,7 +58,7 @@ write_apache_config() {
 
   app_block="$(cat <<EOF
     DocumentRoot ${app_dir}/apps/web/dist
-    LimitRequestBody 12582912
+    LimitRequestBody 20971520
     <Directory ${app_dir}/apps/web/dist>
         Options -Indexes +FollowSymLinks
         AllowOverride None

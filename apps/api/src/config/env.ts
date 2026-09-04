@@ -14,7 +14,7 @@ const envSchema = z.object({
   STORAGE_PROVIDER: z.enum(['local', 's3', 'cloudinary', 'r2']).default('local'),
   UPLOAD_DIR: z.string().default('uploads'),
   PUBLIC_URL: z.string().default('http://localhost:3333'),
-  MAX_UPLOAD_MB: z.coerce.number().default(8),
+  MAX_UPLOAD_MB: z.coerce.number().default(15),
 })
 
 export type Env = z.infer<typeof envSchema>

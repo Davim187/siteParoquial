@@ -129,7 +129,7 @@ export function AdminPeoplePage() {
                     ) : null}
                   </div>
                 </div>
-                <p className="text-xs text-muted">Envie JPG, PNG, WebP ou HEIC (iPhone) do computador (até 8 MB).</p>
+                <p className="text-xs text-muted">Envie JPG, PNG, WebP ou HEIC (iPhone) do computador (até 15 MB).</p>
               </div>
             ) : (
               <AdminInput label="Foto" value={editing.photo} onChange={(photo) => setEditing({ ...editing, photo })} />
