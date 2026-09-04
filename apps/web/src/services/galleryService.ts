@@ -1,5 +1,6 @@
-import { apiRequest, API_URL, mediaUrl } from '@/lib/api-client'
-import { parseApiError } from '@/lib/api-error'
+import { apiRequest, mediaUrl } from '@/lib/api-client'
+import { getErrorMessage } from '@/lib/api-error'
+import { uploadMedia } from '@/services/mediaService'
 import type { GalleryAlbum, GalleryPhoto, Paginated } from '@/types'
 
 type ApiAlbum = {
@@ -128,35 +129,48 @@ export type BulkUploadResult = {
   message: string
 }
 
+export async function addAlbumPhoto(albumId: string, mediaId: string) {
+  const item = await apiRequest<ApiPhoto>(`/api/gallery/albums/${albumId}/photos`, {
+    method: 'POST',
+    json: { mediaId },
+  })
+  return mapPhoto(item)
+}
+
 export async function bulkUploadPhotos(
   albumId: string,
   files: File[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<BulkUploadResult> {
-  const form = new FormData()
-  for (const file of files) form.append('file', file, file.name || 'foto.jpg')
+  const succeeded: BulkUploadResult['succeeded'] = []
+  const failed: BulkUploadResult['failed'] = []
 
-  const token = localStorage.getItem('paroquia_access_token')
-  const response = await fetch(`${API_URL}/api/gallery/albums/${albumId}/photos/bulk`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    body: form,
-  })
-
-  onProgress?.(files.length, files.length)
-
-  const body = (await response.json().catch(() => ({}))) as BulkUploadResult & { message?: string }
-  if (response.status === 413) {
-    throw new Error('O envio é grande demais para o servidor.')
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index]
+    try {
+      const media = await uploadMedia(file, 'gallery')
+      const photo = await addAlbumPhoto(albumId, media.id)
+      succeeded.push({ fileName: file.name, photoId: photo.id })
+    } catch (error) {
+      failed.push({
+        fileName: file.name,
+        error: getErrorMessage(error, 'Falha no upload.'),
+      })
+    }
+    onProgress?.(index + 1, files.length)
   }
-  if (!response.ok && response.status !== 422) {
-    throw await parseApiError(response)
-  }
+
+  const message = [
+    succeeded.length ? `${succeeded.length} foto(s) enviada(s) com sucesso.` : null,
+    failed.length ? `${failed.length} foto(s) não puderam ser enviadas.` : null,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return {
-    succeeded: body.succeeded ?? [],
-    failed: body.failed ?? [],
-    message: body.message ?? 'Upload concluído.',
+    succeeded,
+    failed,
+    message: message || 'Nenhuma foto enviada.',
   }
 }
 

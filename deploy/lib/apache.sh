@@ -174,6 +174,11 @@ configure_apache() {
     fix_apache_ports 0
   fi
 
+  cat > /etc/apache2/conf-available/paroquia-upload.conf <<'EOF'
+LimitRequestBody 0
+EOF
+  a2enconf paroquia-upload >/dev/null 2>&1 || true
+
   write_apache_config "$APP_DIR" "$domain" "$ssl_enabled"
   a2ensite "$APACHE_SITE" >/dev/null 2>&1 || true
   a2dissite 000-default.conf >/dev/null 2>&1 || true

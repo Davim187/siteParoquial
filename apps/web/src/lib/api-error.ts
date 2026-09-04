@@ -28,9 +28,6 @@ export class ApiError extends Error {
 
 export async function parseApiError(response: Response): Promise<ApiError> {
   const body = (await response.json().catch(() => ({}))) as ApiErrorBody
-  if (response.status === 413 && !body.message) {
-    return new ApiError(413, { message: 'O envio é grande demais para o servidor.' })
-  }
   return new ApiError(response.status, body)
 }
 
