@@ -137,25 +137,37 @@ export async function addAlbumPhoto(albumId: string, mediaId: string) {
   return mapPhoto(item)
 }
 
+export type BulkUploadFileEvent = {
+  index: number
+  fileName: string
+  status: 'start' | 'success' | 'error'
+  error?: string
+}
+
 export async function bulkUploadPhotos(
   albumId: string,
   files: File[],
   onProgress?: (done: number, total: number) => void,
+  onFile?: (event: BulkUploadFileEvent) => void,
 ): Promise<BulkUploadResult> {
   const succeeded: BulkUploadResult['succeeded'] = []
   const failed: BulkUploadResult['failed'] = []
 
   for (let index = 0; index < files.length; index += 1) {
     const file = files[index]
+    onFile?.({ index, fileName: file.name, status: 'start' })
     try {
       const media = await uploadMedia(file, 'gallery')
       const photo = await addAlbumPhoto(albumId, media.id)
       succeeded.push({ fileName: file.name, photoId: photo.id })
+      onFile?.({ index, fileName: file.name, status: 'success' })
     } catch (error) {
+      const message = getErrorMessage(error, 'Falha no upload.')
       failed.push({
         fileName: file.name,
-        error: getErrorMessage(error, 'Falha no upload.'),
+        error: message,
       })
+      onFile?.({ index, fileName: file.name, status: 'error', error: message })
     }
     onProgress?.(index + 1, files.length)
   }

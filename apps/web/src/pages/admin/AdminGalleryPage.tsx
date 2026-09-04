@@ -379,10 +379,15 @@ function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onCl
             <Suspense fallback={<Skeleton className="h-36" />}>
             <BulkPhotoUpload
               disabled={bulkMutation.isPending}
-              onUpload={async (files) => {
+              onUpload={async (files, onFile) => {
                 setPendingUploads(files.length)
                 try {
-                  const result = await bulkMutation.mutateAsync({ albumId: album.id, files })
+                  const result = await bulkMutation.mutateAsync({
+                    albumId: album.id,
+                    files,
+                    onProgress: (done, total) => setPendingUploads(Math.max(total - done, 0)),
+                    onFile,
+                  })
                   if (result.failed.length) {
                     toast.push(result.message, result.succeeded.length ? 'success' : 'error')
                   } else {

@@ -15,9 +15,23 @@ export type PendingUploadFile = {
   error?: string
 }
 
+type UploadFileEvent = {
+  index: number
+  fileName: string
+  status: 'start' | 'success' | 'error'
+  error?: string
+}
+
 type BulkPhotoUploadProps = {
-  onUpload: (files: File[]) => Promise<{ succeeded: string[]; failed: Array<{ fileName: string; error: string }> }>
+  onUpload: (
+    files: File[],
+    onFile?: (event: UploadFileEvent) => void,
+  ) => Promise<{ succeeded: string[]; failed: Array<{ fileName: string; error: string }> }>
   disabled?: boolean
+}
+
+function selectedMessage(count: number) {
+  return count === 1 ? '1 foto selecionada.' : `${count} fotos selecionadas.`
 }
 
 function validateFile(file: File): string | null {
@@ -89,6 +103,8 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
     setPreparing(true)
     setItems((current) => [...current, ...placeholders])
 
+    let selectedCount = items.filter((item) => item.status === 'pending').length
+
     for (const placeholder of placeholders) {
       try {
         const prepared = await prepareUploadImage(placeholder.file)
@@ -98,7 +114,9 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
           previewUrl: URL.createObjectURL(prepared),
           status: 'pending',
         }
+        selectedCount += 1
         setItems((current) => current.map((item) => (item.id === placeholder.id ? ready : item)))
+        setSummary(errors.length ? `${selectedMessage(selectedCount)} ${errors.join(' ')}` : selectedMessage(selectedCount))
       } catch {
         errors.push(`Não foi possível preparar o arquivo ${placeholder.file.name}.`)
         setItems((current) => current.filter((item) => item.id !== placeholder.id))
@@ -106,7 +124,11 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
     }
 
     setPreparing(false)
-    if (errors.length) setSummary(errors.join(' '))
+    if (selectedCount) {
+      setSummary(errors.length ? `${selectedMessage(selectedCount)} ${errors.join(' ')}` : selectedMessage(selectedCount))
+    } else if (errors.length) {
+      setSummary(errors.join(' '))
+    }
   }
 
   function removeItem(id: string) {
@@ -119,24 +141,44 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
 
   async function handleUpload() {
     if (!pendingFiles.length || uploading) return
+    const queue = items.filter((item) => item.status === 'pending' || item.status === 'error')
     setUploading(true)
-    setSummary(null)
-    setItems((current) =>
-      current.map((item) =>
-        item.status === 'pending' || item.status === 'error' ? { ...item, status: 'uploading' } : item,
-      ),
-    )
+    setSummary(`Enviando 1 de ${queue.length}...`)
+
+    let sent = 0
+    let failedCount = 0
 
     try {
-      const result = await onUpload(pendingFiles)
-      setItems((current) =>
-        current.map((item) => {
-          if (item.status !== 'uploading') return item
-          const failed = result.failed.find((entry) => entry.fileName === item.file.name)
-          if (failed) return { ...item, status: 'error', error: failed.error }
-          return { ...item, status: 'success' }
-        }),
-      )
+      const result = await onUpload(pendingFiles, (event) => {
+        const target = queue[event.index]
+        if (!target) return
+        if (event.status === 'start') {
+          setItems((current) =>
+            current.map((item) => (item.id === target.id ? { ...item, status: 'uploading', error: undefined } : item)),
+          )
+          setSummary(`Enviando ${event.index + 1} de ${queue.length}...`)
+          return
+        }
+        if (event.status === 'success') {
+          sent += 1
+          setItems((current) =>
+            current.map((item) => (item.id === target.id ? { ...item, status: 'success' } : item)),
+          )
+        } else {
+          failedCount += 1
+          setItems((current) =>
+            current.map((item) =>
+              item.id === target.id ? { ...item, status: 'error', error: event.error ?? 'Falha no upload.' } : item,
+            ),
+          )
+        }
+        const parts = [
+          sent ? `${sent} enviada(s)` : null,
+          failedCount ? `${failedCount} com erro` : null,
+          event.index + 1 < queue.length ? `${queue.length - event.index - 1} na fila` : null,
+        ].filter(Boolean)
+        setSummary(parts.join(' · '))
+      })
       const message = [
         result.succeeded.length ? `${result.succeeded.length} foto(s) enviada(s) com sucesso.` : null,
         result.failed.length ? `${result.failed.length} foto(s) não puderam ser enviadas.` : null,
@@ -245,6 +287,11 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
               {item.status === 'preparing' ? (
                 <span className="absolute inset-x-0 bottom-0 bg-navy-deep/80 py-1 text-center text-[10px] text-white">
                   Preparando...
+                </span>
+              ) : null}
+              {item.status === 'pending' ? (
+                <span className="absolute inset-x-0 bottom-0 bg-navy-deep/80 py-1 text-center text-[10px] text-white">
+                  Selecionada
                 </span>
               ) : null}
               {item.status === 'uploading' ? (

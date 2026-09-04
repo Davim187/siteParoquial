@@ -80,11 +80,13 @@ export function useBulkUploadPhotosMutation() {
       albumId,
       files,
       onProgress,
+      onFile,
     }: {
       albumId: string
       files: File[]
       onProgress?: (done: number, total: number) => void
-    }) => bulkUploadPhotos(albumId, files, onProgress),
+      onFile?: Parameters<typeof bulkUploadPhotos>[3]
+    }) => bulkUploadPhotos(albumId, files, onProgress, onFile),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['gallery'] })
     },
