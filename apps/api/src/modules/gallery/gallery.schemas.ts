@@ -45,4 +45,4 @@ export const reorderPhotosSchema = z.object({
   photoIds: z.array(z.string().cuid()).min(1, 'Informe a ordem das fotos.'),
 })
 
-export const MAX_BULK_UPLOAD_FILES = 50
+export const MAX_BULK_UPLOAD_FILES = 25

@@ -53,7 +53,7 @@ async function buildServer() {
   await app.register(multipart, {
     limits: {
       fileSize: uploadBytes,
-      files: 50,
+      files: 25,
       fieldSize: 1024 * 1024,
     },
   })
