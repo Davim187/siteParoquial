@@ -118,6 +118,12 @@ async function buildServer() {
     if (err.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER' || err.statusCode === 401) {
       return reply.status(401).send({ error: 'UNAUTHORIZED', message: 'Autenticação necessária.' })
     }
+    if (err.code === 'FST_REQ_FILE_TOO_LARGE' || err.statusCode === 413) {
+      return reply.status(413).send({
+        error: 'PAYLOAD_TOO_LARGE',
+        message: `Cada foto pode ter no máximo ${env.MAX_UPLOAD_MB} MB.`,
+      })
+    }
     request.log.error({ err: error }, 'Unhandled error')
     return reply.status(err.statusCode ?? 500).send({
       error: 'INTERNAL_ERROR',

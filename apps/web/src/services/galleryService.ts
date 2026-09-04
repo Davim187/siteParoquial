@@ -128,11 +128,29 @@ export type BulkUploadResult = {
   message: string
 }
 
-export async function bulkUploadPhotos(
-  albumId: string,
-  files: File[],
-  onProgress?: (done: number, total: number) => void,
-): Promise<BulkUploadResult> {
+const BATCH_MAX_FILES = 4
+const BATCH_MAX_BYTES = 40 * 1024 * 1024
+
+function chunkUploadBatches(files: File[]): File[][] {
+  const batches: File[][] = []
+  let current: File[] = []
+  let bytes = 0
+
+  for (const file of files) {
+    const nextBytes = bytes + file.size
+    if (current.length >= BATCH_MAX_FILES || (current.length > 0 && nextBytes > BATCH_MAX_BYTES)) {
+      batches.push(current)
+      current = []
+      bytes = 0
+    }
+    current.push(file)
+    bytes += file.size
+  }
+  if (current.length) batches.push(current)
+  return batches
+}
+
+async function uploadPhotoBatch(albumId: string, files: File[]): Promise<BulkUploadResult> {
   const form = new FormData()
   for (const file of files) form.append('file', file, file.name || 'foto.jpg')
 
@@ -143,9 +161,10 @@ export async function bulkUploadPhotos(
     body: form,
   })
 
-  onProgress?.(files.length, files.length)
-
   const body = (await response.json().catch(() => ({}))) as BulkUploadResult & { message?: string }
+  if (response.status === 413) {
+    throw new Error('O envio é grande demais para o servidor. Tente menos fotos por vez.')
+  }
   if (!response.ok && response.status !== 422) {
     throw await parseApiError(response)
   }
@@ -154,6 +173,37 @@ export async function bulkUploadPhotos(
     succeeded: body.succeeded ?? [],
     failed: body.failed ?? [],
     message: body.message ?? 'Upload concluído.',
+  }
+}
+
+export async function bulkUploadPhotos(
+  albumId: string,
+  files: File[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<BulkUploadResult> {
+  const succeeded: BulkUploadResult['succeeded'] = []
+  const failed: BulkUploadResult['failed'] = []
+  let done = 0
+
+  for (const batch of chunkUploadBatches(files)) {
+    const result = await uploadPhotoBatch(albumId, batch)
+    succeeded.push(...result.succeeded)
+    failed.push(...result.failed)
+    done += batch.length
+    onProgress?.(done, files.length)
+  }
+
+  const message = [
+    succeeded.length ? `${succeeded.length} foto(s) enviada(s) com sucesso.` : null,
+    failed.length ? `${failed.length} foto(s) não puderam ser enviadas.` : null,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return {
+    succeeded,
+    failed,
+    message: message || 'Nenhuma foto enviada.',
   }
 }
 

@@ -60,7 +60,7 @@ write_apache_config() {
     DocumentRoot ${app_dir}/apps/web/dist
     Timeout 600
     ProxyTimeout 600
-    LimitRequestBody 536870912
+    LimitRequestBody 0
     <Directory ${app_dir}/apps/web/dist>
         Options -Indexes +FollowSymLinks
         AllowOverride None
@@ -80,6 +80,9 @@ EOF
     ProxyPreserveHost On
     RequestHeader set X-Forwarded-Proto "http"
     RequestHeader set X-Forwarded-Port "80"
+    <Location /api>
+        LimitRequestBody 0
+    </Location>
     ProxyPass /api http://127.0.0.1:3333/api connectiontimeout=30 timeout=600
     ProxyPassReverse /api http://127.0.0.1:3333/api
     ProxyPass /uploads http://127.0.0.1:3333/uploads connectiontimeout=30 timeout=600
@@ -91,6 +94,9 @@ EOF
     ProxyPreserveHost On
     RequestHeader set X-Forwarded-Proto "https"
     RequestHeader set X-Forwarded-Port "443"
+    <Location /api>
+        LimitRequestBody 0
+    </Location>
     ProxyPass /api http://127.0.0.1:3333/api connectiontimeout=30 timeout=600
     ProxyPassReverse /api http://127.0.0.1:3333/api
     ProxyPass /uploads http://127.0.0.1:3333/uploads connectiontimeout=30 timeout=600
