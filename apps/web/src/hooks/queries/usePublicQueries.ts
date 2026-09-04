@@ -127,6 +127,7 @@ export function usePastoralsQuery(params?: { includeInactive?: boolean }) {
     queryFn: () => listPastorals(params),
     staleTime: STALE_TIME.pastorals,
     placeholderData: (previous) => previous,
+    refetchOnMount: 'always',
   })
 }
 

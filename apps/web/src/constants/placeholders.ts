@@ -9,4 +9,11 @@ export const PLACEHOLDER_IMAGES = {
   news: 'https://images.unsplash.com/photo-1519491050282-cf00c82424b4?auto=format&fit=crop&w=1200&q=80',
 } as const
 
+/** Capa da pastoral: upload local ou a mesma foto padrão. Ignora Unsplash antigo do cache. */
+export function pastoralCover(image?: string | null) {
+  const url = image?.trim() ?? ''
+  if (url && !/unsplash\.com/i.test(url)) return url
+  return PLACEHOLDER_IMAGES.pastoral
+}
+
 export const HERO_IMAGE = PLACEHOLDER_IMAGES.church

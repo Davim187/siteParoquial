@@ -62,9 +62,9 @@ const SPECS: PersistSpec[] = [
     restore: (data) => queryClient.setQueryData(queryKeys.masses.upcoming(4), data),
   },
   {
-    storageKey: 'pastorals',
+    storageKey: 'pastorals-v2',
     matches: (key) => key[0] === 'pastorals' && key[1] === 'list' && !asParams(key[2])?.includeInactive,
-    restore: (data) => queryClient.setQueryData(queryKeys.pastorals.list(), data),
+    restore: (data) => restoreStale(queryKeys.pastorals.list(), data),
   },
   {
     storageKey: 'pastorals-admin',

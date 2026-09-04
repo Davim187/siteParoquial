@@ -1,5 +1,5 @@
 import { apiRequest, mediaUrl } from '@/lib/api-client'
-import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
+import { pastoralCover } from '@/constants/placeholders'
 import type { Pastoral } from '@/types'
 
 function mapPastoral(item: any): Pastoral & { imageId?: string | null } {
@@ -8,8 +8,7 @@ function mapPastoral(item: any): Pastoral & { imageId?: string | null } {
     slug: item.slug,
     name: item.name,
     description: item.description,
-    image:
-      mediaUrl(item.imageUrl) || PLACEHOLDER_IMAGES.pastoral,
+    image: pastoralCover(mediaUrl(item.imageUrl) || item.image),
     imageId: item.imageId ?? null,
     responsible: item.responsible,
     contact: item.phone || item.email || '[CONTATO]',

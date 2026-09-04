@@ -1,5 +1,5 @@
 import { apiRequest, mediaUrl } from '@/lib/api-client'
-import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
+import { PLACEHOLDER_IMAGES, pastoralCover } from '@/constants/placeholders'
 import { queryClient, STALE_TIME, GC_TIME } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
 import type {
@@ -26,7 +26,7 @@ export type HomeBootstrap = {
   gallery: GalleryAlbum[]
 }
 
-const HOME_CACHE_KEY = 'paroquia.home.v2'
+const HOME_CACHE_KEY = 'paroquia.home.v4'
 
 function mapSettings(s: any): ParishSettings {
   return {
@@ -174,7 +174,7 @@ function mapPastoral(item: any): Pastoral {
     slug: item.slug,
     name: item.name,
     description: item.description,
-    image: mediaUrl(item.imageUrl) || PLACEHOLDER_IMAGES.pastoral,
+    image: pastoralCover(mediaUrl(item.imageUrl) || item.image),
     responsible: item.responsible,
     contact: item.phone || item.email || '[CONTATO]',
     meetingTime: item.meetingTime || '[HORÁRIO]',
@@ -249,7 +249,10 @@ export function seedQueryCachesFromHome(data: HomeBootstrap, opts?: { overwriteS
   queryClient.setQueryData(queryKeys.events.upcoming(3), data.events.slice(0, 3))
   queryClient.setQueryData(queryKeys.events.upcoming(6), data.events)
   queryClient.setQueryData(queryKeys.people.list(), data.people)
-  queryClient.setQueryData(queryKeys.pastorals.list(), data.pastorals)
+  const cachedPastorals = queryClient.getQueryData<Pastoral[]>(queryKeys.pastorals.list())
+  if (!cachedPastorals || data.pastorals.length >= cachedPastorals.length) {
+    queryClient.setQueryData(queryKeys.pastorals.list(), data.pastorals)
+  }
   queryClient.setQueryData(queryKeys.gallery.albums({ limit: 3 }), {
     data: data.gallery,
     pagination: { page: 1, limit: 3, total: data.gallery.length, totalPages: 1 },

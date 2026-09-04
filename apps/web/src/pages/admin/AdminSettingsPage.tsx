@@ -66,6 +66,8 @@ export function AdminSettingsPage() {
             invalidate.settings()
             try {
               sessionStorage.removeItem('paroquia.home.v2')
+              sessionStorage.removeItem('paroquia.home.v3')
+              sessionStorage.removeItem('paroquia.home.v4')
             } catch {
               /* ignore */
             }

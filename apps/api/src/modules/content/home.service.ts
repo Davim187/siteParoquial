@@ -141,7 +141,6 @@ export async function getHomeBootstrap() {
       where: { active: true },
       include: { image: mediaLite },
       orderBy: { name: 'asc' },
-      take: 6,
     }),
     prisma.galleryAlbum.findMany({
       where: { active: true },

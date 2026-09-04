@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom'
 import type { Pastoral } from '@/types'
 import { Card } from '@/components/ui/Card'
 import { ProseHtml } from '@/components/ui/ProseHtml'
+import { pastoralCover } from '@/constants/placeholders'
 
 export function PastoralCard({ pastoral }: { pastoral: Pastoral }) {
   return (
     <Card className="flex h-full flex-col">
-      <img src={pastoral.image} alt="" className="h-40 w-full object-cover" loading="lazy" />
+      <img src={pastoralCover(pastoral.image)} alt="" className="h-40 w-full object-cover" loading="lazy" />
       <div className="flex flex-1 flex-col p-5">
         <h3 className="font-serif text-2xl text-navy">{pastoral.name}</h3>
         {pastoral.description?.trim() ? (
