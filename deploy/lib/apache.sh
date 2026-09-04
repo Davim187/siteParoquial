@@ -58,7 +58,9 @@ write_apache_config() {
 
   app_block="$(cat <<EOF
     DocumentRoot ${app_dir}/apps/web/dist
-    LimitRequestBody 20971520
+    Timeout 300
+    ProxyTimeout 300
+    LimitRequestBody 83886080
     <Directory ${app_dir}/apps/web/dist>
         Options -Indexes +FollowSymLinks
         AllowOverride None
@@ -78,9 +80,9 @@ EOF
     ProxyPreserveHost On
     RequestHeader set X-Forwarded-Proto "http"
     RequestHeader set X-Forwarded-Port "80"
-    ProxyPass /api http://127.0.0.1:3333/api
+    ProxyPass /api http://127.0.0.1:3333/api connectiontimeout=30 timeout=300
     ProxyPassReverse /api http://127.0.0.1:3333/api
-    ProxyPass /uploads http://127.0.0.1:3333/uploads
+    ProxyPass /uploads http://127.0.0.1:3333/uploads connectiontimeout=30 timeout=300
     ProxyPassReverse /uploads http://127.0.0.1:3333/uploads
 EOF
 )"
@@ -89,9 +91,9 @@ EOF
     ProxyPreserveHost On
     RequestHeader set X-Forwarded-Proto "https"
     RequestHeader set X-Forwarded-Port "443"
-    ProxyPass /api http://127.0.0.1:3333/api
+    ProxyPass /api http://127.0.0.1:3333/api connectiontimeout=30 timeout=300
     ProxyPassReverse /api http://127.0.0.1:3333/api
-    ProxyPass /uploads http://127.0.0.1:3333/uploads
+    ProxyPass /uploads http://127.0.0.1:3333/uploads connectiontimeout=30 timeout=300
     ProxyPassReverse /uploads http://127.0.0.1:3333/uploads
 EOF
 )"

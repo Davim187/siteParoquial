@@ -34,11 +34,12 @@ export class LocalStorageService implements StorageService {
     const fileName = `${safeFolder}/${base}.webp`
     const thumbName = `${safeFolder}/${base}-thumb.webp`
 
-    const image = sharp(normalized).rotate()
-    const meta = await image.metadata()
-    const webp = await image.webp({ quality: 82 }).toBuffer()
-    const thumb = await sharp(normalized)
+    const image = sharp(normalized, { failOn: 'none', sequentialRead: true })
       .rotate()
+      .resize(2560, 2560, { fit: 'inside', withoutEnlargement: true })
+    const meta = await image.clone().metadata()
+    const webp = await image.webp({ quality: 82 }).toBuffer()
+    const thumb = await sharp(webp)
       .resize(640, 640, { fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 75 })
       .toBuffer()

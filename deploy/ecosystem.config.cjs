@@ -54,7 +54,7 @@ module.exports = {
       exec_mode: 'fork',
       instances: 1,
       autorestart: true,
-      max_memory_restart: '512M',
+      max_memory_restart: '1024M',
       error_file: path.join(logsDir, 'api-error.log'),
       out_file: path.join(logsDir, 'api-out.log'),
       merge_logs: true,

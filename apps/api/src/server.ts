@@ -25,7 +25,11 @@ import { galleryRoutes } from './modules/gallery/gallery.routes.js'
 import { usersRoutes } from './modules/users/users.routes.js'
 
 async function buildServer() {
+  const uploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024
   const app = Fastify({
+    bodyLimit: 80 * 1024 * 1024,
+    requestTimeout: 300_000,
+    connectionTimeout: 30_000,
     logger: {
       level: env.NODE_ENV === 'production' ? 'info' : 'debug',
       redact: ['req.headers.authorization', 'body.password', 'body.refreshToken'],
@@ -47,7 +51,11 @@ async function buildServer() {
   await app.register(rateLimit, { max: 200, timeWindow: '1 minute' })
   await app.register(jwt, { secret: env.JWT_SECRET })
   await app.register(multipart, {
-    limits: { fileSize: env.MAX_UPLOAD_MB * 1024 * 1024 },
+    limits: {
+      fileSize: uploadBytes,
+      files: 50,
+      fieldSize: 1024 * 1024,
+    },
   })
   await app.register(fastifyStatic, {
     root: path.resolve(process.cwd(), env.UPLOAD_DIR),
