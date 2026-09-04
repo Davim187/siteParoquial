@@ -26,10 +26,14 @@ restart_api() {
   prepare_api_runtime
   test_api_boot
 
-  deploy_log "Iniciando PM2..."
+  deploy_log "Atualizando PM2..."
   export APP_DIR
-  pm2 delete paroquia-api 2>/dev/null || true
-  APP_DIR="$APP_DIR" pm2 start "$APP_DIR/deploy/ecosystem.config.cjs"
+  if pm2 describe paroquia-api >/dev/null 2>&1; then
+    # Relê o ecosystem sem apagar o processo — evita 502 no Apache.
+    APP_DIR="$APP_DIR" pm2 startOrReload "$APP_DIR/deploy/ecosystem.config.cjs" --update-env
+  else
+    APP_DIR="$APP_DIR" pm2 start "$APP_DIR/deploy/ecosystem.config.cjs"
+  fi
   pm2 save
 }
 
