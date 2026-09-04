@@ -27,8 +27,8 @@ import { usersRoutes } from './modules/users/users.routes.js'
 async function buildServer() {
   const uploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024
   const app = Fastify({
-    bodyLimit: 80 * 1024 * 1024,
-    requestTimeout: 300_000,
+    bodyLimit: 512 * 1024 * 1024,
+    requestTimeout: 600_000,
     connectionTimeout: 30_000,
     logger: {
       level: env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -53,7 +53,7 @@ async function buildServer() {
   await app.register(multipart, {
     limits: {
       fileSize: uploadBytes,
-      files: 25,
+      files: 30,
       fieldSize: 1024 * 1024,
     },
   })

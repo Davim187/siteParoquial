@@ -5,7 +5,7 @@ import { prepareUploadImage } from '@/utils/prepareUploadImage'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif'
 const MAX_FILE_MB = 15
-const MAX_FILES = 25
+const MAX_FILES = 30
 
 export type PendingUploadFile = {
   id: string

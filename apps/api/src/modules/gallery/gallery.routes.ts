@@ -306,23 +306,6 @@ export async function galleryRoutes(app: FastifyInstance) {
       const album = await prisma.galleryAlbum.findUnique({ where: { id: albumId } })
       if (!album) throw new AppError(404, 'Álbum não encontrado.')
 
-      const parts = request.files()
-      const files: Array<{ filename: string; mimetype: string; buffer: Buffer }> = []
-
-      for await (const part of parts) {
-        if (part.type !== 'file') continue
-        files.push({
-          filename: part.filename,
-          mimetype: part.mimetype,
-          buffer: await part.toBuffer(),
-        })
-        if (files.length > MAX_BULK_UPLOAD_FILES) {
-          throw new AppError(400, `É possível enviar no máximo ${MAX_BULK_UPLOAD_FILES} fotos por vez.`)
-        }
-      }
-
-      if (files.length === 0) throw new AppError(400, 'Selecione pelo menos uma foto.')
-
       const maxOrder = await prisma.galleryPhoto.aggregate({
         where: { albumId },
         _max: { sortOrder: true },
@@ -331,13 +314,28 @@ export async function galleryRoutes(app: FastifyInstance) {
 
       const succeeded: Array<{ fileName: string; photoId: string }> = []
       const failed: Array<{ fileName: string; error: string }> = []
+      let received = 0
 
-      for (const file of files) {
+      for await (const part of request.files()) {
+        if (part.type !== 'file') continue
+        received += 1
+        const fileName = part.filename || `foto-${received}.jpg`
+
+        if (received > MAX_BULK_UPLOAD_FILES) {
+          await part.toBuffer().catch(() => undefined)
+          failed.push({
+            fileName,
+            error: `É possível enviar no máximo ${MAX_BULK_UPLOAD_FILES} fotos por vez.`,
+          })
+          continue
+        }
+
         try {
-          const stored = await storage.upload(file.buffer, file.filename, file.mimetype, 'gallery')
+          const buffer = await part.toBuffer()
+          const stored = await storage.upload(buffer, fileName, part.mimetype, 'gallery')
           const media = await prisma.media.create({
             data: {
-              originalName: file.filename,
+              originalName: fileName,
               fileName: stored.fileName,
               url: stored.url,
               thumbnailUrl: stored.thumbnailUrl,
@@ -367,14 +365,16 @@ export async function galleryRoutes(app: FastifyInstance) {
             album.coverMediaId = media.id
           }
 
-          succeeded.push({ fileName: file.filename, photoId: photo.id })
+          succeeded.push({ fileName, photoId: photo.id })
         } catch (error) {
           failed.push({
-            fileName: file.filename,
+            fileName,
             error: error instanceof Error ? error.message : 'Falha no upload.',
           })
         }
       }
+
+      if (received === 0) throw new AppError(400, 'Selecione pelo menos uma foto.')
 
       await logActivity({
         userId: request.authUser!.id,
@@ -384,7 +384,7 @@ export async function galleryRoutes(app: FastifyInstance) {
         metadata: { succeeded: succeeded.length, failed: failed.length },
       })
 
-      return reply.status(failed.length === files.length ? 422 : 201).send({
+      return reply.status(failed.length && !succeeded.length ? 422 : 201).send({
         succeeded,
         failed,
         message:
