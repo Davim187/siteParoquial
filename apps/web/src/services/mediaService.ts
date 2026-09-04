@@ -42,7 +42,7 @@ export async function listAllMedia(params?: { search?: string }) {
 export async function uploadMedia(file: File, folder = 'general') {
   const prepared = await prepareUploadImage(file)
   const form = new FormData()
-  form.append('file', prepared)
+  form.append('file', prepared, prepared.name || 'foto.jpg')
   const token = localStorage.getItem('paroquia_access_token')
   const response = await fetch(`${API_URL}/api/media/upload?folder=${encodeURIComponent(folder)}`, {
     method: 'POST',

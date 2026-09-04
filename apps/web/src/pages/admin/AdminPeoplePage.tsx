@@ -90,7 +90,7 @@ export function AdminPeoplePage() {
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-                        className="hidden"
+                        className="sr-only"
                         disabled={uploadingPhoto}
                         onChange={async (e) => {
                           const file = e.target.files?.[0]

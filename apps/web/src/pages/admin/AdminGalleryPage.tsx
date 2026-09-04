@@ -224,7 +224,7 @@ export function AdminGalleryPage() {
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-                    className="hidden"
+                    className="sr-only"
                     disabled={uploadingCover}
                     onChange={async (event) => {
                       const file = event.target.files?.[0]

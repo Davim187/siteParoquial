@@ -134,7 +134,7 @@ export async function bulkUploadPhotos(
   onProgress?: (done: number, total: number) => void,
 ): Promise<BulkUploadResult> {
   const form = new FormData()
-  for (const file of files) form.append('file', file)
+  for (const file of files) form.append('file', file, file.name || 'foto.jpg')
 
   const token = localStorage.getItem('paroquia_access_token')
   const response = await fetch(`${API_URL}/api/gallery/albums/${albumId}/photos/bulk`, {

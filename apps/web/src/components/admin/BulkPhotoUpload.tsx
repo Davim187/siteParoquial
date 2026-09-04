@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AlertCircle, CheckCircle2, ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { prepareUploadImage } from '@/utils/prepareUploadImage'
@@ -21,10 +21,14 @@ type BulkPhotoUploadProps = {
 }
 
 function validateFile(file: File): string | null {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/octet-stream']
   const ext = file.name.toLowerCase()
   const validExt = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'].some((item) => ext.endsWith(item))
-  if (!allowed.includes(file.type) && !validExt) {
+  const type = file.type.toLowerCase()
+  if (type && !type.startsWith('image/') && !allowed.includes(type) && !validExt) {
+    return `O arquivo ${file.name} não é um formato de imagem válido.`
+  }
+  if (!type && !validExt) {
     return `O arquivo ${file.name} não é um formato de imagem válido.`
   }
   if (file.size > MAX_FILE_MB * 1024 * 1024) {
@@ -34,7 +38,6 @@ function validateFile(file: File): string | null {
 }
 
 export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
   const [items, setItems] = useState<PendingUploadFile[]>([])
   const [uploading, setUploading] = useState(false)
   const [preparing, setPreparing] = useState(false)
@@ -55,16 +58,20 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
     const errors: string[] = []
 
     for (const file of Array.from(selected)) {
+      const selectedFile = new File([file], file.name || 'foto.jpg', {
+        type: file.type || 'application/octet-stream',
+        lastModified: file.lastModified,
+      })
       if (items.length + validFiles.length >= MAX_FILES) {
         errors.push(`É possível selecionar no máximo ${MAX_FILES} fotos por vez.`)
         break
       }
-      const validationError = validateFile(file)
+      const validationError = validateFile(selectedFile)
       if (validationError) {
         errors.push(validationError)
         continue
       }
-      validFiles.push(file)
+      validFiles.push(selectedFile)
     }
 
     if (!validFiles.length) {
@@ -161,29 +168,29 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
   return (
     <div className="space-y-4 rounded-xl border border-line bg-cream/40 p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPT}
-          multiple
-          className="hidden"
-          disabled={disabled || uploading || preparing}
-          onChange={(event) => {
-            void handleSelect(event.target.files)
-            event.target.value = ''
-          }}
-        />
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={disabled || uploading || preparing}
-          loading={preparing}
-          onClick={() => inputRef.current?.click()}
+        <label
+          className={`inline-flex cursor-pointer items-center justify-center rounded-lg border border-line bg-white px-3.5 py-1.5 text-sm font-medium text-navy hover:border-marian/40 hover:bg-cream ${
+            disabled || uploading || preparing ? 'pointer-events-none opacity-50' : ''
+          }`}
         >
-          {!preparing ? <ImagePlus className="mr-2 h-4 w-4" /> : null}
+          {preparing ? (
+            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <ImagePlus className="mr-2 h-4 w-4" />
+          )}
           {preparing ? 'Preparando fotos...' : 'Selecionar fotos'}
-        </Button>
+          <input
+            type="file"
+            accept={ACCEPT}
+            multiple
+            className="sr-only"
+            disabled={disabled || uploading || preparing}
+            onChange={(event) => {
+              void handleSelect(event.target.files)
+              event.target.value = ''
+            }}
+          />
+        </label>
         {pendingFiles.length ? (
           <Button type="button" size="sm" disabled={disabled || uploading || preparing} onClick={() => void handleUpload()}>
             <Upload className="mr-2 h-4 w-4" />
