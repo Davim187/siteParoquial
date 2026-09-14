@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { AlertCircle, CheckCircle2, ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { IMAGE_ACCEPT, MAX_UPLOAD_MB, isNefFile, validateImageUpload } from '@/constants/upload'
+import { extractNefPreviewUrl } from '@/utils/nefPreview'
 import { prepareUploadImage } from '@/utils/prepareUploadImage'
 
 const ACCEPT = IMAGE_ACCEPT
@@ -91,10 +92,13 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
     for (const placeholder of placeholders) {
       try {
         const prepared = await prepareUploadImage(placeholder.file)
+        const previewUrl = isNefFile(prepared)
+          ? await extractNefPreviewUrl(prepared)
+          : URL.createObjectURL(prepared)
         const ready: PendingUploadFile = {
           id: placeholder.id,
           file: prepared,
-          previewUrl: isNefFile(prepared) ? '' : URL.createObjectURL(prepared),
+          previewUrl,
           status: 'pending',
         }
         selectedCount += 1
@@ -270,7 +274,12 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
                   <span className="sr-only">{item.status === 'preparing' ? 'Preparando foto...' : 'Foto RAW Nikon'}</span>
                 </div>
               ) : (
-                <img src={item.previewUrl} alt="" className="aspect-square w-full object-cover" />
+                <img
+                  src={item.previewUrl}
+                  alt=""
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
+                />
               )}
               <span className="absolute top-1 left-1 rounded bg-navy-deep/70 px-1.5 py-0.5 text-[10px] text-white">
                 {index + 1}
