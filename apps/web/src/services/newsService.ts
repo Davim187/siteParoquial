@@ -1,5 +1,6 @@
 import { apiRequest, mediaUrl } from '@/lib/api-client'
 import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
+import { cardImageUrl, fullImageUrl } from '@/utils/media'
 import type { NewsArticle } from '@/types'
 
 type ApiNews = {
@@ -10,6 +11,7 @@ type ApiNews = {
   excerpt: string
   content?: string
   coverUrl?: string | null
+  coverThumbUrl?: string | null
   authorName?: string | null
   categoryName?: string | null
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
@@ -28,7 +30,7 @@ type ApiNews = {
   progressGoal?: number
 }
 
-function mapNews(item: ApiNews): NewsArticle & { categoryId?: string | null; coverMediaId?: string | null } {
+function mapNews(item: ApiNews, variant: 'thumb' | 'full' = 'thumb'): NewsArticle & { categoryId?: string | null; coverMediaId?: string | null } {
   return {
     id: item.id,
     slug: item.slug,
@@ -38,7 +40,10 @@ function mapNews(item: ApiNews): NewsArticle & { categoryId?: string | null; cov
     content: item.content ?? '',
     author: item.authorName ?? '[EQUIPE DE COMUNICAÇÃO]',
     date: (item.publishedAt ?? item.createdAt).slice(0, 10),
-    image: mediaUrl(item.coverUrl) || PLACEHOLDER_IMAGES.news,
+    image:
+      (variant === 'full'
+        ? fullImageUrl(item.coverUrl, item.coverThumbUrl)
+        : cardImageUrl(item.coverUrl, item.coverThumbUrl)) || PLACEHOLDER_IMAGES.news,
     category: item.categoryName ?? 'Comunidade',
     categoryId: item.categoryId ?? null,
     coverMediaId: item.coverMediaId ?? null,
@@ -64,7 +69,7 @@ export async function listNews(options?: { includeDrafts?: boolean; search?: str
   const result = await apiRequest<{ data: ApiNews[] }>(`/api/news?${params}`, {
     auth: Boolean(options?.includeDrafts),
   })
-  const items = result.data.map(mapNews)
+  const items = result.data.map((item) => mapNews(item))
   if (options?.includeDrafts) return items
   return items.filter((item) => item.status === 'published')
 }
@@ -98,7 +103,7 @@ export function writeCampaignCache(article: NewsArticle | null) {
 
 export async function getNewsBySlug(slug: string) {
   const item = await apiRequest<ApiNews>(`/api/news/${slug}`, { auth: false })
-  return mapNews(item)
+  return mapNews(item, 'full')
 }
 
 export async function getRelatedNews(article: NewsArticle) {

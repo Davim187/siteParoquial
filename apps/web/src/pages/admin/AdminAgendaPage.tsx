@@ -8,6 +8,7 @@ import {
   AdminTextarea,
   RowActions,
 } from '@/components/admin/AdminUi'
+import { MediaPicker } from '@/components/admin/MediaPicker'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { useAuth } from '@/contexts/AuthContext'
@@ -16,7 +17,7 @@ import { useEventsQuery, useMassesQuery } from '@/hooks/queries/usePublicQueries
 import { deleteEvent, saveEvent } from '@/services/eventsService'
 import { deleteMass, saveMass } from '@/services/massesService'
 import type { EventCategory, Mass, ParishEvent } from '@/types'
-import { formatDate } from '@/utils/dates'
+import { formatDate, toISODate } from '@/utils/dates'
 
 export function AdminAgendaPage() {
   usePageMeta('Agenda | Admin')
@@ -25,6 +26,8 @@ export function AdminAgendaPage() {
   const { data, isLoading, error } = useEventsQuery('todos', { admin: true })
   const [editing, setEditing] = useState<(Omit<ParishEvent, 'id'> & { id?: string }) | null>(null)
   const [toDelete, setToDelete] = useState<ParishEvent | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerMode, setPickerMode] = useState<'cover' | 'gallery'>('cover')
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
@@ -42,11 +45,16 @@ export function AdminAgendaPage() {
       onCreate={() =>
         setEditing({
           title: '',
-          date: new Date().toISOString().slice(0, 10),
+          slug: '',
+          date: toISODate(new Date()),
           time: '19:00',
           location: 'Igreja Matriz',
           description: '',
           category: 'evento',
+          image: undefined,
+          imageId: null,
+          gallery: [],
+          galleryMediaIds: [],
         })
       }
       loading={isLoading && !data}
@@ -73,7 +81,12 @@ export function AdminAgendaPage() {
           <form onSubmit={onSave} className="grid gap-3">
             <AdminInput label="Título" value={editing.title} onChange={(title) => setEditing({ ...editing, title })} />
             <AdminInput label="Data" type="date" value={editing.date} onChange={(date) => setEditing({ ...editing, date })} />
-            <AdminInput label="Horário" value={editing.time} onChange={(time) => setEditing({ ...editing, time })} />
+            <AdminInput
+              label="Horário"
+              type="time"
+              value={editing.time}
+              onChange={(time) => setEditing({ ...editing, time })}
+            />
             <AdminInput
               label="Local"
               value={editing.location}
@@ -102,6 +115,58 @@ export function AdminAgendaPage() {
                 <option value="celebracao-especial">Celebração especial</option>
               </select>
             </label>
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700">Imagem de capa</p>
+              <div className="flex flex-wrap items-center gap-3">
+                {editing.image ? <img src={editing.image} alt="" className="h-20 w-28 rounded-lg object-cover" /> : null}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setPickerMode('cover')
+                    setPickerOpen(true)
+                  }}
+                >
+                  Escolher foto
+                </Button>
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700">Galeria de fotos</p>
+              <p className="mb-3 text-xs text-slate-500">As fotos aparecem na página do evento.</p>
+              <div className="flex flex-wrap gap-2">
+                {(editing.gallery ?? []).map((src, index) => (
+                  <div key={`${src}-${index}`} className="relative">
+                    <img src={src} alt="" className="h-20 w-24 rounded-lg object-cover" />
+                    <button
+                      type="button"
+                      className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+                      onClick={() =>
+                        setEditing({
+                          ...editing,
+                          gallery: (editing.gallery ?? []).filter((_, i) => i !== index),
+                          galleryMediaIds: (editing.galleryMediaIds ?? []).filter((_, i) => i !== index),
+                        })
+                      }
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setPickerMode('gallery')
+                    setPickerOpen(true)
+                  }}
+                >
+                  + Adicionar foto
+                </Button>
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setEditing(null)}>
                 Cancelar
@@ -111,6 +176,31 @@ export function AdminAgendaPage() {
           </form>
         ) : null}
       </Modal>
+      <MediaPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(media) => {
+          if (!editing) return
+          if (pickerMode === 'gallery') {
+            if ((editing.galleryMediaIds ?? []).includes(media.id)) {
+              setPickerOpen(false)
+              return
+            }
+            setEditing({
+              ...editing,
+              gallery: [...(editing.gallery ?? []), media.thumbnailUrl || media.url],
+              galleryMediaIds: [...(editing.galleryMediaIds ?? []), media.id],
+            })
+          } else {
+            setEditing({
+              ...editing,
+              image: media.thumbnailUrl || media.url,
+              imageId: media.id,
+            })
+          }
+          setPickerOpen(false)
+        }}
+      />
       <ConfirmDialog
         open={Boolean(toDelete)}
         title="Excluir evento?"
@@ -146,6 +236,7 @@ export function AdminMassesPage() {
       type: editing.type,
       location: editing.location,
       notes: editing.notes,
+      celebrant: editing.celebrant,
     })
     setEditing(null)
     invalidate.masses()
@@ -164,17 +255,19 @@ export function AdminMassesPage() {
           type: 'Santa Missa',
           location: 'Igreja Matriz',
           notes: '',
+          celebrant: '',
         })
       }
       loading={isLoading && !data}
       error={error instanceof Error ? error.message : null}
     >
       <AdminTable
-        headers={['Data', 'Horário', 'Tipo', 'Ações']}
+        headers={['Data', 'Horário', 'Tipo', 'Celebrante', 'Ações']}
         rows={data?.map((item) => [
           formatDate(item.date),
           item.time,
           item.type,
+          item.celebrant || '—',
           <RowActions
             key={item.id}
             entityLabel="missa"
@@ -195,6 +288,12 @@ export function AdminMassesPage() {
               label="Local"
               value={editing.location}
               onChange={(location) => setEditing({ ...editing, location })}
+            />
+            <AdminInput
+              label="Celebrante"
+              value={editing.celebrant ?? ''}
+              onChange={(celebrant) => setEditing({ ...editing, celebrant })}
+              hint="Nome do padre ou diácono que preside. Pode deixar em branco."
             />
             <AdminInput
               label="Observação"

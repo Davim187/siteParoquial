@@ -32,6 +32,7 @@ export function NewsCard({
             isFeatured ? 'h-64 md:h-full md:min-h-[320px]' : 'h-48',
           )}
           loading="lazy"
+          decoding="async"
         />
       </div>
       <div className={cn('flex flex-1 flex-col p-5', isFeatured && 'md:p-8')}>

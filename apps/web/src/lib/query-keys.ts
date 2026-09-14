@@ -17,6 +17,7 @@ export const queryKeys = {
     all: ['events'] as const,
     list: (category?: string, params?: { admin?: boolean }) => ['events', 'list', category, params] as const,
     upcoming: (limit?: number) => ['events', 'upcoming', limit] as const,
+    detail: (slug: string) => ['events', 'detail', slug] as const,
   },
   masses: {
     all: ['masses'] as const,

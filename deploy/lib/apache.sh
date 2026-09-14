@@ -87,6 +87,9 @@ EOF
     ProxyPassReverse /api http://127.0.0.1:3333/api
     ProxyPass /uploads http://127.0.0.1:3333/uploads connectiontimeout=30 timeout=600
     ProxyPassReverse /uploads http://127.0.0.1:3333/uploads
+    <Location /uploads>
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </Location>
 EOF
 )"
 
@@ -101,6 +104,9 @@ EOF
     ProxyPassReverse /api http://127.0.0.1:3333/api
     ProxyPass /uploads http://127.0.0.1:3333/uploads connectiontimeout=30 timeout=600
     ProxyPassReverse /uploads http://127.0.0.1:3333/uploads
+    <Location /uploads>
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </Location>
 EOF
 )"
 

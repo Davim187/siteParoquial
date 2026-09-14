@@ -116,6 +116,7 @@ export async function getHomeBootstrap() {
         type: true,
         location: true,
         notes: true,
+        celebrant: true,
         active: true,
       },
     }),

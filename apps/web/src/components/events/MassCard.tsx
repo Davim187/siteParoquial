@@ -1,10 +1,22 @@
-import { MapPin } from 'lucide-react'
+import { MapPin, User } from 'lucide-react'
 import type { Mass } from '@/types'
-import { formatDate, weekdayName } from '@/utils/dates'
+import { formatDate, isSameDay, parseDate, weekdayName } from '@/utils/dates'
 import { cn } from '@/utils/cn'
 
+function massDayFlags(date: string, time: string) {
+  const occurs = parseDate(date, time)
+  const now = new Date()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return {
+    isToday: isSameDay(occurs, now),
+    isTomorrow: isSameDay(occurs, tomorrow),
+  }
+}
+
 export function MassCard({ mass }: { mass: Mass }) {
-  const badge = mass.isToday ? 'Hoje' : mass.isTomorrow ? 'Amanhã' : mass.isNext ? 'Próxima celebração' : null
+  const { isToday, isTomorrow } = massDayFlags(mass.date, mass.time)
+  const badge = isToday ? 'Hoje' : isTomorrow ? 'Amanhã' : mass.isNext ? 'Próxima celebração' : null
   const weekday = weekdayName(mass.date)
   const showNotes =
     mass.notes &&
@@ -19,7 +31,7 @@ export function MassCard({ mass }: { mass: Mass }) {
           <span
             className={cn(
               'shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-              mass.isToday ? 'bg-marian text-white' : 'bg-gold/20 text-gold-dark',
+              isToday ? 'bg-marian text-white' : 'bg-gold/20 text-gold-dark',
             )}
           >
             {badge}
@@ -30,6 +42,12 @@ export function MassCard({ mass }: { mass: Mass }) {
       <p className="mt-3 font-serif text-3xl text-navy">{formatDate(mass.date)}</p>
       <p className="mt-4 text-lg font-semibold text-marian">{mass.time}</p>
       <h3 className="mt-1 font-serif text-xl text-navy">{mass.type}</h3>
+      {mass.celebrant ? (
+        <p className="mt-2 inline-flex items-center gap-2 text-sm text-navy">
+          <User size={16} className="text-gold-dark" />
+          {mass.celebrant}
+        </p>
+      ) : null}
       <p className="mt-2 inline-flex items-center gap-2 text-sm text-muted">
         <MapPin size={16} />
         {mass.location}

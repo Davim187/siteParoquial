@@ -5,7 +5,7 @@ import type { EventCategory, NewsArticle, Notice, ParishEvent, Mass, Pastoral, P
 import { getSettings, listPeople } from '@/services/parishService'
 import { getCampaignNews, getNewsBySlug, listNews, readCampaignCache } from '@/services/newsService'
 import { getFeaturedNotices, listNotices } from '@/services/noticesService'
-import { listEvents, listUpcomingEvents } from '@/services/eventsService'
+import { listEvents, listUpcomingEvents, getEventBySlug } from '@/services/eventsService'
 import { listMasses, listUpcomingMasses } from '@/services/massesService'
 import { listPastorals, getPastoralBySlug } from '@/services/pastoralService'
 import { listSacraments, getSacramentBySlug } from '@/services/sacramentService'
@@ -100,6 +100,15 @@ export function useUpcomingEventsQuery(limit?: number) {
     queryFn: () => listUpcomingEvents(limit),
     staleTime: STALE_TIME.events,
     placeholderData: (previous) => previous,
+  })
+}
+
+export function useEventDetailQuery(slug: string) {
+  return useQuery<ParishEvent>({
+    queryKey: queryKeys.events.detail(slug),
+    queryFn: () => getEventBySlug(slug),
+    enabled: Boolean(slug),
+    staleTime: STALE_TIME.events,
   })
 }
 

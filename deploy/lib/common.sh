@@ -140,6 +140,17 @@ ensure_max_upload_mb() {
   fi
 }
 
+ensure_parish_timezone() {
+  local file="$1"
+  local desired="${2:-America/Sao_Paulo}"
+
+  if grep -qE '^TZ=' "$file"; then
+    sed -i "s/^TZ=.*/TZ=${desired}/" "$file"
+  else
+    printf '\nTZ=%s\n' "$desired" >> "$file"
+  fi
+}
+
 validate_env_production() {
   local file="$1"
 
@@ -159,6 +170,7 @@ validate_env_production() {
   fi
 
   ensure_max_upload_mb "$file" 15
+  ensure_parish_timezone "$file" "America/Sao_Paulo"
 }
 
 git_sync_branch() {

@@ -1,14 +1,19 @@
-import { apiRequest, mediaUrl } from '@/lib/api-client'
+import { apiRequest } from '@/lib/api-client'
 import { pastoralCover } from '@/constants/placeholders'
+import { cardImageUrl, fullImageUrl } from '@/utils/media'
 import type { Pastoral } from '@/types'
 
-function mapPastoral(item: any): Pastoral & { imageId?: string | null } {
+function mapPastoral(item: any, variant: 'thumb' | 'full' = 'thumb'): Pastoral & { imageId?: string | null } {
+  const src =
+    variant === 'full'
+      ? fullImageUrl(item.imageUrl, item.imageThumbUrl)
+      : cardImageUrl(item.imageUrl, item.imageThumbUrl)
   return {
     id: item.id,
     slug: item.slug,
     name: item.name,
     description: item.description,
-    image: pastoralCover(mediaUrl(item.imageUrl) || item.image),
+    image: pastoralCover(src || item.image),
     imageId: item.imageId ?? null,
     responsible: item.responsible,
     contact: item.phone || item.email || '[CONTATO]',
@@ -24,12 +29,12 @@ export async function listPastorals(options?: { includeInactive?: boolean }): Pr
   const result = await apiRequest<{ data: any[] }>(`/api/pastorals?${params}`, {
     auth: Boolean(options?.includeInactive),
   })
-  return result.data.map(mapPastoral)
+  return result.data.map((item) => mapPastoral(item))
 }
 
 export async function getPastoralBySlug(slug: string) {
   const item = await apiRequest<any>(`/api/pastorals/${slug}`, { auth: false })
-  return mapPastoral(item)
+  return mapPastoral(item, 'full')
 }
 
 export async function savePastoral(input: any) {

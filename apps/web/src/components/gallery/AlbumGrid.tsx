@@ -19,6 +19,7 @@ export function AlbumGrid({ albums }: { albums: GalleryAlbum[] }) {
                   alt=""
                   className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-muted">

@@ -39,6 +39,7 @@ const productionEnv = {
   HOST: '0.0.0.0',
   PORT: '3333',
   ...fileEnv,
+  TZ: fileEnv.TZ || 'America/Sao_Paulo',
   UPLOAD_DIR: path.isAbsolute(uploadDirName)
     ? uploadDirName
     : path.join(apiDir, uploadDirName),

@@ -2,6 +2,9 @@ import { apiRequest, mediaUrl } from '@/lib/api-client'
 import { PLACEHOLDER_IMAGES, pastoralCover } from '@/constants/placeholders'
 import { queryClient, STALE_TIME, GC_TIME } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
+import { cardImageUrl } from '@/utils/media'
+import { localPartsFromIso } from '@/utils/dates'
+import { cleanMapsUrl } from '@/utils/maps'
 import type {
   GalleryAlbum,
   Mass,
@@ -12,7 +15,6 @@ import type {
   Pastoral,
   Person,
 } from '@/types'
-import { cleanMapsUrl } from '@/utils/maps'
 
 export type HomeBootstrap = {
   settings: ParishSettings
@@ -26,7 +28,7 @@ export type HomeBootstrap = {
   gallery: GalleryAlbum[]
 }
 
-const HOME_CACHE_KEY = 'paroquia.home.v4'
+const HOME_CACHE_KEY = 'paroquia.home.v6'
 
 function mapSettings(s: any): ParishSettings {
   return {
@@ -74,7 +76,7 @@ function mapNews(item: any): NewsArticle {
     content: item.content ?? '',
     author: item.authorName ?? '[EQUIPE DE COMUNICAÇÃO]',
     date: String(item.publishedAt ?? item.createdAt).slice(0, 10),
-    image: mediaUrl(item.coverUrl) || PLACEHOLDER_IMAGES.news,
+    image: cardImageUrl(item.coverUrl, item.coverThumbUrl) || PLACEHOLDER_IMAGES.news,
     category: item.categoryName ?? 'Comunidade',
     status: 'published',
     featured: Boolean(item.featured),
@@ -94,7 +96,7 @@ function mapNotice(item: any): Notice {
     title: item.title,
     description: item.description,
     date: String(item.startsAt).slice(0, 10),
-    image: mediaUrl(item.imageUrl) || undefined,
+    image: cardImageUrl(item.imageUrl, item.imageThumbUrl) || undefined,
     category:
       item.category === 'URGENTE'
         ? 'urgente'
@@ -119,6 +121,7 @@ function mapMass(item: any): Mass {
     type: item.type,
     location: item.location,
     notes: item.notes ?? undefined,
+    celebrant: item.celebrant ?? undefined,
     isToday: item.isToday,
     isTomorrow: item.isTomorrow,
     isNext: item.isNext,
@@ -137,18 +140,24 @@ function mapEvent(item: any): ParishEvent {
     CELEBRACAO: 'celebracao-especial',
     OUTRO: 'evento',
   }
+  const start = localPartsFromIso(String(item.startsAt ?? ''))
+  const end = item.endsAt ? localPartsFromIso(String(item.endsAt)) : null
   return {
     id: item.id,
+    slug: item.slug || item.id,
     title: item.title,
-    date: String(item.startsAt).slice(0, 10),
-    time: String(item.startsAt).slice(11, 16),
-    endTime: item.endsAt ? String(item.endsAt).slice(11, 16) : undefined,
+    date: start.date,
+    time: start.time,
+    endTime: end?.time,
     location: item.location,
     description: item.description,
-    image: mediaUrl(item.imageUrl) || undefined,
+    image: cardImageUrl(item.imageUrl, item.imageThumbUrl) || undefined,
+    imageId: item.imageId ?? null,
     category: typeToCategory[item.type] ?? 'evento',
     responsible: item.responsible ?? undefined,
     externalUrl: item.externalUrl ?? undefined,
+    gallery: item.gallery ?? [],
+    galleryMediaIds: item.galleryMediaIds ?? [],
   }
 }
 
@@ -158,7 +167,7 @@ function mapPerson(item: any): Person {
     slug: item.slug,
     name: item.name,
     role: item.roleTitle,
-    photo: mediaUrl(item.imageUrl) || PLACEHOLDER_IMAGES.person,
+    photo: cardImageUrl(item.imageUrl, item.imageThumbUrl) || PLACEHOLDER_IMAGES.person,
     photoId: item.photoId ?? null,
     bio: item.bio,
     quote: item.quote ?? undefined,
@@ -174,7 +183,7 @@ function mapPastoral(item: any): Pastoral {
     slug: item.slug,
     name: item.name,
     description: item.description,
-    image: pastoralCover(mediaUrl(item.imageUrl) || item.image),
+    image: pastoralCover(cardImageUrl(item.imageUrl, item.imageThumbUrl) || item.image),
     responsible: item.responsible,
     contact: item.phone || item.email || '[CONTATO]',
     meetingTime: item.meetingTime || '[HORÁRIO]',

@@ -41,6 +41,7 @@ export interface Notice {
 
 export interface ParishEvent {
   id: string
+  slug: string
   title: string
   date: string
   time: string
@@ -48,9 +49,12 @@ export interface ParishEvent {
   location: string
   description: string
   image?: string
+  imageId?: string | null
   category: EventCategory
   responsible?: string
   externalUrl?: string
+  gallery?: string[]
+  galleryMediaIds?: string[]
 }
 
 export interface Mass {
@@ -61,6 +65,7 @@ export interface Mass {
   type: string
   location: string
   notes?: string
+  celebrant?: string
   isToday?: boolean
   isTomorrow?: boolean
   isNext?: boolean

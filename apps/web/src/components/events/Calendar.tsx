@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { ParishEvent } from '@/types'
 import { eventLabels } from '@/utils/labels'
 import { toISODate } from '@/utils/dates'
@@ -75,8 +76,13 @@ export function Calendar({ events }: { events: ParishEvent[] }) {
               <p className="text-sm font-semibold text-navy">{day}</p>
               <ul className="mt-1 space-y-1">
                 {dayEvents.slice(0, 2).map((event) => (
-                  <li key={event.id} className="truncate rounded bg-marian/10 px-1 py-0.5 text-[11px] text-marian">
-                    {event.time} {event.title}
+                  <li key={event.id}>
+                    <Link
+                      to={`/agenda/${event.slug || event.id}`}
+                      className="block truncate rounded bg-marian/10 px-1 py-0.5 text-[11px] text-marian hover:bg-marian/20"
+                    >
+                      {event.time} {event.title}
+                    </Link>
                   </li>
                 ))}
                 {dayEvents.length > 2 ? (

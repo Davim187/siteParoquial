@@ -10,6 +10,7 @@ function mapUpcoming(item: any): Mass {
     type: item.type,
     location: item.location,
     notes: item.notes ?? undefined,
+    celebrant: item.celebrant ?? undefined,
     isToday: item.isToday,
     isTomorrow: item.isTomorrow,
     isNext: item.isNext,
@@ -42,6 +43,7 @@ export async function saveMass(input: {
   type: string
   location: string
   notes?: string
+  celebrant?: string
 }) {
   const payload = input.date
     ? {
@@ -50,6 +52,7 @@ export async function saveMass(input: {
         type: input.type,
         location: input.location,
         notes: input.notes,
+        celebrant: input.celebrant || null,
         active: true,
       }
     : {
@@ -61,6 +64,7 @@ export async function saveMass(input: {
         type: input.type,
         location: input.location,
         notes: input.notes,
+        celebrant: input.celebrant || null,
         active: true,
       }
 

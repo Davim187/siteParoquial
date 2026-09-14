@@ -1,5 +1,6 @@
 import { apiRequest, mediaUrl } from '@/lib/api-client'
 import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
+import { cardImageUrl, fullImageUrl } from '@/utils/media'
 import type { ParishSettings, Person, PatronFeast } from '@/types'
 import { cleanMapsUrl } from '@/utils/maps'
 import { queryClient } from '@/lib/query-client'
@@ -124,7 +125,7 @@ export async function listPeople(options?: { includeInactive?: boolean }): Promi
       name: item.name,
       role: item.roleTitle,
       photo:
-        mediaUrl(item.imageUrl) || PLACEHOLDER_IMAGES.person,
+        cardImageUrl(item.imageUrl, item.imageThumbUrl) || PLACEHOLDER_IMAGES.person,
       photoId: item.photoId ?? null,
       bio: item.bio,
       quote: item.quote ?? undefined,
@@ -142,7 +143,7 @@ export async function getPersonBySlug(slug: string) {
     slug: item.slug,
     name: item.name,
     role: item.roleTitle,
-    photo: mediaUrl(item.imageUrl) || PLACEHOLDER_IMAGES.person,
+    photo: fullImageUrl(item.imageUrl, item.imageThumbUrl) || PLACEHOLDER_IMAGES.person,
     photoId: item.photoId ?? null,
     bio: item.bio,
     quote: item.quote ?? undefined,

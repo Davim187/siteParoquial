@@ -15,6 +15,7 @@ const updateMassSchema = z.object({
   type: z.string().min(2).optional(),
   location: z.string().min(2).optional(),
   notes: z.string().optional().nullable(),
+  celebrant: z.string().optional().nullable(),
   active: z.boolean().optional(),
 })
 
@@ -102,6 +103,7 @@ export async function massesRoutes(app: FastifyInstance) {
         type: data.type,
         location: data.location,
         notes: data.notes ?? null,
+        celebrant: data.celebrant ?? null,
         active: data.active,
       },
     })
@@ -121,6 +123,7 @@ export async function massesRoutes(app: FastifyInstance) {
         type: data.type,
         location: data.location,
         notes: data.notes === undefined ? undefined : data.notes ?? null,
+        celebrant: data.celebrant === undefined ? undefined : data.celebrant ?? null,
         active: data.active,
       },
     })

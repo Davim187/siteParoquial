@@ -60,6 +60,8 @@ async function buildServer() {
   await app.register(fastifyStatic, {
     root: path.resolve(process.cwd(), env.UPLOAD_DIR),
     prefix: '/uploads/',
+    maxAge: 365 * 24 * 60 * 60 * 1000,
+    immutable: true,
   })
 
   if (env.NODE_ENV !== 'production') {

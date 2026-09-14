@@ -112,6 +112,28 @@ export function toISODate(date: Date) {
   return `${year}-${month}-${day}`
 }
 
+export function clockFromDate(date: Date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+/** Interpreta ISO UTC e devolve data/hora no fuso do navegador. */
+export function localPartsFromIso(iso: string) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return { date: iso.slice(0, 10), time: '00:00' }
+  }
+  return { date: toISODate(date), time: clockFromDate(date) }
+}
+
+export function normalizeTime(value?: string) {
+  const raw = (value ?? '19:00').trim()
+  const match = raw.match(/^(\d{1,2})(?:[:hH](\d{2}))?/)
+  if (!match) return '19:00'
+  const hour = Math.min(23, Number(match[1]))
+  const minute = Math.min(59, Number(match[2] ?? 0))
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+}
+
 export function addDays(isoDate: string, days: number) {
   const date = parseDate(isoDate)
   date.setDate(date.getDate() + days)
