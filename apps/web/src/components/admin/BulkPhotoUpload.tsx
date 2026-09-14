@@ -6,7 +6,6 @@ import { prepareUploadImage } from '@/utils/prepareUploadImage'
 
 const ACCEPT = IMAGE_ACCEPT
 const MAX_FILE_MB = MAX_UPLOAD_MB
-const MAX_FILES = 30
 
 export type PendingUploadFile = {
   id: string
@@ -64,10 +63,6 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
         type: file.type || 'application/octet-stream',
         lastModified: file.lastModified,
       })
-      if (items.length + validFiles.length >= MAX_FILES) {
-        errors.push(`É possível selecionar no máximo ${MAX_FILES} fotos por vez.`)
-        break
-      }
       const validationError = validateFile(selectedFile)
       if (validationError) {
         errors.push(validationError)
@@ -239,8 +234,8 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
       </div>
 
       <p className="text-xs text-muted">
-        Selecione várias imagens de uma vez (JPG, PNG, WebP, HEIC ou NEF). Máximo {MAX_FILES} arquivos, {MAX_FILE_MB} MB
-        cada. O envio acontece de 5 em 5.
+        Selecione quantas fotos quiser (JPG, PNG, WebP, HEIC ou NEF), até {MAX_FILE_MB} MB cada. O envio continua de 5 em
+        5 para não sobrecarregar o servidor.
       </p>
 
       {preparingCount ? (
