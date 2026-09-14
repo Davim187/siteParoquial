@@ -131,7 +131,7 @@ host_from_env() {
 
 ensure_max_upload_mb() {
   local file="$1"
-  local desired="${2:-15}"
+  local desired="${2:-30}"
 
   if grep -qE '^MAX_UPLOAD_MB=' "$file"; then
     sed -i "s/^MAX_UPLOAD_MB=.*/MAX_UPLOAD_MB=${desired}/" "$file"
@@ -169,7 +169,7 @@ validate_env_production() {
     deploy_die "DATABASE_URL usa host 'postgres' — troque por 127.0.0.1 no $file"
   fi
 
-  ensure_max_upload_mb "$file" 15
+  ensure_max_upload_mb "$file" 30
   ensure_parish_timezone "$file" "America/Sao_Paulo"
 }
 
