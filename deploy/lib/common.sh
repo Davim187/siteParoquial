@@ -145,7 +145,7 @@ ensure_parish_timezone() {
   local desired="${2:-America/Sao_Paulo}"
 
   if grep -qE '^TZ=' "$file"; then
-    sed -i "s/^TZ=.*/TZ=${desired}/" "$file"
+    sed -i "s|^TZ=.*|TZ=${desired}|" "$file"
   else
     printf '\nTZ=%s\n' "$desired" >> "$file"
   fi
