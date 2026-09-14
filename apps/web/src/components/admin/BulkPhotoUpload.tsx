@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { AlertCircle, CheckCircle2, ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { IMAGE_ACCEPT, MAX_UPLOAD_MB, isNefFile, validateImageUpload } from '@/constants/upload'
 import { prepareUploadImage } from '@/utils/prepareUploadImage'
 
-const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif'
-const MAX_FILE_MB = 30
+const ACCEPT = IMAGE_ACCEPT
+const MAX_FILE_MB = MAX_UPLOAD_MB
 const MAX_FILES = 30
 
 export type PendingUploadFile = {
@@ -35,20 +36,7 @@ function selectedMessage(count: number) {
 }
 
 function validateFile(file: File): string | null {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/octet-stream']
-  const ext = file.name.toLowerCase()
-  const validExt = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'].some((item) => ext.endsWith(item))
-  const type = file.type.toLowerCase()
-  if (type && !type.startsWith('image/') && !allowed.includes(type) && !validExt) {
-    return `O arquivo ${file.name} não é um formato de imagem válido.`
-  }
-  if (!type && !validExt) {
-    return `O arquivo ${file.name} não é um formato de imagem válido.`
-  }
-  if (file.size > MAX_FILE_MB * 1024 * 1024) {
-    return `O arquivo ${file.name} excede o limite de ${MAX_FILE_MB} MB.`
-  }
-  return null
+  return validateImageUpload(file, MAX_FILE_MB)
 }
 
 export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
@@ -111,7 +99,7 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
         const ready: PendingUploadFile = {
           id: placeholder.id,
           file: prepared,
-          previewUrl: URL.createObjectURL(prepared),
+          previewUrl: isNefFile(prepared) ? '' : URL.createObjectURL(prepared),
           status: 'pending',
         }
         selectedCount += 1
@@ -134,7 +122,7 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
   function removeItem(id: string) {
     setItems((current) => {
       const item = current.find((entry) => entry.id === id)
-      if (item) URL.revokeObjectURL(item.previewUrl)
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl)
       return current.filter((entry) => entry.id !== id)
     })
   }
@@ -204,7 +192,9 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
 
   function clearSuccessful() {
     setItems((current) => {
-      current.filter((item) => item.status === 'success').forEach((item) => URL.revokeObjectURL(item.previewUrl))
+      current
+        .filter((item) => item.status === 'success' && item.previewUrl)
+        .forEach((item) => URL.revokeObjectURL(item.previewUrl))
       return current.filter((item) => item.status !== 'success')
     })
   }
@@ -249,7 +239,7 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
       </div>
 
       <p className="text-xs text-muted">
-        Selecione várias imagens de uma vez (JPG, PNG, WebP ou HEIC). Máximo {MAX_FILES} arquivos, {MAX_FILE_MB} MB
+        Selecione várias imagens de uma vez (JPG, PNG, WebP, HEIC ou NEF). Máximo {MAX_FILES} arquivos, {MAX_FILE_MB} MB
         cada. O envio acontece de 5 em 5.
       </p>
 
@@ -275,10 +265,14 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {items.map((item, index) => (
             <li key={item.id} className="relative overflow-hidden rounded-lg border border-line bg-white">
-              {item.status === 'preparing' ? (
+              {item.status === 'preparing' || !item.previewUrl ? (
                 <div className="flex aspect-square w-full items-center justify-center bg-cream">
-                  <LoaderCircle className="h-6 w-6 animate-spin text-muted" aria-hidden="true" />
-                  <span className="sr-only">Preparando foto...</span>
+                  {item.status === 'preparing' ? (
+                    <LoaderCircle className="h-6 w-6 animate-spin text-muted" aria-hidden="true" />
+                  ) : (
+                    <span className="text-xs font-semibold tracking-wide text-muted">NEF</span>
+                  )}
+                  <span className="sr-only">{item.status === 'preparing' ? 'Preparando foto...' : 'Foto RAW Nikon'}</span>
                 </div>
               ) : (
                 <img src={item.previewUrl} alt="" className="aspect-square w-full object-cover" />

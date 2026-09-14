@@ -89,7 +89,7 @@ export function AdminPeoplePage() {
                       {uploadingPhoto ? 'Enviando...' : 'Enviar arquivo'}
                       <input
                         type="file"
-                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,.nef"
                         className="sr-only"
                         disabled={uploadingPhoto}
                         onChange={async (e) => {
@@ -129,7 +129,7 @@ export function AdminPeoplePage() {
                     ) : null}
                   </div>
                 </div>
-                <p className="text-xs text-muted">Envie JPG, PNG, WebP ou HEIC (iPhone) do computador (até 30 MB).</p>
+                <p className="text-xs text-muted">Envie JPG, PNG, WebP, HEIC ou NEF (até 30 MB).</p>
               </div>
             ) : (
               <AdminInput label="Foto" value={editing.photo} onChange={(photo) => setEditing({ ...editing, photo })} />

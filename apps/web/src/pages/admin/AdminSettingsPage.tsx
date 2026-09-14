@@ -197,7 +197,7 @@ export function AdminSettingsPage() {
               {uploadingPatroness ? 'Enviando...' : 'Enviar imagem'}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,.nef"
                 className="sr-only"
                 disabled={uploadingPatroness}
                 onChange={async (event) => {

@@ -6,7 +6,7 @@ const HEIC_TYPES = new Set([
 ])
 
 function jpegFileName(name: string) {
-  const base = name.replace(/\.(heic|heif|jpeg|jpg|png|webp)$/i, '')
+  const base = name.replace(/\.(heic|heif|jpeg|jpg|png|webp|nef)$/i, '')
   return `${base || 'foto'}.jpg`
 }
 
@@ -70,8 +70,16 @@ async function convertWithHeic2Any(file: File) {
 
 /**
  * Converte HEIC/HEIF para JPEG no navegador antes do upload.
+ * NEF (Nikon RAW) segue para a API, que extrai o JPEG embutido.
  */
 export async function prepareUploadImage(file: File): Promise<File> {
+  if (
+    /\.nef$/i.test(file.name) ||
+    file.type.toLowerCase() === 'image/x-nikon-nef' ||
+    file.type.toLowerCase() === 'image/nef'
+  ) {
+    return file
+  }
   const header = await readFileHeader(file)
   const needsConversion = isHeicByMeta(file) || isHeicByHeader(header)
   if (!needsConversion) return file

@@ -41,7 +41,7 @@ export function AdminMediaPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,.nef"
               className="sr-only"
               disabled={uploading}
               onChange={(e) => void onUpload(e.target.files?.[0] ?? null)}
