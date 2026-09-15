@@ -5,7 +5,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar'
 import { useCampaignNewsQuery, useSettingsQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
-import pixQrCode from '@/assets/pix-qrcode.jpg'
+import pixQrCode from '@/assets/pix-qrcode.png'
 
 export function DonatePage() {
   usePageMeta('Dízimo e doações | Paróquia Nossa Senhora das Graças')
