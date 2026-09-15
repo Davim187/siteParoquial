@@ -5,6 +5,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar'
 import { useCampaignNewsQuery, useSettingsQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import pixQrCode from '@/assets/pix-qrcode.jpg'
 
 export function DonatePage() {
   usePageMeta('Dízimo e doações | Paróquia Nossa Senhora das Graças')
@@ -62,7 +63,14 @@ export function DonatePage() {
                 </div>
                 <div>
                   <dt className="font-semibold text-navy">QR Code</dt>
-                  <dd>[QR CODE — A DEFINIR]</dd>
+                  <dd className="mt-3">
+                    <img
+                      src={pixQrCode}
+                      alt="QR Code PIX da Paróquia Nossa Senhora das Graças"
+                      className="h-auto w-52 max-w-full rounded-xl border border-line bg-white p-2 sm:w-64"
+                    />
+                    <p className="mt-2 text-xs">Aponte a câmera do celular para pagar com PIX.</p>
+                  </dd>
                 </div>
               </dl>
               <Button className="mt-6" href="/contato">
