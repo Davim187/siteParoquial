@@ -1,8 +1,21 @@
 import type { EventType, Prisma } from '@prisma/client'
-import { paginated, parsePagination } from '../../lib/http.js'
+import { paginated, parsePagination, slugify } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
+import { prisma } from '../../lib/prisma.js'
 import type { EventInput, EventUpdate } from './events.schema.js'
 import * as eventsRepository from './events.repository.js'
+
+async function uniqueEventSlug(base: string, excludeId?: string) {
+  let slug = slugify(base)
+  if (!slug) slug = 'evento'
+  let suffix = 0
+  while (true) {
+    const candidate = suffix === 0 ? slug : `${slug}-${suffix}`
+    const existing = await prisma.event.findUnique({ where: { slug: candidate } })
+    if (!existing || existing.id === excludeId) return candidate
+    suffix += 1
+  }
+}
 
 function mapEvent(item: any) {
   return { ...item, imageUrl: item.image?.url ?? null, imageThumbUrl: item.image?.thumbnailUrl ?? null }
@@ -29,6 +42,7 @@ export async function listEvents(query: Record<string, unknown>, hasAuthorizatio
 export async function createEvent(data: EventInput, userId: string) {
   const item = await eventsRepository.createEvent({
     ...data,
+    slug: await uniqueEventSlug(data.title),
     externalUrl: data.externalUrl || null,
     startsAt: new Date(data.startsAt),
     endsAt: data.endsAt ? new Date(data.endsAt) : null,
