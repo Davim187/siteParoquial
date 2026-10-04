@@ -70,43 +70,10 @@ jobs:
               exit 1
             fi
             cd "$APP_DIR"
-            export GIT_TERMINAL_PROMPT=0
-            TOKEN="${DEPLOY_GITHUB_TOKEN:-$GITHUB_TOKEN}"
-            if [ -n "$TOKEN" ]; then
-              git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-            fi
-            git -c credential.helper= fetch origin --prune
-            git checkout "$GITHUB_REF_NAME"
-            git reset --hard "origin/$GITHUB_REF_NAME"
-            if [ ! -f .env.production ]; then
-              echo "Arquivo .env.production não encontrado. Copie .env.production.example e configure."
-              exit 1
-            fi
-            if ! grep -Eq '^POSTGRES_PASSWORD=.+' .env.production; then
-              echo "POSTGRES_PASSWORD não definido em $APP_DIR/.env.production"
-              exit 1
-            fi
-            if ! grep -Eq '^DATABASE_URL=.+' .env.production; then
-              echo "DATABASE_URL não definido em $APP_DIR/.env.production"
-              exit 1
-            fi
-            bash deploy/remove-apache.sh
-            docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
-            docker compose -f docker-compose.prod.yml --env-file .env.production exec -T postgres \
-              sh -c 'until pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; do sleep 1; done'
-            echo "==> Aplicando migrations..."
-            for attempt in $(seq 1 20); do
-              if docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
-                ../../node_modules/.bin/prisma migrate deploy; then
-                echo "==> Deploy concluído."
-                docker compose -f docker-compose.prod.yml --env-file .env.production ps
-                exit 0
-              fi
-              echo "   Tentativa ${attempt}/20 — aguardando API..."
-              [ "$attempt" -eq 20 ] && {
-                echo "Falha ao aplicar migrations. Logs da API:"
-                docker compose -f docker-compose.prod.yml --env-file .env.production logs api --tail 80
-                exit 1
-              }
-              sleep 3
-            done
+            export APP_DIR
+            export GITHUB_REPOSITORY
+            export GITHUB_TOKEN
+            export DEPLOY_GITHUB_TOKEN
+            export GITHUB_REF_NAME
+            export DEPLOY_BRANCH="$GITHUB_REF_NAME"
+            bash deploy/deploy.sh

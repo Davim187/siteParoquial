@@ -5,6 +5,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { Logo } from '@/components/layout/Logo'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/utils/cn'
+import { prefetchPublicRoute } from '@/lib/public-prefetch'
 
 const links = [
   { to: '/', label: 'Início' },
@@ -80,6 +81,8 @@ export function Header() {
                   key={link.to}
                   to={link.to}
                   onClick={() => setOpen(false)}
+                  onMouseEnter={() => prefetchPublicRoute(link.to)}
+                  onFocus={() => prefetchPublicRoute(link.to)}
                   className={({ isActive }) =>
                     cn(
                       'rounded-lg px-3 py-3 text-base text-navy transition hover:bg-white',
@@ -128,6 +131,8 @@ export function Header() {
               <NavLink
                 key={link.to}
                 to={link.to}
+                onMouseEnter={() => prefetchPublicRoute(link.to)}
+                onFocus={() => prefetchPublicRoute(link.to)}
                 className={({ isActive }) =>
                   cn(
                     'rounded-full px-2.5 py-1.5 text-[13px] font-medium text-navy/80 transition hover:text-marian',

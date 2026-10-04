@@ -1,427 +1,95 @@
-# Passo a passo — Deploy automático
+# Deploy — Paróquia N.S. das Graças
 
-Guia completo para publicar o site paroquial no VPS com **Docker + GitHub Actions**.
-
-**Resumo:** você configura o servidor uma vez em `/www`. Depois, cada `git push` na branch `master` atualiza o site automaticamente.
+**Stack:** Apache (frontend) · PM2 (API) · Docker (Postgres) · GitHub Actions
 
 ---
 
-## Visão geral
+## Estrutura
 
-| Onde | O que acontece |
-|------|----------------|
-| **Seu computador** | Código no GitHub + chave SSH |
-| **GitHub** | Actions conecta no VPS e roda o deploy |
-| **Servidor (`/www`)** | Docker sobe PostgreSQL + API + Nginx (site na porta 80) |
-
----
-
-# Parte 1 — No seu computador
-
-## 1.1 Ter o projeto no GitHub
-
-Se ainda não fez push do monorepo completo:
-
-```bash
-cd ~/Documentos/siteParoquial
-git status
-git add .
-git commit -m "Preparar deploy"
-git push origin master
 ```
-
-Repositório: `https://github.com/Davim187/siteParoquial`
-
----
-
-## 1.2 Criar chave SSH para o deploy
-
-No **seu computador** (não no servidor):
-
-```bash
-ssh-keygen -t ed25519 -C "deploy-site-paroquial" -f ~/.ssh/deploy_paroquia -N ""
-```
-
-Isso gera dois arquivos:
-
-- `~/.ssh/deploy_paroquia` → chave **privada** (vai no GitHub Secrets)
-- `~/.ssh/deploy_paroquia.pub` → chave **pública** (vai no servidor)
-
----
-
-## 1.3 Copiar a chave pública para o VPS
-
-Substitua `SEU_IP` pelo IP do servidor (ex.: `84.46.251.102`):
-
-```bash
-ssh-copy-id -i ~/.ssh/deploy_paroquia.pub root@SEU_IP
-```
-
-Se `ssh-copy-id` não existir:
-
-```bash
-cat ~/.ssh/deploy_paroquia.pub | ssh root@SEU_IP "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
-```
-
-Teste o acesso:
-
-```bash
-ssh -i ~/.ssh/deploy_paroquia root@SEU_IP
-```
-
-Se entrar sem pedir senha, está ok. Digite `exit` para sair.
-
----
-
-## 1.4 Configurar secrets no GitHub
-
-1. Abra: **https://github.com/Davim187/siteParoquial/settings/secrets/actions**
-2. Clique em **New repository secret** para cada item:
-
-| Nome do secret | Valor |
-|----------------|--------|
-| `DEPLOY_HOST` | IP do VPS (ex.: `84.46.251.102`) |
-| `DEPLOY_USER` | `root` |
-| `DEPLOY_SSH_KEY` | Conteúdo **inteiro** da chave privada |
-
-Para copiar a chave privada:
-
-```bash
-cat ~/.ssh/deploy_paroquia
-```
-
-Cole tudo no secret, incluindo as linhas `-----BEGIN ... KEY-----` e `-----END ... KEY-----`.
-
-> **Opcional:** em vez de `DEPLOY_SSH_KEY`, pode usar `DEPLOY_PASSWORD` com a senha root (menos seguro).
-
-> **Opcional:** `DEPLOY_PORT` = `22` se a porta SSH for diferente.
-
----
-
-## 1.5 Clonar código no VPS (use HTTPS)
-
-O servidor **não precisa** de chave SSH no GitHub se você clonar por **HTTPS** (padrão do `setup-server.sh`):
-
-```bash
-git clone https://github.com/Davim187/siteParoquial.git /www
-```
-
-> **Importante:** o deploy automático espera o projeto em **`/www`**, não em `/opt/siteParoquial`.
-
-### (Opcional) SSH no VPS
-
-Só use SSH se preferir. Gere uma chave no servidor e cadastre como **Deploy Key** em  
-GitHub → repositório → Settings → Deploy keys:
-
-```bash
-ssh-keygen -t ed25519 -C "vps-site-paroquial" -f ~/.ssh/id_ed25519 -N ""
-cat ~/.ssh/id_ed25519.pub
-```
-
-Depois clone com:
-
-```bash
-git clone git@github.com:Davim187/siteParoquial.git /www
+deploy/
+├── deploy.sh              # Comando principal
+├── setup.sh               # Configuração inicial do VPS
+├── doctor.sh              # Diagnóstico
+├── ecosystem.config.cjs   # PM2
+├── lib.sh                 # Carrega módulos
+└── lib/
+    ├── common.sh          # Paths, env, git
+    ├── build.sh           # npm ci + build
+    ├── postgres.sh        # Docker Postgres + migrations
+    ├── pm2.sh             # API
+    └── apache.sh          # Apache + HTTPS
 ```
 
 ---
 
-# Parte 2 — No servidor (VPS)
+## Comandos
 
-Conecte no VPS:
-
-```bash
-ssh root@SEU_IP
-```
-
----
-
-## 2.1 Primeira configuração (uma vez só)
-
-### Caminho A — Script automático
-
-Se o repositório **já está** em `/www`:
-
-```bash
-cd /www
-git pull origin master
-bash deploy/setup-server.sh
-```
-
-Se aparecer *branches divergentes*, alinhe o servidor ao GitHub (descarta commits locais no VPS):
-
-```bash
-cd /www
-git fetch origin
-git reset --hard origin/master
-```
-
-Se `/www` **ainda não existe**, clone primeiro:
-
-```bash
-git clone https://github.com/Davim187/siteParoquial.git /www
-cd /www
-bash deploy/setup-server.sh
-```
-
-O script faz:
-
-- Instala Docker
-- Remove Apache/Nginx do sistema (libera porta 80)
-- Configura firewall (22, 80, 443)
-- Clona o projeto em `/www` (se necessário)
-- Cria `.env.production` inicial
-
-### Caminho B — Manual
-
-```bash
-apt-get update
-apt-get install -y git curl
-curl -fsSL https://get.docker.com | sh
-systemctl enable docker && systemctl start docker
-
-git clone https://github.com/Davim187/siteParoquial.git /www
-cd /www
-bash deploy/remove-apache.sh
-cp .env.production.example .env.production
-```
+| Comando | O que faz |
+|---------|-----------|
+| `bash deploy/setup.sh` | Instala Node, PM2, Docker, Apache (uma vez) |
+| `bash deploy/deploy.sh` | Deploy completo |
+| `bash deploy/deploy.sh api` | Só API (build + PM2) |
+| `bash deploy/deploy.sh web` | Só frontend + Apache |
+| `bash deploy/deploy.sh ssl` | Só certificado HTTPS |
+| `bash deploy/doctor.sh` | Diagnóstico do ambiente |
 
 ---
 
-## 2.2 Editar variáveis de produção
+## Primeira vez no VPS
 
 ```bash
-nano /www/.env.production
-```
-
-Ajuste **obrigatoriamente**:
-
-| Variável | Exemplo |
-|----------|---------|
-| `POSTGRES_PASSWORD` | Senha forte para o banco (**não deixe o valor do exemplo**) |
-| `CORS_ORIGIN` | `http://SEU_IP` ou `https://seudominio.com.br` |
-| `PUBLIC_URL` | Mesmo valor acima |
-| `JWT_SECRET` | String longa e aleatória (mín. 32 caracteres) |
-
-> Se aparecer `POSTGRES_PASSWORD is missing`, o arquivo `.env.production` não existe ou a senha não foi definida.
-
-Salvar: `Ctrl+O`, Enter, `Ctrl+X`.
-
----
-
-## 2.3 Primeiro deploy manual
-
-```bash
-cd /www
+git clone https://github.com/Davim187/siteParoquial.git /var/www
+cd /var/www
+bash deploy/setup.sh
+nano .env.production   # configure senhas e domínio
 bash deploy/deploy.sh
 ```
 
-Aguarde o build (pode levar alguns minutos na primeira vez).
+### `.env.production` obrigatório
 
-Verifique se subiu:
+```
+POSTGRES_PASSWORD=senha-forte
+DATABASE_URL=postgresql://paroquia:senha-forte@127.0.0.1:5432/paroquia?schema=public
+JWT_SECRET=string-longa-minimo-32-caracteres
+PUBLIC_URL=https://paroquiansdasgracas.com.br
+CORS_ORIGIN=https://paroquiansdasgracas.com.br
+ACME_EMAIL=seu-email@gmail.com
+```
+
+> Use **domínio** em `PUBLIC_URL`, não IP.  
+> `DATABASE_URL` usa `127.0.0.1`, não `postgres`.
+
+---
+
+## Deploy automático (GitHub Actions)
+
+Secrets necessários: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
+
+Cada push em `master` executa `bash deploy/deploy.sh` no VPS.
+
+---
+
+## Problemas comuns
+
+| Sintoma | Solução |
+|---------|---------|
+| `turbo: not found` | `NODE_ENV=development npm ci` |
+| `tsc lib.es2022 not found` | Idem — devDependencies não instaladas |
+| API 503 | `bash deploy/deploy.sh api` |
+| HTTPS não funciona | `bash deploy/deploy.sh ssl` |
+| `Listen 443` duplicado | `bash deploy/doctor.sh` → depois `bash deploy/deploy.sh ssl` |
+| Imagens 404 | Uploads em `apps/api/uploads` (volume Docker antigo precisa ser copiado) |
+
+---
+
+## Beekeeper (banco)
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
-curl -I http://localhost
+# No PC — túnel SSH
+ssh -N -L 5432:127.0.0.1:5432 root@SEU_IP
+
+# Beekeeper: Host=127.0.0.1 Port=5432 User=paroquia Database=paroquia
 ```
 
----
-
-## 2.4 Acessar o site
-
-- **Site:** `http://SEU_IP`
-- **Admin:** `http://SEU_IP/admin/login`
-- Crie um usuário administrador real pelo painel ou diretamente no banco. **Não** rode o seed de desenvolvimento em produção.
-
----
-
-# Parte 3 — Deploy automático (dia a dia)
-
-Depois que a Parte 1 e 2 estiverem ok:
-
-## No computador
-
-```bash
-cd ~/Documentos/siteParoquial
-# faça suas alterações...
-git add .
-git commit -m "Descrição da mudança"
-git push origin master
-```
-
-## O que acontece sozinho
-
-1. GitHub Actions dispara o workflow **Deploy produção**
-2. Conecta no VPS via SSH
-3. Atualiza código em `/www`
-4. Remove Apache se voltou a subir
-5. Rebuild dos containers Docker
-6. Roda as migrations (o seed de desenvolvimento **não** roda em produção)
-
-Acompanhe em: **https://github.com/Davim187/siteParoquial/actions**
-
----
-
-# Acessar o banco pelo Beekeeper Studio
-
-O Postgres fica exposto **somente em `127.0.0.1:5432` no VPS** (não abre na internet).
-
-## Diagnóstico no VPS
-
-```bash
-cd /var/www   # ou /www
-bash deploy/check-db.sh
-```
-
-Esse script verifica porta, senha e mostra os dados corretos para o Beekeeper.
-
----
-
-## Método recomendado — túnel SSH manual (Linux Snap)
-
-O Beekeeper instalado via **Snap** costuma falhar com chave SSH. Use o terminal:
-
-**Terminal 1 (deixe aberto):**
-```bash
-ssh -N -L 5432:127.0.0.1:5432 root@84.46.251.102
-```
-
-**Beekeeper — nova conexão PostgreSQL (aba SSH Tunnel DESLIGADA):**
-
-| Campo | Valor |
-|-------|--------|
-| Host | `127.0.0.1` |
-| Port | `5432` |
-| User | `paroquia` |
-| Password | valor de `POSTGRES_PASSWORD` no `.env.production` |
-| Database | `paroquia` |
-| SSL | Disabled |
-
-Clique **Test** → **Connect**.
-
-> Se a porta 5432 no seu PC já estiver em uso, use `-L 15432:127.0.0.1:5432` e Port `15432` no Beekeeper.
-
----
-
-## Método alternativo — SSH Tunnel dentro do Beekeeper
-
-Funciona melhor com Beekeeper `.deb` (não Snap).
-
-1. **New Connection** → **PostgreSQL**
-2. **Connection**: Host `127.0.0.1`, Port `5432`, User `paroquia`, Database `paroquia`
-3. **SSH Tunnel** ativado: Host IP do VPS, User `root`, chave ou senha
-4. **Test** → **Connect**
-
----
-
-## Senha não funciona?
-
-O Postgres grava a senha na **primeira criação** do volume. Se mudou o `.env.production` depois, alinhe no VPS:
-
-```bash
-cd /var/www
-grep POSTGRES_PASSWORD .env.production
-
-docker compose -f docker-compose.prod.yml --env-file .env.production exec postgres \
-  psql -U postgres -d paroquia -c "ALTER USER paroquia WITH PASSWORD 'SUA_SENHA_AQUI';"
-
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d api
-```
-
-Use **exatamente a mesma senha** no Beekeeper e no `.env.production`.
-
----
-
-## Porta não aparece em 127.0.0.1:5432?
-
-```bash
-cd /var/www
-git fetch origin && git reset --hard origin/master
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d
-ss -tlnp | grep 5432
-```
-
----
-
-# Parte 4 — Comandos úteis no servidor
-
-```bash
-cd /www
-
-# Ver containers
-docker compose -f docker-compose.prod.yml ps
-
-# Ver logs da API
-docker compose -f docker-compose.prod.yml logs -f api
-
-# Ver logs do site (Nginx)
-docker compose -f docker-compose.prod.yml logs -f web
-
-# Deploy manual
-bash deploy/deploy.sh
-
-# Parar tudo
-docker compose -f docker-compose.prod.yml down
-
-# Subir de novo
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d
-```
-
----
-
-# Checklist rápido
-
-### Computador
-- [ ] Código no GitHub (`master`)
-- [ ] Chave SSH `deploy_paroquia` criada
-- [ ] Chave pública no VPS (`authorized_keys`)
-- [ ] Secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` no GitHub
-
-### Servidor
-- [ ] Docker instalado
-- [ ] Projeto em `/www`
-- [ ] `.env.production` configurado
-- [ ] `bash deploy/deploy.sh` rodou sem erro
-- [ ] Site abre em `https://paroquiansdasgracas.com.br`
-- [ ] Apache removido (portas 80 e 443 livres para o Caddy)
-
-### Segurança (produção)
-- [ ] Trocar senha do admin do painel
-- [ ] Trocar `JWT_SECRET` e `POSTGRES_PASSWORD`
-- [ ] Trocar senha root do VPS
-- [ ] Preferir chave SSH em vez de senha
-
----
-
-# Problemas comuns
-
-| Erro | Solução |
-|------|---------|
-| `missing server host` | Criar secret `DEPLOY_HOST` no GitHub |
-| `Repositório não encontrado em /www` | Rodar clone + setup no servidor |
-| `.env.production não encontrado` | `cp .env.production.example .env.production` e editar |
-| Porta 80 em uso | `bash deploy/remove-apache.sh` |
-| Navegador recusa HTTPS (443) | O Caddy precisa da porta 443. No painel do VPS, libere 443/tcp além da 80. |
-| Permission denied (SSH) | Verificar chave pública no VPS e secret `DEPLOY_SSH_KEY` |
-| `Permission denied (publickey)` ao clonar | Use HTTPS: `git clone https://github.com/Davim187/siteParoquial.git /www` |
-| Clone em `/opt/siteParoquial` | O deploy usa `/www`. Remova a pasta errada e clone de novo em `/www` |
-| `POSTGRES_PASSWORD is missing` | Edite `/www/.env.production` (ou `/var/www/.env.production`) e defina a senha |
-| Erro Prisma `debian-openssl-3.0.x` | Rebuild da API: `docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build api` |
-
----
-
-# Estrutura no servidor
-
-```
-/www/
-├── apps/
-│   ├── api/              # Backend
-│   └── web/              # Frontend (build vai pro container Nginx)
-├── deploy/               # Scripts de deploy
-├── docker-compose.prod.yml
-├── turbo.json
-├── .env.production       # Configurações (NÃO commitar)
-└── ...
-```
-
-O site público é servido pelo **Nginx dentro do Docker** na porta **80**. Não é necessário Apache no servidor.
+Senha = `POSTGRES_PASSWORD` do `.env.production`.

@@ -1,4 +1,5 @@
-import { apiRequest, mediaUrl } from '@/lib/api-client'
+import { apiRequest } from '@/lib/api-client'
+import { cardImageUrl } from '@/utils/media'
 import type { Notice } from '@/types'
 
 function mapNotice(item: any): Notice {
@@ -7,7 +8,7 @@ function mapNotice(item: any): Notice {
     title: item.title,
     description: item.description,
     date: String(item.startsAt).slice(0, 10),
-    image: mediaUrl(item.imageUrl) || undefined,
+    image: cardImageUrl(item.imageUrl, item.imageThumbUrl) || undefined,
     category:
       item.category === 'URGENTE'
         ? 'urgente'

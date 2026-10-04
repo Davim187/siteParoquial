@@ -5,14 +5,19 @@ export function ProgressBar({
   current = 0,
   goal = 0,
   label,
+  mode = 'amount',
   tone = 'light',
 }: {
   current?: number
   goal?: number
   label?: string
+  mode?: 'amount' | 'percent'
   tone?: 'light' | 'dark'
 }) {
-  const percent = progressPercent(current, goal)
+  const percent =
+    mode === 'percent'
+      ? Math.min(100, Math.max(0, Math.round(current || 0)))
+      : progressPercent(current, goal)
   const dark = tone === 'dark'
 
   return (
@@ -27,10 +32,14 @@ export function ProgressBar({
         />
       </div>
       <div className={cn('flex flex-wrap items-center justify-between gap-2 text-sm', dark ? 'text-white/80' : 'text-muted')}>
-        <span>
-          {formatBRL(current)} arrecadados
-          {goal > 0 ? ` de ${formatBRL(goal)}` : ''}
-        </span>
+        {mode === 'percent' ? (
+          <span>{percent}% concluído</span>
+        ) : (
+          <span>
+            {formatBRL(current)} arrecadados
+            {goal > 0 ? ` de ${formatBRL(goal)}` : ''}
+          </span>
+        )}
         <span className={cn('font-semibold', dark ? 'text-gold' : 'text-marian')}>{percent}%</span>
       </div>
     </div>

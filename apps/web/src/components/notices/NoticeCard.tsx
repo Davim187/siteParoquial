@@ -8,7 +8,7 @@ export function NoticeCard({ notice }: { notice: Notice }) {
   return (
     <Card className="p-5">
       {notice.image ? (
-        <img src={notice.image} alt="" className="-mx-5 -mt-5 mb-4 h-36 w-[calc(100%+2.5rem)] object-cover" loading="lazy" />
+        <img src={notice.image} alt="" className="-mx-5 -mt-5 mb-4 h-36 w-[calc(100%+2.5rem)] object-cover" loading="lazy" decoding="async" />
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={notice.category === 'urgente' ? 'urgent' : 'marian'}>{noticeLabels[notice.category]}</Badge>

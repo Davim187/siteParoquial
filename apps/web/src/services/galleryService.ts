@@ -1,5 +1,6 @@
-import { apiRequest, API_URL, mediaUrl } from '@/lib/api-client'
-import { parseApiError } from '@/lib/api-error'
+import { apiRequest, mediaUrl } from '@/lib/api-client'
+import { getErrorMessage } from '@/lib/api-error'
+import { uploadMedia } from '@/services/mediaService'
 import type { GalleryAlbum, GalleryPhoto, Paginated } from '@/types'
 
 type ApiAlbum = {
@@ -128,32 +129,68 @@ export type BulkUploadResult = {
   message: string
 }
 
+export async function addAlbumPhoto(albumId: string, mediaId: string) {
+  const item = await apiRequest<ApiPhoto>(`/api/gallery/albums/${albumId}/photos`, {
+    method: 'POST',
+    json: { mediaId },
+  })
+  return mapPhoto(item)
+}
+
+export type BulkUploadFileEvent = {
+  index: number
+  fileName: string
+  status: 'start' | 'success' | 'error'
+  error?: string
+}
+
+const UPLOAD_BATCH_SIZE = 5
+
 export async function bulkUploadPhotos(
   albumId: string,
   files: File[],
   onProgress?: (done: number, total: number) => void,
+  onFile?: (event: BulkUploadFileEvent) => void,
 ): Promise<BulkUploadResult> {
-  const form = new FormData()
-  for (const file of files) form.append('file', file)
+  const succeeded: BulkUploadResult['succeeded'] = []
+  const failed: BulkUploadResult['failed'] = []
+  let completed = 0
 
-  const token = localStorage.getItem('paroquia_access_token')
-  const response = await fetch(`${API_URL}/api/gallery/albums/${albumId}/photos/bulk`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    body: form,
-  })
-
-  onProgress?.(files.length, files.length)
-
-  const body = (await response.json().catch(() => ({}))) as BulkUploadResult & { message?: string }
-  if (!response.ok && response.status !== 422) {
-    throw await parseApiError(response)
+  async function uploadOne(file: File, index: number) {
+    onFile?.({ index, fileName: file.name, status: 'start' })
+    try {
+      const media = await uploadMedia(file, 'gallery')
+      const photo = await addAlbumPhoto(albumId, media.id)
+      succeeded.push({ fileName: file.name, photoId: photo.id })
+      onFile?.({ index, fileName: file.name, status: 'success' })
+    } catch (error) {
+      const message = getErrorMessage(error, 'Falha no upload.')
+      failed.push({
+        fileName: file.name,
+        error: message,
+      })
+      onFile?.({ index, fileName: file.name, status: 'error', error: message })
+    }
+    completed += 1
+    onProgress?.(completed, files.length)
   }
 
+  for (let start = 0; start < files.length; start += UPLOAD_BATCH_SIZE) {
+    const batch = files.slice(start, start + UPLOAD_BATCH_SIZE)
+    await Promise.all(batch.map((file, offset) => uploadOne(file, start + offset)))
+  }
+
+  const message = [
+    succeeded.length ? `${succeeded.length} foto(s) enviada(s) com sucesso.` : null,
+    failed.length ? `${failed.length} foto(s) não puderam ser enviadas.` : null,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return {
-    succeeded: body.succeeded ?? [],
-    failed: body.failed ?? [],
-    message: body.message ?? 'Upload concluído.',
+    succeeded,
+    failed,
+    message: message || 'Nenhuma foto enviada.',
   }
 }
 
@@ -161,19 +198,9 @@ export async function deleteAlbumPhoto(albumId: string, photoId: string) {
   await apiRequest(`/api/gallery/albums/${albumId}/photos/${photoId}`, { method: 'DELETE' })
 }
 
-/** @deprecated Mantido para compatibilidade com endpoints legados */
+/** @deprecated Galeria legada removida — use álbuns */
 export async function listGallery() {
-  const albums = await listAlbums({ limit: 40 })
-  return albums.data.flatMap((album) =>
-    (album.photos ?? []).map((photo) => ({
-      id: photo.id,
-      title: photo.title ?? album.title,
-      src: photo.url,
-      alt: photo.title ?? album.title,
-      category: 'eventos' as const,
-      date: album.eventDate,
-    })),
-  )
+  return []
 }
 
 export async function deleteGalleryItem(id: string) {
@@ -181,5 +208,5 @@ export async function deleteGalleryItem(id: string) {
 }
 
 export async function saveGalleryItem(_input: unknown) {
-  throw new Error('Use createAlbum e bulkUploadPhotos para a nova galeria por álbuns.')
+  throw new Error('Use createAlbum e bulkUploadPhotos para a galeria por álbuns.')
 }

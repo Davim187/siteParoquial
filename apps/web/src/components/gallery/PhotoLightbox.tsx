@@ -1,6 +1,41 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { GalleryPhoto } from '@/types'
+
+function GalleryImg({
+  src,
+  fallback,
+  alt,
+  className,
+}: {
+  src: string
+  fallback?: string
+  alt: string
+  className?: string
+}) {
+  const [current, setCurrent] = useState(src)
+
+  useEffect(() => {
+    setCurrent(src)
+  }, [src])
+
+  return (
+    <img
+      src={current}
+      alt={alt}
+      className={className}
+      onError={() => {
+        if (fallback && current !== fallback) setCurrent(fallback)
+      }}
+    />
+  )
+}
+
+function preload(url?: string) {
+  if (!url) return
+  const image = new Image()
+  image.src = url
+}
 
 export function PhotoLightbox({
   photos,
@@ -12,7 +47,11 @@ export function PhotoLightbox({
   onClose: () => void
 }) {
   const [index, setIndex] = useState(initialIndex)
-  const current = photos[index]
+  const [shownIndex, setShownIndex] = useState(initialIndex)
+  const shown = photos[shownIndex]
+  const pending = photos[index]
+  const pendingUrl = pending?.url
+  const touchStartX = useRef<number | null>(null)
 
   const goPrev = useCallback(() => {
     setIndex((value) => (value === 0 ? photos.length - 1 : value - 1))
@@ -21,6 +60,24 @@ export function PhotoLightbox({
   const goNext = useCallback(() => {
     setIndex((value) => (value === photos.length - 1 ? 0 : value + 1))
   }, [photos.length])
+
+  useEffect(() => {
+    if (!pendingUrl) return
+    let cancelled = false
+    const image = new Image()
+    const reveal = () => {
+      if (!cancelled) setShownIndex(index)
+    }
+    image.onload = reveal
+    image.onerror = reveal
+    image.src = pendingUrl
+    if (image.complete) reveal()
+    preload(photos[(index + 1) % photos.length]?.url)
+    preload(photos[(index - 1 + photos.length) % photos.length]?.url)
+    return () => {
+      cancelled = true
+    }
+  }, [index, pendingUrl, photos])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -32,7 +89,7 @@ export function PhotoLightbox({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [goNext, goPrev, onClose])
 
-  if (!current) return null
+  if (!shown || !pending) return null
 
   return (
     <div
@@ -40,6 +97,19 @@ export function PhotoLightbox({
       role="dialog"
       aria-modal="true"
       aria-label="Visualização ampliada"
+      onTouchStart={(event) => {
+        touchStartX.current = event.changedTouches[0]?.clientX ?? null
+      }}
+      onTouchEnd={(event) => {
+        const start = touchStartX.current
+        const end = event.changedTouches[0]?.clientX
+        touchStartX.current = null
+        if (start == null || end == null) return
+        const delta = end - start
+        if (Math.abs(delta) < 40) return
+        if (delta > 0) goPrev()
+        else goNext()
+      }}
     >
       <button
         type="button"
@@ -72,15 +142,16 @@ export function PhotoLightbox({
       ) : null}
 
       <div className="flex max-h-[90vh] max-w-5xl flex-col items-center">
-        <img
-          src={current.url}
-          alt={current.title ?? current.originalName ?? 'Foto da galeria'}
+        <GalleryImg
+          src={shown.url}
+          fallback={shown.thumbUrl}
+          alt={shown.title ?? shown.originalName ?? 'Foto da galeria'}
           className="max-h-[75vh] max-w-full rounded-lg object-contain"
         />
         <div className="mt-3 text-center text-white">
-          {current.title ? <p className="font-medium">{current.title}</p> : null}
+          {shown.title ? <p className="font-medium">{shown.title}</p> : null}
           <p className="text-sm text-white/70">
-            {index + 1} de {photos.length}
+            {shownIndex + 1} de {photos.length}
           </p>
         </div>
       </div>
@@ -104,11 +175,11 @@ export function PhotoGrid({
             onClick={() => onPhotoClick(photoIndex)}
             className="group relative block w-full overflow-hidden rounded-xl focus-visible:outline-none"
           >
-            <img
-              src={photo.thumbUrl}
+            <GalleryImg
+              src={photo.thumbUrl || photo.url}
+              fallback={photo.url}
               alt={photo.title ?? photo.originalName ?? 'Foto'}
               className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105"
-              loading="lazy"
             />
           </button>
         </li>

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { STALE_TIME } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
-import { getDashboardStats, getFeast, getSettings } from '@/services/parishService'
+import { getDashboardStats, getAdminSettings, getFeast } from '@/services/parishService'
 import { listNewsCategories, writeCampaignCache } from '@/services/newsService'
 import { listPrayerRequests } from '@/services/prayerService'
 import { listMessages } from '@/services/contactService'
@@ -103,7 +103,7 @@ export function useFeastQuery() {
 export function useAdminSettingsQuery() {
   return useQuery<ParishSettings>({
     queryKey: queryKeys.settings,
-    queryFn: getSettings,
+    queryFn: getAdminSettings,
     staleTime: STALE_TIME.settings,
     placeholderData: (previous) => previous,
   })
@@ -134,7 +134,10 @@ export function useInvalidateQueries() {
     pastorals: () => client.invalidateQueries({ queryKey: queryKeys.pastorals.all }),
     sacraments: () => client.invalidateQueries({ queryKey: queryKeys.sacraments.all }),
     people: () => client.invalidateQueries({ queryKey: queryKeys.people.all }),
-    settings: () => client.invalidateQueries({ queryKey: queryKeys.settings }),
+    settings: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.settings })
+      void client.invalidateQueries({ queryKey: queryKeys.home })
+    },
     dashboard: () => client.invalidateQueries({ queryKey: queryKeys.dashboard }),
     prayers: () => client.invalidateQueries({ queryKey: queryKeys.prayers }),
     messages: () => client.invalidateQueries({ queryKey: queryKeys.messages }),

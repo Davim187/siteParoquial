@@ -13,6 +13,7 @@ export function PersonCard({ person }: { person: Person }) {
         alt={`Foto de ${person.name}`}
         className="mx-auto h-36 w-36 rounded-full object-cover ring-4 ring-gold/30"
         loading="lazy"
+        decoding="async"
       />
       <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-gold-dark">{person.role}</p>
       <h3 className="mt-1 font-serif text-2xl text-navy">{person.name}</h3>

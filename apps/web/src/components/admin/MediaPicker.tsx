@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
 import { Search, Upload } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -6,6 +6,7 @@ import { type MediaItem } from '@/services/mediaService'
 import { useMediaLibrary } from '@/hooks/useMediaLibrary'
 import { useToast } from '@/components/ui/Toast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { SkeletonGrid } from '@/components/ui/Feedback'
 import { mediaPreviewSrc } from '@/utils/media'
 
 export function MediaPicker({
@@ -19,11 +20,15 @@ export function MediaPicker({
 }) {
   const toast = useToast()
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
   const [selected, setSelected] = useState<MediaItem | null>(null)
   const [toDelete, setToDelete] = useState<MediaItem | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [uploadLabel, setUploadLabel] = useState('Enviando...')
-  const { items, loading, uploading, load, upload, remove } = useMediaLibrary({ enabled: open, search })
+  const { items, loading, uploading, load, upload, remove } = useMediaLibrary({
+    enabled: open,
+    search: deferredSearch,
+  })
 
   useEffect(() => {
     if (!open) {
@@ -73,14 +78,16 @@ export function MediaPicker({
             {uploading ? uploadLabel : 'Enviar imagem'}
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-              className="hidden"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,.nef"
+              className="sr-only"
               disabled={uploading}
               onChange={(e) => void onUpload(e.target.files?.[0] ?? null, e.target)}
             />
           </label>
         </div>
-        {loading ? <p className="py-10 text-center text-sm text-muted">Carregando biblioteca...</p> : null}
+        {loading ? (
+          <SkeletonGrid count={8} className="aspect-square h-auto" cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4" />
+        ) : null}
         {!loading && items.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted">Nenhuma imagem encontrada. Envie a primeira.</p>
         ) : null}

@@ -2,7 +2,7 @@ import type { FormEvent, ReactNode } from 'react'
 import { Eye, Copy, Pencil, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
-import { Loading, ErrorState } from '@/components/ui/Feedback'
+import { ErrorState, SkeletonTable } from '@/components/ui/Feedback'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function AdminCrudShell({
@@ -12,6 +12,7 @@ export function AdminCrudShell({
   createPermission,
   loading,
   error,
+  skeletonCols = 4,
   children,
 }: {
   title: string
@@ -20,6 +21,7 @@ export function AdminCrudShell({
   createPermission?: string
   loading?: boolean
   error?: string | null
+  skeletonCols?: number
   children: ReactNode
 }) {
   const { hasPermission } = useAuth()
@@ -35,9 +37,8 @@ export function AdminCrudShell({
           </Button>
         ) : null}
       </div>
-      {loading ? <Loading /> : null}
       {error ? <ErrorState message={error} /> : null}
-      {children}
+      {loading ? <SkeletonTable cols={skeletonCols} /> : children}
     </div>
   )
 }

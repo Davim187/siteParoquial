@@ -1,11 +1,12 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AlertCircle, CheckCircle2, ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { IMAGE_ACCEPT, MAX_UPLOAD_MB, isNefFile, validateImageUpload } from '@/constants/upload'
+import { extractNefPreviewUrl } from '@/utils/nefPreview'
 import { prepareUploadImage } from '@/utils/prepareUploadImage'
 
-const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif'
-const MAX_FILE_MB = 8
-const MAX_FILES = 50
+const ACCEPT = IMAGE_ACCEPT
+const MAX_FILE_MB = MAX_UPLOAD_MB
 
 export type PendingUploadFile = {
   id: string
@@ -15,26 +16,30 @@ export type PendingUploadFile = {
   error?: string
 }
 
+type UploadFileEvent = {
+  index: number
+  fileName: string
+  status: 'start' | 'success' | 'error'
+  error?: string
+}
+
 type BulkPhotoUploadProps = {
-  onUpload: (files: File[]) => Promise<{ succeeded: string[]; failed: Array<{ fileName: string; error: string }> }>
+  onUpload: (
+    files: File[],
+    onFile?: (event: UploadFileEvent) => void,
+  ) => Promise<{ succeeded: string[]; failed: Array<{ fileName: string; error: string }> }>
   disabled?: boolean
 }
 
+function selectedMessage(count: number) {
+  return count === 1 ? '1 foto selecionada.' : `${count} fotos selecionadas.`
+}
+
 function validateFile(file: File): string | null {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
-  const ext = file.name.toLowerCase()
-  const validExt = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'].some((item) => ext.endsWith(item))
-  if (!allowed.includes(file.type) && !validExt) {
-    return `O arquivo ${file.name} não é um formato de imagem válido.`
-  }
-  if (file.size > MAX_FILE_MB * 1024 * 1024) {
-    return `O arquivo ${file.name} excede o limite de ${MAX_FILE_MB} MB.`
-  }
-  return null
+  return validateImageUpload(file, MAX_FILE_MB)
 }
 
 export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
   const [items, setItems] = useState<PendingUploadFile[]>([])
   const [uploading, setUploading] = useState(false)
   const [preparing, setPreparing] = useState(false)
@@ -55,16 +60,16 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
     const errors: string[] = []
 
     for (const file of Array.from(selected)) {
-      if (items.length + validFiles.length >= MAX_FILES) {
-        errors.push(`É possível selecionar no máximo ${MAX_FILES} fotos por vez.`)
-        break
-      }
-      const validationError = validateFile(file)
+      const selectedFile = new File([file], file.name || 'foto.jpg', {
+        type: file.type || 'application/octet-stream',
+        lastModified: file.lastModified,
+      })
+      const validationError = validateFile(selectedFile)
       if (validationError) {
         errors.push(validationError)
         continue
       }
-      validFiles.push(file)
+      validFiles.push(selectedFile)
     }
 
     if (!validFiles.length) {
@@ -82,16 +87,23 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
     setPreparing(true)
     setItems((current) => [...current, ...placeholders])
 
+    let selectedCount = items.filter((item) => item.status === 'pending').length
+
     for (const placeholder of placeholders) {
       try {
         const prepared = await prepareUploadImage(placeholder.file)
+        const previewUrl = isNefFile(prepared)
+          ? await extractNefPreviewUrl(prepared)
+          : URL.createObjectURL(prepared)
         const ready: PendingUploadFile = {
           id: placeholder.id,
           file: prepared,
-          previewUrl: URL.createObjectURL(prepared),
+          previewUrl,
           status: 'pending',
         }
+        selectedCount += 1
         setItems((current) => current.map((item) => (item.id === placeholder.id ? ready : item)))
+        setSummary(errors.length ? `${selectedMessage(selectedCount)} ${errors.join(' ')}` : selectedMessage(selectedCount))
       } catch {
         errors.push(`Não foi possível preparar o arquivo ${placeholder.file.name}.`)
         setItems((current) => current.filter((item) => item.id !== placeholder.id))
@@ -99,37 +111,63 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
     }
 
     setPreparing(false)
-    if (errors.length) setSummary(errors.join(' '))
+    if (selectedCount) {
+      setSummary(errors.length ? `${selectedMessage(selectedCount)} ${errors.join(' ')}` : selectedMessage(selectedCount))
+    } else if (errors.length) {
+      setSummary(errors.join(' '))
+    }
   }
 
   function removeItem(id: string) {
     setItems((current) => {
       const item = current.find((entry) => entry.id === id)
-      if (item) URL.revokeObjectURL(item.previewUrl)
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl)
       return current.filter((entry) => entry.id !== id)
     })
   }
 
   async function handleUpload() {
     if (!pendingFiles.length || uploading) return
+    const queue = items.filter((item) => item.status === 'pending' || item.status === 'error')
     setUploading(true)
-    setSummary(null)
-    setItems((current) =>
-      current.map((item) =>
-        item.status === 'pending' || item.status === 'error' ? { ...item, status: 'uploading' } : item,
-      ),
-    )
+    setSummary(`Enviando de 5 em 5... 0 de ${queue.length}.`)
+
+    let sent = 0
+    let failedCount = 0
 
     try {
-      const result = await onUpload(pendingFiles)
-      setItems((current) =>
-        current.map((item) => {
-          if (item.status !== 'uploading') return item
-          const failed = result.failed.find((entry) => entry.fileName === item.file.name)
-          if (failed) return { ...item, status: 'error', error: failed.error }
-          return { ...item, status: 'success' }
-        }),
-      )
+      const result = await onUpload(pendingFiles, (event) => {
+        const target = queue[event.index]
+        if (!target) return
+        if (event.status === 'start') {
+          setItems((current) =>
+            current.map((item) => (item.id === target.id ? { ...item, status: 'uploading', error: undefined } : item)),
+          )
+          const remaining = queue.length - sent - failedCount
+          setSummary(`Enviando de 5 em 5... ${sent} de ${queue.length}.${remaining ? ` ${remaining} na fila.` : ''}`)
+          return
+        }
+        if (event.status === 'success') {
+          sent += 1
+          setItems((current) =>
+            current.map((item) => (item.id === target.id ? { ...item, status: 'success' } : item)),
+          )
+        } else {
+          failedCount += 1
+          setItems((current) =>
+            current.map((item) =>
+              item.id === target.id ? { ...item, status: 'error', error: event.error ?? 'Falha no upload.' } : item,
+            ),
+          )
+        }
+        const remaining = queue.length - sent - failedCount
+        const parts = [
+          `Enviando de 5 em 5... ${sent} de ${queue.length}.`,
+          failedCount ? `${failedCount} com erro.` : null,
+          remaining ? `${remaining} na fila.` : null,
+        ].filter(Boolean)
+        setSummary(parts.join(' '))
+      })
       const message = [
         result.succeeded.length ? `${result.succeeded.length} foto(s) enviada(s) com sucesso.` : null,
         result.failed.length ? `${result.failed.length} foto(s) não puderam ser enviadas.` : null,
@@ -153,7 +191,9 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
 
   function clearSuccessful() {
     setItems((current) => {
-      current.filter((item) => item.status === 'success').forEach((item) => URL.revokeObjectURL(item.previewUrl))
+      current
+        .filter((item) => item.status === 'success' && item.previewUrl)
+        .forEach((item) => URL.revokeObjectURL(item.previewUrl))
       return current.filter((item) => item.status !== 'success')
     })
   }
@@ -161,29 +201,29 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
   return (
     <div className="space-y-4 rounded-xl border border-line bg-cream/40 p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPT}
-          multiple
-          className="hidden"
-          disabled={disabled || uploading || preparing}
-          onChange={(event) => {
-            void handleSelect(event.target.files)
-            event.target.value = ''
-          }}
-        />
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={disabled || uploading || preparing}
-          loading={preparing}
-          onClick={() => inputRef.current?.click()}
+        <label
+          className={`inline-flex cursor-pointer items-center justify-center rounded-lg border border-line bg-white px-3.5 py-1.5 text-sm font-medium text-navy hover:border-marian/40 hover:bg-cream ${
+            disabled || uploading || preparing ? 'pointer-events-none opacity-50' : ''
+          }`}
         >
-          {!preparing ? <ImagePlus className="mr-2 h-4 w-4" /> : null}
+          {preparing ? (
+            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <ImagePlus className="mr-2 h-4 w-4" />
+          )}
           {preparing ? 'Preparando fotos...' : 'Selecionar fotos'}
-        </Button>
+          <input
+            type="file"
+            accept={ACCEPT}
+            multiple
+            className="sr-only"
+            disabled={disabled || uploading || preparing}
+            onChange={(event) => {
+              void handleSelect(event.target.files)
+              event.target.value = ''
+            }}
+          />
+        </label>
         {pendingFiles.length ? (
           <Button type="button" size="sm" disabled={disabled || uploading || preparing} onClick={() => void handleUpload()}>
             <Upload className="mr-2 h-4 w-4" />
@@ -198,8 +238,8 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
       </div>
 
       <p className="text-xs text-muted">
-        Selecione várias imagens de uma vez (JPG, PNG, WebP ou HEIC). Máximo {MAX_FILES} arquivos, {MAX_FILE_MB} MB
-        cada.
+        Selecione quantas fotos quiser (JPG, PNG, WebP, HEIC ou NEF), até {MAX_FILE_MB} MB cada. O envio continua de 5 em
+        5 para não sobrecarregar o servidor.
       </p>
 
       {preparingCount ? (
@@ -224,13 +264,22 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {items.map((item, index) => (
             <li key={item.id} className="relative overflow-hidden rounded-lg border border-line bg-white">
-              {item.status === 'preparing' ? (
+              {item.status === 'preparing' || !item.previewUrl ? (
                 <div className="flex aspect-square w-full items-center justify-center bg-cream">
-                  <LoaderCircle className="h-6 w-6 animate-spin text-muted" aria-hidden="true" />
-                  <span className="sr-only">Preparando foto...</span>
+                  {item.status === 'preparing' ? (
+                    <LoaderCircle className="h-6 w-6 animate-spin text-muted" aria-hidden="true" />
+                  ) : (
+                    <span className="text-xs font-semibold tracking-wide text-muted">NEF</span>
+                  )}
+                  <span className="sr-only">{item.status === 'preparing' ? 'Preparando foto...' : 'Foto RAW Nikon'}</span>
                 </div>
               ) : (
-                <img src={item.previewUrl} alt="" className="aspect-square w-full object-cover" />
+                <img
+                  src={item.previewUrl}
+                  alt=""
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
+                />
               )}
               <span className="absolute top-1 left-1 rounded bg-navy-deep/70 px-1.5 py-0.5 text-[10px] text-white">
                 {index + 1}
@@ -238,6 +287,11 @@ export function BulkPhotoUpload({ onUpload, disabled }: BulkPhotoUploadProps) {
               {item.status === 'preparing' ? (
                 <span className="absolute inset-x-0 bottom-0 bg-navy-deep/80 py-1 text-center text-[10px] text-white">
                   Preparando...
+                </span>
+              ) : null}
+              {item.status === 'pending' ? (
+                <span className="absolute inset-x-0 bottom-0 bg-navy-deep/80 py-1 text-center text-[10px] text-white">
+                  Selecionada
                 </span>
               ) : null}
               {item.status === 'uploading' ? (

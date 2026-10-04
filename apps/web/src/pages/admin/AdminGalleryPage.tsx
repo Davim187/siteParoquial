@@ -1,7 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { z } from 'zod'
-import { BulkPhotoUpload } from '@/components/admin/BulkPhotoUpload'
 import {
   AdminCrudShell,
   AdminInput,
@@ -13,6 +12,7 @@ import { MediaPicker } from '@/components/admin/MediaPicker'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Skeleton, SkeletonGrid } from '@/components/ui/Feedback'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useToast } from '@/components/ui/Toast'
 import { usePageMeta } from '@/hooks/usePageMeta'
@@ -30,6 +30,10 @@ import { getErrorMessage, getFieldErrors, formatValidationSummary } from '@/lib/
 import { formatDate } from '@/utils/dates'
 import type { GalleryAlbum } from '@/types'
 import { uploadMedia } from '@/services/mediaService'
+
+const BulkPhotoUpload = lazy(() =>
+  import('@/components/admin/BulkPhotoUpload').then((mod) => ({ default: mod.BulkPhotoUpload })),
+)
 
 const albumFormSchema = z.object({
   title: z.string().trim().min(2, 'O título do álbum é obrigatório.').max(150, 'O título deve ter no máximo 150 caracteres.'),
@@ -141,7 +145,7 @@ export function AdminGalleryPage() {
         setEditing(emptyForm())
         setFormErrors({})
       }}
-      loading={albumsQuery.isLoading}
+      loading={albumsQuery.isLoading && !albumsQuery.data}
       error={albumsQuery.error ? getErrorMessage(albumsQuery.error) : null}
     >
       <AdminTable
@@ -219,8 +223,8 @@ export function AdminGalleryPage() {
                   {uploadingCover ? 'Enviando...' : 'Enviar capa'}
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-                    className="hidden"
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,.nef"
+                    className="sr-only"
                     disabled={uploadingCover}
                     onChange={async (event) => {
                       const file = event.target.files?.[0]
@@ -372,12 +376,18 @@ function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onCl
       <Modal open={Boolean(album)} onClose={onClose} title={album ? `Fotos — ${album.title}` : 'Fotos'}>
         {album ? (
           <div className="space-y-4">
+            <Suspense fallback={<Skeleton className="h-36" />}>
             <BulkPhotoUpload
               disabled={bulkMutation.isPending}
-              onUpload={async (files) => {
+              onUpload={async (files, onFile) => {
                 setPendingUploads(files.length)
                 try {
-                  const result = await bulkMutation.mutateAsync({ albumId: album.id, files })
+                  const result = await bulkMutation.mutateAsync({
+                    albumId: album.id,
+                    files,
+                    onProgress: (done, total) => setPendingUploads(Math.max(total - done, 0)),
+                    onFile,
+                  })
                   if (result.failed.length) {
                     toast.push(result.message, result.succeeded.length ? 'success' : 'error')
                   } else {
@@ -395,8 +405,11 @@ function AlbumPhotosModal({ album, onClose }: { album: GalleryAlbum | null; onCl
                 }
               }}
             />
+            </Suspense>
 
-            {albumQuery.isLoading ? <p className="text-sm text-muted">Carregando fotos...</p> : null}
+            {albumQuery.isLoading && !albumQuery.data ? (
+              <SkeletonGrid count={8} className="aspect-square h-auto" cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4" />
+            ) : null}
 
             {photos.length || showPlaceholders ? (
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">

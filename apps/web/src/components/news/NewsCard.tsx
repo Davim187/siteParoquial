@@ -4,6 +4,7 @@ import { formatDate } from '@/utils/dates'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/PageHeader'
 import { ProgressBar } from '@/components/ui/ProgressBar'
+import { ProseHtml } from '@/components/ui/ProseHtml'
 import { cn } from '@/utils/cn'
 
 export function NewsCard({
@@ -31,6 +32,7 @@ export function NewsCard({
             isFeatured ? 'h-64 md:h-full md:min-h-[320px]' : 'h-48',
           )}
           loading="lazy"
+          decoding="async"
         />
       </div>
       <div className={cn('flex flex-1 flex-col p-5', isFeatured && 'md:p-8')}>
@@ -50,14 +52,19 @@ export function NewsCard({
         {isFeatured && article.subtitle ? (
           <p className="mt-2 text-base text-navy/70">{article.subtitle}</p>
         ) : null}
-        <p className={cn('mt-2 flex-1 leading-relaxed text-muted', isFeatured ? 'text-base' : 'text-sm')}>
-          {article.excerpt}
-        </p>
+        <div className={cn('mt-2 flex-1', isFeatured ? 'text-base' : 'text-sm')}>
+          <ProseHtml
+            compact
+            html={article.excerpt}
+            className={cn('line-clamp-4', isFeatured ? 'text-base' : 'text-sm')}
+          />
+        </div>
         {article.showProgress ? (
           <div className="mt-4">
             <ProgressBar
               current={article.progressCurrent}
               goal={article.progressGoal}
+              mode={article.progressMode}
               label={article.progressLabel}
             />
           </div>

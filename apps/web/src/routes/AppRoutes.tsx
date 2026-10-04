@@ -2,7 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { PublicLayout } from '@/layouts/PublicLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
-import { Loading } from '@/components/ui/Feedback'
+import { PageSkeleton } from '@/components/ui/Feedback'
 
 const HomePage = lazy(() => import('@/pages/HomePage').then((m) => ({ default: m.HomePage })))
 const ParishPage = lazy(() => import('@/pages/ParishPage').then((m) => ({ default: m.ParishPage })))
@@ -16,6 +16,9 @@ const NewsDetailPage = lazy(() =>
 const NoticesPage = lazy(() => import('@/pages/NoticesPage').then((m) => ({ default: m.NoticesPage })))
 const MassesPage = lazy(() => import('@/pages/MassesPage').then((m) => ({ default: m.MassesPage })))
 const AgendaPage = lazy(() => import('@/pages/AgendaPage').then((m) => ({ default: m.AgendaPage })))
+const EventDetailPage = lazy(() =>
+  import('@/pages/EventDetailPage').then((m) => ({ default: m.EventDetailPage })),
+)
 const PastoralsPage = lazy(() =>
   import('@/pages/PastoralsPage').then((m) => ({ default: m.PastoralsPage })),
 )
@@ -61,28 +64,28 @@ const AdminMassesPage = lazy(() =>
   import('@/pages/admin/AdminAgendaPage').then((m) => ({ default: m.AdminMassesPage })),
 )
 const AdminPastoralsPage = lazy(() =>
-  import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminPastoralsPage })),
+  import('@/pages/admin/AdminPastoralsPage').then((m) => ({ default: m.AdminPastoralsPage })),
 )
 const AdminSacramentsPage = lazy(() =>
-  import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminSacramentsPage })),
+  import('@/pages/admin/AdminSacramentsPage').then((m) => ({ default: m.AdminSacramentsPage })),
 )
 const AdminGalleryPage = lazy(() =>
   import('@/pages/admin/AdminGalleryPage').then((m) => ({ default: m.AdminGalleryPage })),
 )
 const AdminPeoplePage = lazy(() =>
-  import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminPeoplePage })),
+  import('@/pages/admin/AdminPeoplePage').then((m) => ({ default: m.AdminPeoplePage })),
 )
 const AdminPrayersPage = lazy(() =>
-  import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminPrayersPage })),
+  import('@/pages/admin/AdminPrayersPage').then((m) => ({ default: m.AdminPrayersPage })),
 )
 const AdminMessagesPage = lazy(() =>
-  import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminMessagesPage })),
+  import('@/pages/admin/AdminMessagesPage').then((m) => ({ default: m.AdminMessagesPage })),
 )
 const AdminFeastPage = lazy(() =>
-  import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminFeastPage })),
+  import('@/pages/admin/AdminFeastPage').then((m) => ({ default: m.AdminFeastPage })),
 )
 const AdminSettingsPage = lazy(() =>
-  import('@/pages/admin/AdminMorePages').then((m) => ({ default: m.AdminSettingsPage })),
+  import('@/pages/admin/AdminSettingsPage').then((m) => ({ default: m.AdminSettingsPage })),
 )
 const AdminMediaPage = lazy(() =>
   import('@/pages/admin/AdminMediaPage').then((m) => ({ default: m.AdminMediaPage })),
@@ -98,7 +101,7 @@ const AdminProfilePage = lazy(() =>
 )
 
 function Suspend({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<Loading label="Carregando página..." />}>{children}</Suspense>
+  return <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
 }
 
 export function AppRoutes() {
@@ -174,6 +177,14 @@ export function AppRoutes() {
           element={
             <Suspend>
               <AgendaPage />
+            </Suspend>
+          }
+        />
+        <Route
+          path="agenda/:slug"
+          element={
+            <Suspend>
+              <EventDetailPage />
             </Suspend>
           }
         />

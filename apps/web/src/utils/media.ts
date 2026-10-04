@@ -1,6 +1,14 @@
 import { mediaUrl } from '@/lib/api-client'
 import type { MediaItem } from '@/services/mediaService'
 
+export function cardImageUrl(full?: string | null, thumb?: string | null) {
+  return mediaUrl(thumb || full) || ''
+}
+
+export function fullImageUrl(full?: string | null, thumb?: string | null) {
+  return mediaUrl(full || thumb) || ''
+}
+
 export function mapMediaItem(item: MediaItem): MediaItem {
   return {
     ...item,

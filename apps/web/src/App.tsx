@@ -4,10 +4,14 @@ import { AppRoutes } from '@/routes/AppRoutes'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ToastProvider } from '@/components/ui/Toast'
 import { queryClient } from '@/lib/query-client'
+import { hydrateHomeFromSession } from '@/services/homeService'
+import { hydratePersistedQueries, installQueryPersistence } from '@/lib/query-persist'
+
+installQueryPersistence()
+hydratePersistedQueries()
+hydrateHomeFromSession()
 
 export default function App() {
-
-  
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

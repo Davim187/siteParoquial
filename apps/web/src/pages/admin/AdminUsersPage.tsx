@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { KeyRound, Shield, UserPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -9,7 +9,7 @@ import {
 } from '@/components/admin/AdminUi'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Loading, ErrorState } from '@/components/ui/Feedback'
+import { ErrorState, SkeletonTable } from '@/components/ui/Feedback'
 import { Modal } from '@/components/ui/Modal'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useToast } from '@/components/ui/Toast'
@@ -17,27 +17,17 @@ import { PERMISSION_GROUPS } from '@/constants/permissions'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { apiRequest } from '@/lib/api-client'
+import {
+  useAdminPermissionsQuery,
+  useAdminRolesQuery,
+  useAdminUsersQuery,
+  useInvalidateAdminAccessQueries,
+  type AdminUserRow as UserRow,
+} from '@/hooks/queries/useAdminAccessQueries'
 import { IconButton } from '@/components/ui/IconButton'
 import { formatDateTime } from '@/utils/dates'
 
-type UserRow = {
-  id: string
-  name: string
-  email: string
-  active: boolean
-  role: string
-  roleName?: string
-  lastLoginAt?: string | null
-  overrides?: Array<{ code: string; granted: boolean }>
-}
-
 type PermissionItem = { id: string; code: string; name: string }
-
-type RoleOption = {
-  code: string
-  name: string
-  permissions: string[]
-}
 
 const emptyForm = {
   name: '',
@@ -52,11 +42,22 @@ export function AdminUsersPage() {
   usePageMeta('Usuários | Admin')
   const toast = useToast()
   const { hasPermission, user: me } = useAuth()
-  const [users, setUsers] = useState<UserRow[]>([])
-  const [roles, setRoles] = useState<RoleOption[]>([])
-  const [permissions, setPermissions] = useState<PermissionItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const usersQuery = useAdminUsersQuery()
+  const rolesQuery = useAdminRolesQuery()
+  const permissionsQuery = useAdminPermissionsQuery()
+  const invalidateAccess = useInvalidateAdminAccessQueries()
+  const users = usersQuery.data ?? []
+  const roles = rolesQuery.data ?? []
+  const permissions = (permissionsQuery.data ?? []) as PermissionItem[]
+  const loading = (usersQuery.isLoading || rolesQuery.isLoading || permissionsQuery.isLoading) && !usersQuery.data
+  const error =
+    usersQuery.error instanceof Error
+      ? usersQuery.error.message
+      : rolesQuery.error instanceof Error
+        ? rolesQuery.error.message
+        : permissionsQuery.error instanceof Error
+          ? permissionsQuery.error.message
+          : null
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<UserRow | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -69,27 +70,13 @@ export function AdminUsersPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
-  async function load() {
-    try {
-      setError(null)
-      const [usersRes, rolesRes, permsRes] = await Promise.all([
-        apiRequest<{ data: UserRow[] }>('/api/users'),
-        apiRequest<{ data: RoleOption[] }>('/api/roles'),
-        apiRequest<{ data: PermissionItem[] }>('/api/permissions'),
-      ])
-      setUsers(usersRes.data)
-      setRoles(rolesRes.data)
-      setPermissions(permsRes.data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível carregar usuários.')
-    } finally {
-      setLoading(false)
-    }
+  async function reload() {
+    await Promise.all([
+      invalidateAccess.users(),
+      invalidateAccess.roles(),
+      invalidateAccess.permissions(),
+    ])
   }
-
-  useEffect(() => {
-    void load()
-  }, [])
 
   const filtered = useMemo(() => {
     return users.filter((user) => {
@@ -185,7 +172,7 @@ export function AdminUsersPage() {
         toast.push('Usuário criado.')
       }
       setFormOpen(false)
-      await load()
+      await reload()
     } catch (err) {
       toast.push(err instanceof Error ? err.message : 'Erro ao salvar usuário.', 'error')
     } finally {
@@ -206,7 +193,7 @@ export function AdminUsersPage() {
       })
       toast.push('Permissões atualizadas.')
       setPermUser(null)
-      await load()
+      await reload()
     } catch (err) {
       toast.push(err instanceof Error ? err.message : 'Erro ao salvar permissões.', 'error')
     } finally {
@@ -236,8 +223,8 @@ export function AdminUsersPage() {
   if (!hasPermission('USERS_MANAGE')) {
     return <ErrorState message="Você não tem permissão para gerenciar usuários." />
   }
-  if (loading) return <Loading />
-  if (error) return <ErrorState message={error} />
+  if (loading) return <SkeletonTable cols={5} rows={8} />
+  if (error && !users.length) return <ErrorState message={error} />
 
   return (
     <div className="space-y-6">
@@ -497,7 +484,7 @@ export function AdminUsersPage() {
             await apiRequest(`/api/users/${toDelete.id}`, { method: 'DELETE' })
             toast.push('Usuário excluído.')
             setToDelete(null)
-            await load()
+            await reload()
           } catch (err) {
             toast.push(err instanceof Error ? err.message : 'Erro ao excluir.', 'error')
           } finally {

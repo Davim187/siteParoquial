@@ -1,9 +1,33 @@
 import { apiRequest, mediaUrl } from '@/lib/api-client'
+import { PLACEHOLDER_IMAGES } from '@/constants/placeholders'
+import { cardImageUrl, fullImageUrl } from '@/utils/media'
 import type { ParishSettings, Person, PatronFeast } from '@/types'
 import { cleanMapsUrl } from '@/utils/maps'
+import { queryClient } from '@/lib/query-client'
+import { queryKeys } from '@/lib/query-keys'
+import { writeHomeCache, type HomeBootstrap } from '@/services/homeService'
 
-export async function getSettings(): Promise<ParishSettings> {
-  const s = await apiRequest<any>('/api/settings', { auth: false })
+function mapPatroness(raw: any): ParishSettings['patroness'] {
+  const imageValue = raw?.image
+  const image =
+    typeof imageValue === 'string'
+      ? imageValue
+      : imageValue && typeof imageValue === 'object'
+        ? String(imageValue.url ?? imageValue.thumbnailUrl ?? '')
+        : ''
+  return {
+    name: raw?.name ?? '',
+    history: raw?.history ?? '',
+    devotion: raw?.devotion ?? '',
+    medal: raw?.medal ?? '',
+    feast: raw?.feast ?? '',
+    traditions: raw?.traditions ?? '',
+    image: mediaUrl(image),
+  }
+}
+
+async function fetchSettings(admin: boolean): Promise<ParishSettings> {
+  const s = await apiRequest<any>('/api/settings', { auth: admin })
   return {
     name: s.name,
     slogan: s.slogan,
@@ -23,21 +47,60 @@ export async function getSettings(): Promise<ParishSettings> {
     history: s.history,
     mission: s.mission,
     vision: s.vision,
-    patroness: s.patroness,
+    patroness: mapPatroness(s.patroness),
   }
 }
 
+export async function getSettings(): Promise<ParishSettings> {
+  return fetchSettings(false)
+}
+
+export async function getAdminSettings(): Promise<ParishSettings> {
+  return fetchSettings(true)
+}
+
 export async function saveSettings(settings: ParishSettings) {
-  const current = await apiRequest<any>('/api/settings')
-  return apiRequest('/api/settings', {
+  await apiRequest('/api/settings', {
     method: 'PUT',
     json: {
-      ...current,
-      ...settings,
+      name: settings.name,
+      slogan: settings.slogan,
+      welcomeText: settings.welcomeText,
+      address: settings.address,
+      phone: settings.phone,
+      whatsapp: settings.whatsapp,
+      email: settings.email,
+      instagram: settings.instagram,
+      facebook: settings.facebook,
+      youtube: settings.youtube,
+      secretaryHours: settings.secretaryHours,
       mapsUrl: cleanMapsUrl(settings.mapsUrl),
-      patroness: settings.patroness ?? current.patroness,
+      pixKey: settings.pixKey,
+      bankDetails: settings.bankDetails,
+      streamingUrl: settings.streamingUrl,
+      history: settings.history,
+      mission: settings.mission,
+      vision: settings.vision,
+      patroness: {
+        ...settings.patroness,
+        image: settings.patroness?.image
+          ? settings.patroness.image.replace(/^https?:\/\/[^/]+/, '')
+          : '',
+      },
     },
   })
+  const nextSettings: ParishSettings = {
+    ...settings,
+    patroness: mapPatroness(settings.patroness),
+  }
+  queryClient.setQueryData(queryKeys.settings, nextSettings)
+  const home = queryClient.getQueryData<HomeBootstrap>(queryKeys.home)
+  if (home) {
+    const nextHome = { ...home, settings: nextSettings }
+    queryClient.setQueryData(queryKeys.home, nextHome)
+    writeHomeCache(nextHome)
+  }
+  return nextSettings
 }
 
 export async function getFeast(): Promise<PatronFeast> {
@@ -46,12 +109,15 @@ export async function getFeast(): Promise<PatronFeast> {
 }
 
 export async function saveFeast(feast: PatronFeast) {
-  const current = await apiRequest<any>('/api/settings')
-  return apiRequest('/api/settings', { method: 'PUT', json: { ...current, feast } })
+  return apiRequest('/api/settings', { method: 'PUT', json: { feast } })
 }
 
-export async function listPeople(): Promise<Person[]> {
-  const result = await apiRequest<{ data: any[] }>('/api/people', { auth: false })
+export async function listPeople(options?: { includeInactive?: boolean }): Promise<Person[]> {
+  const params = new URLSearchParams({ limit: '100' })
+  if (options?.includeInactive) params.set('all', 'true')
+  const result = await apiRequest<{ data: any[] }>(`/api/people?${params}`, {
+    auth: Boolean(options?.includeInactive),
+  })
   return result.data.map(
     (item): Person => ({
       id: item.id,
@@ -59,8 +125,7 @@ export async function listPeople(): Promise<Person[]> {
       name: item.name,
       role: item.roleTitle,
       photo:
-        mediaUrl(item.imageUrl) ||
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+        cardImageUrl(item.imageUrl, item.imageThumbUrl) || PLACEHOLDER_IMAGES.person,
       photoId: item.photoId ?? null,
       bio: item.bio,
       quote: item.quote ?? undefined,
@@ -78,9 +143,7 @@ export async function getPersonBySlug(slug: string) {
     slug: item.slug,
     name: item.name,
     role: item.roleTitle,
-    photo:
-      mediaUrl(item.imageUrl) ||
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+    photo: fullImageUrl(item.imageUrl, item.imageThumbUrl) || PLACEHOLDER_IMAGES.person,
     photoId: item.photoId ?? null,
     bio: item.bio,
     quote: item.quote ?? undefined,

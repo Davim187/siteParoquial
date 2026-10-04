@@ -17,7 +17,11 @@ import { fieldLabel } from './lib/validation-labels.js'
 import { apiRouter } from './router/index.js'
 
 async function buildServer() {
+  const uploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024
   const app = Fastify({
+    bodyLimit: 1024 * 1024 * 1024,
+    requestTimeout: 600_000,
+    connectionTimeout: 30_000,
     logger: {
       level: env.NODE_ENV === 'production' ? 'info' : 'debug',
       redact: ['req.headers.authorization', 'body.password', 'body.refreshToken'],
@@ -39,34 +43,42 @@ async function buildServer() {
   await app.register(rateLimit, { max: 200, timeWindow: '1 minute' })
   await app.register(jwt, { secret: env.JWT_SECRET })
   await app.register(multipart, {
-    limits: { fileSize: env.MAX_UPLOAD_MB * 1024 * 1024 },
+    limits: {
+      fileSize: uploadBytes,
+      files: 30,
+      fieldSize: 1024 * 1024,
+    },
   })
   await app.register(fastifyStatic, {
     root: path.resolve(process.cwd(), env.UPLOAD_DIR),
     prefix: '/uploads/',
+    maxAge: 365 * 24 * 60 * 60 * 1000,
+    immutable: true,
   })
 
-  await app.register(swagger, {
-    openapi: {
-      info: {
-        title: 'API Paróquia Nossa Senhora das Graças',
-        description: 'API oficial do site e do painel administrativo',
-        version: '1.0.0',
-      },
-      components: {
-        securitySchemes: {
-          bearerAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
+  if (env.NODE_ENV !== 'production') {
+    await app.register(swagger, {
+      openapi: {
+        info: {
+          title: 'API Paróquia Nossa Senhora das Graças',
+          description: 'API oficial do site e do painel administrativo',
+          version: '1.0.0',
+        },
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+            },
           },
         },
       },
-    },
-  })
-  await app.register(swaggerUi, {
-    routePrefix: '/api/docs',
-  })
+    })
+    await app.register(swaggerUi, {
+      routePrefix: '/api/docs',
+    })
+  }
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
@@ -100,6 +112,12 @@ async function buildServer() {
     if (err.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER' || err.statusCode === 401) {
       return reply.status(401).send({ error: 'UNAUTHORIZED', message: 'Autenticação necessária.' })
     }
+    if (err.code === 'FST_REQ_FILE_TOO_LARGE' || err.statusCode === 413) {
+      return reply.status(413).send({
+        error: 'PAYLOAD_TOO_LARGE',
+        message: `Cada foto pode ter no máximo ${env.MAX_UPLOAD_MB} MB.`,
+      })
+    }
     request.log.error({ err: error }, 'Unhandled error')
     return reply.status(err.statusCode ?? 500).send({
       error: 'INTERNAL_ERROR',
@@ -114,4 +132,4 @@ async function buildServer() {
 
 const app = await buildServer()
 await app.listen({ port: env.PORT, host: env.HOST })
-app.log.info(`API em http://${env.HOST}:${env.PORT} | docs em /api/docs`)
+app.log.info(`API em http://${env.HOST}:${env.PORT}${env.NODE_ENV !== 'production' ? ' | docs em /api/docs' : ''}`)

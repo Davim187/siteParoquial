@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
+import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { submitPrayerRequest } from '@/services/prayerService'
 
@@ -9,19 +10,26 @@ export function PrayerPage() {
   const [sent, setSent] = useState(false)
   const [anonymous, setAnonymous] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
+    setSubmitError(null)
     setSubmitting(true)
-    await submitPrayerRequest({
-      name: String(form.get('name') ?? ''),
-      email: String(form.get('email') ?? '') || undefined,
-      request: String(form.get('request') ?? ''),
-      anonymous,
-    })
-    setSubmitting(false)
-    setSent(true)
+    try {
+      await submitPrayerRequest({
+        name: String(form.get('name') ?? ''),
+        email: String(form.get('email') ?? '') || undefined,
+        request: String(form.get('request') ?? ''),
+        anonymous,
+      })
+      setSent(true)
+    } catch (err) {
+      setSubmitError(getErrorMessage(err, 'Não foi possível enviar o pedido. Tente novamente.'))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -43,6 +51,11 @@ export function PrayerPage() {
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-line bg-white p-6">
+            {submitError ? (
+              <p className="rounded-xl bg-red-50 p-4 text-sm text-red-800" role="alert">
+                {submitError}
+              </p>
+            ) : null}
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-navy">Nome</span>
               <input

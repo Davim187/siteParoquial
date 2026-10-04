@@ -2,26 +2,27 @@ import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
-import { queryClient } from '@/lib/query-client'
-import { queryKeys } from '@/lib/query-keys'
-import { STALE_TIME, GC_TIME } from '@/lib/query-client'
-import { getCampaignNews } from '@/services/newsService'
-import { getSettings } from '@/services/parishService'
+import { hydrateHomeFromSession, prefetchHome } from '@/services/homeService'
+import { prefetchPublicRoute } from '@/lib/public-prefetch'
+import { scheduleIdleTasks } from '@/lib/idle-prefetch'
+
+const WARM_ROUTES = [
+  '/noticias',
+  '/avisos',
+  '/missas',
+  '/agenda',
+  '/pastorais',
+  '/sacramentos',
+  '/galeria',
+  '/nossa-paroquia',
+]
 
 export function PublicLayout() {
   useEffect(() => {
-    void queryClient.prefetchQuery({
-      queryKey: queryKeys.news.campaign,
-      queryFn: getCampaignNews,
-      staleTime: STALE_TIME.news,
-      gcTime: GC_TIME.long,
-    })
-    void queryClient.prefetchQuery({
-      queryKey: queryKeys.settings,
-      queryFn: getSettings,
-      staleTime: STALE_TIME.settings,
-      gcTime: GC_TIME.long,
-    })
+    hydrateHomeFromSession()
+    void prefetchHome()
+
+    return scheduleIdleTasks(WARM_ROUTES.map((route) => () => prefetchPublicRoute(route)))
   }, [])
 
   return (

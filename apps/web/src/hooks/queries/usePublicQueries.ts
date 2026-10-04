@@ -5,11 +5,25 @@ import type { EventCategory, NewsArticle, Notice, ParishEvent, Mass, Pastoral, P
 import { getSettings, listPeople } from '@/services/parishService'
 import { getCampaignNews, getNewsBySlug, listNews, readCampaignCache } from '@/services/newsService'
 import { getFeaturedNotices, listNotices } from '@/services/noticesService'
-import { listEvents, listUpcomingEvents } from '@/services/eventsService'
+import { listEvents, listUpcomingEvents, getEventBySlug } from '@/services/eventsService'
 import { listMasses, listUpcomingMasses } from '@/services/massesService'
 import { listPastorals, getPastoralBySlug } from '@/services/pastoralService'
 import { listSacraments, getSacramentBySlug } from '@/services/sacramentService'
 import { getPersonBySlug } from '@/services/parishService'
+import { getHomeBootstrap, readHomeCache, type HomeBootstrap } from '@/services/homeService'
+
+export function useHomeQuery() {
+  const cached = typeof window === 'undefined' ? null : readHomeCache()
+  return useQuery<HomeBootstrap>({
+    queryKey: queryKeys.home,
+    queryFn: getHomeBootstrap,
+    staleTime: STALE_TIME.home,
+    gcTime: GC_TIME.long,
+    initialData: cached ?? undefined,
+    initialDataUpdatedAt: cached ? Date.now() - 30_000 : undefined,
+    placeholderData: (previous) => previous ?? cached ?? undefined,
+  })
+}
 
 export function useSettingsQuery() {
   return useQuery<ParishSettings>({
@@ -17,6 +31,7 @@ export function useSettingsQuery() {
     queryFn: getSettings,
     staleTime: STALE_TIME.settings,
     gcTime: GC_TIME.long,
+    refetchOnMount: 'always',
     placeholderData: (previous) => previous,
   })
 }
@@ -70,11 +85,11 @@ export function useFeaturedNoticesQuery() {
   })
 }
 
-export function useEventsQuery(category?: EventCategory | 'todos') {
+export function useEventsQuery(category?: EventCategory | 'todos', options?: { admin?: boolean }) {
   return useQuery<ParishEvent[]>({
-    queryKey: queryKeys.events.list(category),
-    queryFn: () => listEvents(category),
-    staleTime: STALE_TIME.events,
+    queryKey: queryKeys.events.list(category, options),
+    queryFn: () => listEvents(category, options),
+    staleTime: options?.admin ? STALE_TIME.admin : STALE_TIME.events,
     placeholderData: (previous) => previous,
   })
 }
@@ -85,6 +100,15 @@ export function useUpcomingEventsQuery(limit?: number) {
     queryFn: () => listUpcomingEvents(limit),
     staleTime: STALE_TIME.events,
     placeholderData: (previous) => previous,
+  })
+}
+
+export function useEventDetailQuery(slug: string) {
+  return useQuery<ParishEvent>({
+    queryKey: queryKeys.events.detail(slug),
+    queryFn: () => getEventBySlug(slug),
+    enabled: Boolean(slug),
+    staleTime: STALE_TIME.events,
   })
 }
 
@@ -112,6 +136,7 @@ export function usePastoralsQuery(params?: { includeInactive?: boolean }) {
     queryFn: () => listPastorals(params),
     staleTime: STALE_TIME.pastorals,
     placeholderData: (previous) => previous,
+    refetchOnMount: 'always',
   })
 }
 
@@ -143,10 +168,10 @@ export function useSacramentDetailQuery(slug: string) {
   })
 }
 
-export function usePeopleQuery() {
+export function usePeopleQuery(params?: { includeInactive?: boolean }) {
   return useQuery<Person[]>({
-    queryKey: queryKeys.people.list,
-    queryFn: listPeople,
+    queryKey: queryKeys.people.list(params),
+    queryFn: () => listPeople(params),
     staleTime: STALE_TIME.people,
     placeholderData: (previous) => previous,
   })

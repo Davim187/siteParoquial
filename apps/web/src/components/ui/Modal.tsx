@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 let openModalCount = 0
@@ -14,20 +14,35 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, elevated = false }: ModalProps) {
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  const ignoreCloseUntilRef = useRef(0)
+
+  function requestClose() {
+    if (Date.now() < ignoreCloseUntilRef.current) return
+    onCloseRef.current()
+  }
+
   useEffect(() => {
     if (!open) return
     openModalCount += 1
     document.body.style.overflow = 'hidden'
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+    const onBlur = () => {
+      // Firefox dispara Escape e clique no fundo ao fechar o seletor de arquivos.
+      ignoreCloseUntilRef.current = Date.now() + 1500
     }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') requestClose()
+    }
+    window.addEventListener('blur', onBlur)
     window.addEventListener('keydown', onKey)
     return () => {
+      window.removeEventListener('blur', onBlur)
       window.removeEventListener('keydown', onKey)
       openModalCount = Math.max(0, openModalCount - 1)
       if (openModalCount === 0) document.body.style.overflow = ''
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
@@ -38,7 +53,9 @@ export function Modal({ open, onClose, title, children, elevated = false }: Moda
           type="button"
           className="fixed inset-0 bg-navy-deep/70 backdrop-blur-sm"
           aria-label="Fechar"
-          onClick={onClose}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) requestClose()
+          }}
         />
         <div
           role="dialog"
@@ -56,7 +73,7 @@ export function Modal({ open, onClose, title, children, elevated = false }: Moda
             )}
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => onCloseRef.current()}
               className="shrink-0 rounded-full p-2 text-muted hover:bg-cream"
               aria-label="Fechar janela"
             >
