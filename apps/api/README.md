@@ -20,6 +20,7 @@ Com `apps/api/.env.production.local` configurado, `npm run dev` na raiz conecta 
 
 ## Estrutura
 
-- `src/modules` — rotas e serviços por domínio
+- `src/router` — registra todas as rotas da API
+- `src/modules/<domínio>` — `router`, `controller`, `service`, `repository` e `schema`
 - `src/storage` — abstração de upload (local hoje)
 - `prisma` — schema, migrations e seed

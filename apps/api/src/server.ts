@@ -14,15 +14,7 @@ import { mkdir } from 'node:fs/promises'
 import { env } from './config/env.js'
 import { AppError } from './lib/http.js'
 import { fieldLabel } from './lib/validation-labels.js'
-import { authRoutes } from './modules/auth/auth.routes.js'
-import { newsRoutes } from './modules/news/news.routes.js'
-import { mediaRoutes } from './modules/media/media.routes.js'
-import { noticesRoutes } from './modules/notices/notices.routes.js'
-import { eventsRoutes } from './modules/events/events.routes.js'
-import { massesRoutes } from './modules/masses/masses.routes.js'
-import { contentRoutes } from './modules/content/content.routes.js'
-import { galleryRoutes } from './modules/gallery/gallery.routes.js'
-import { usersRoutes } from './modules/users/users.routes.js'
+import { apiRouter } from './router/index.js'
 
 async function buildServer() {
   const app = Fastify({
@@ -115,22 +107,7 @@ async function buildServer() {
     })
   })
 
-  app.get('/api/health', async () => ({ ok: true, service: 'paroquia-api' }))
-
-  await app.register(
-    async (api) => {
-      await api.register(authRoutes)
-      await api.register(newsRoutes)
-      await api.register(mediaRoutes)
-      await api.register(noticesRoutes)
-      await api.register(eventsRoutes)
-      await api.register(massesRoutes)
-      await api.register(contentRoutes)
-      await api.register(galleryRoutes)
-      await api.register(usersRoutes)
-    },
-    { prefix: '/api' },
-  )
+  await app.register(apiRouter, { prefix: '/api' })
 
   return app
 }

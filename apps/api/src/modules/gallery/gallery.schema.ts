@@ -45,4 +45,18 @@ export const reorderPhotosSchema = z.object({
   photoIds: z.array(z.string().cuid()).min(1, 'Informe a ordem das fotos.'),
 })
 
+export const publishAlbumSchema = z.object({
+  active: z.boolean({
+    required_error: 'Informe se o álbum está publicado ou em rascunho.',
+    invalid_type_error: 'Informe se o álbum está publicado ou em rascunho.',
+  }),
+})
+
 export const MAX_BULK_UPLOAD_FILES = 50
+
+export type AlbumInput = z.infer<typeof createAlbumSchema>
+export type AlbumUpdate = z.infer<typeof updateAlbumSchema>
+export type AlbumPublish = z.infer<typeof publishAlbumSchema>
+export type PhotoInput = z.infer<typeof createPhotoSchema>
+export type PhotoUpdate = z.infer<typeof updatePhotoSchema>
+export type PhotoReorder = z.infer<typeof reorderPhotosSchema>
