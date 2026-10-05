@@ -36,6 +36,7 @@ const GalleryAlbumPage = lazy(() =>
   import('@/pages/GalleryAlbumPage').then((m) => ({ default: m.GalleryAlbumPage })),
 )
 const ContactPage = lazy(() => import('@/pages/ContactPage').then((m) => ({ default: m.ContactPage })))
+const FeastPage = lazy(() => import('@/pages/FeastPage').then((m) => ({ default: m.FeastPage })))
 const PrayerPage = lazy(() => import('@/pages/PrayerPage').then((m) => ({ default: m.PrayerPage })))
 const DonatePage = lazy(() => import('@/pages/DonatePage').then((m) => ({ default: m.DonatePage })))
 const ParticipatePage = lazy(() =>
@@ -233,6 +234,14 @@ export function AppRoutes() {
           element={
             <Suspend>
               <GalleryAlbumPage />
+            </Suspend>
+          }
+        />
+        <Route
+          path="festa-da-padroeira"
+          element={
+            <Suspend>
+              <FeastPage />
             </Suspend>
           }
         />
