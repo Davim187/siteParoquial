@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { feastForSave, normalizeFeast, storedMediaPath } from '../src/services/feast.ts'
+import { feastDescriptionLines, feastForSave, normalizeFeast, storedMediaPath } from '../src/services/feast.ts'
 
 describe('festa da padroeira', () => {
   it('monta uma festa vazia quando o banco não tem o campo', () => {
@@ -36,5 +36,17 @@ describe('festa da padroeira', () => {
     })
     assert.equal(payload.image, '/uploads/festa.png')
     assert.equal(payload.enabled, true)
+  })
+
+  it('conserva as quebras de linha cadastradas na descrição', () => {
+    const lines = feastDescriptionLines(
+      'Com grande alegria convidamos a comunidade.\n\nSerão dias de fé e oração.\nFique atento.',
+    )
+    assert.deepEqual(lines, [
+      'Com grande alegria convidamos a comunidade.',
+      '',
+      'Serão dias de fé e oração.',
+      'Fique atento.',
+    ])
   })
 })

@@ -199,6 +199,7 @@ export function AdminTextarea({
   hint,
   error,
   required,
+  rows = 4,
 }: {
   label: string
   value: string
@@ -206,6 +207,7 @@ export function AdminTextarea({
   hint?: string
   error?: string
   required?: boolean
+  rows?: number
 }) {
   return (
     <label className="block text-sm">
@@ -216,7 +218,7 @@ export function AdminTextarea({
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        rows={4}
+        rows={rows}
         className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm transition outline-none focus:border-marian/40 focus:ring-2 focus:ring-marian/20"
       />
       {hint && !error ? <span className="mt-1.5 block text-xs text-slate-400">{hint}</span> : null}

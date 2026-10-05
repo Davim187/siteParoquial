@@ -43,6 +43,11 @@ export function normalizeFeast(raw: unknown): PatronFeast {
   }
 }
 
+/** Mantém cada linha e cada parágrafo vazios do jeito que foram digitados. */
+export function feastDescriptionLines(text: string): string[] {
+  return text.replace(/\r\n/g, '\n').split('\n')
+}
+
 export function feastForSave(feast: PatronFeast): PatronFeast {
   return normalizeFeast({
     ...feast,

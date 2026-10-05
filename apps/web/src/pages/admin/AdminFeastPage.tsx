@@ -104,6 +104,8 @@ export function AdminFeastPage() {
           label="Descrição"
           value={current.description}
           onChange={(description) => patch({ description })}
+          hint="Cada Enter vira uma linha nova no site. Uma linha em branco separa os parágrafos."
+          rows={8}
         />
 
         <div className="space-y-2">
