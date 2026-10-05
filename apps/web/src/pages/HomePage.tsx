@@ -66,6 +66,7 @@ export function HomePage() {
         <Skeleton className="min-h-[min(92vh,52rem)] rounded-none bg-navy-deep/80" />
       )}
       {data?.feast?.enabled ? <PatronFeastBanner feast={data.feast} /> : null}
+      {data?.feast?.enabled && campaignNews ? <div className="h-4 bg-cream" aria-hidden /> : null}
       {campaignNews ? <CampaignBanner article={campaignNews} /> : null}
 
       <section className="mx-auto max-w-6xl px-4 py-12 md:px-6">
