@@ -16,3 +16,7 @@ export function findMessages(skip: number, take: number) {
 export function updateMessage(id: string, data: Prisma.ContactMessageUpdateInput) {
   return prisma.contactMessage.update({ where: { id }, data })
 }
+
+export function deleteMessage(id: string) {
+  return prisma.contactMessage.delete({ where: { id } })
+}

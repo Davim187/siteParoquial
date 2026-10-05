@@ -7,8 +7,10 @@ import { prayersRouter } from './prayers/prayers.router.js'
 import { messagesRouter } from './messages/messages.router.js'
 import { settingsRouter } from './settings/settings.router.js'
 import { dashboardRouter } from './dashboard/dashboard.router.js'
+import { homeRouter } from './home.router.js'
 
 export async function contentRouter(app: FastifyInstance) {
+  await app.register(homeRouter)
   await app.register(pastoralsRouter)
   await app.register(sacramentsRouter)
   await app.register(peopleRouter)

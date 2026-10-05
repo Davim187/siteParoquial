@@ -5,6 +5,7 @@ import { Loading, ErrorState } from '@/components/ui/Feedback'
 import { useSettingsQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import { handleContactSubmit } from '@/services/contact-form'
 import { submitContactMessage } from '@/services/contactService'
 import { MapEmbed } from '@/components/ui/MapEmbed'
 import { mapsOpenUrl } from '@/utils/maps'
@@ -17,20 +18,15 @@ export function ContactPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
     setSubmitError(null)
     setSubmitting(true)
     try {
-      await submitContactMessage({
-        name: String(form.get('name') ?? ''),
-        email: String(form.get('email') ?? ''),
-        phone: String(form.get('phone') ?? ''),
-        subject: String(form.get('subject') ?? ''),
-        message: String(form.get('message') ?? ''),
-      })
+      await handleContactSubmit(
+        event,
+        (formElement) => new FormData(formElement as HTMLFormElement),
+        submitContactMessage,
+      )
       setSent(true)
-      event.currentTarget.reset()
     } catch (err) {
       setSubmitError(getErrorMessage(err, 'Não foi possível enviar a mensagem. Tente novamente.'))
     } finally {

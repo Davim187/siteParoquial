@@ -14,3 +14,8 @@ export async function update(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as { id: string }
   return reply.send(await messagesService.updateMessage(id, request.body as MessageUpdate))
 }
+
+export async function remove(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = request.params as { id: string }
+  return reply.send(await messagesService.deleteMessage(id))
+}

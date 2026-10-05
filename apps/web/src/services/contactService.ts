@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/api-client'
+import { deleteMessageRequest, mapMessageStatus, updateMessageRequest } from '@/services/contact-form'
 import type { ContactMessage } from '@/types'
 
 export async function listMessages() {
@@ -12,7 +13,7 @@ export async function listMessages() {
       subject: item.subject,
       message: item.message,
       createdAt: item.createdAt,
-      status: item.status === 'NEW' ? 'new' : item.status === 'READ' ? 'read' : 'replied',
+      status: mapMessageStatus(item.status),
     }),
   )
 }
@@ -24,10 +25,11 @@ export async function submitContactMessage(
 }
 
 export async function updateMessageStatus(id: string, status: ContactMessage['status']) {
-  const map = { new: 'NEW', read: 'READ', replied: 'REPLIED' } as const
-  await apiRequest(`/api/messages/${id}`, { method: 'PATCH', json: { status: map[status] } })
+  const request = updateMessageRequest(id, status)
+  await apiRequest(request.path, { method: request.method, json: request.json })
 }
 
-export async function deleteMessage(_id: string) {
-  return { ok: true }
+export async function deleteMessage(id: string) {
+  const request = deleteMessageRequest(id)
+  return apiRequest(request.path, { method: request.method })
 }

@@ -11,4 +11,5 @@ export async function messagesRouter(app: FastifyInstance) {
     preValidation: [validate({ body: updateMessageSchema })],
     preHandler: [authorize('MESSAGES_MANAGE')],
   }, messagesController.update)
+  app.delete('/messages/:id', { preHandler: [authorize('MESSAGES_MANAGE')] }, messagesController.remove)
 }

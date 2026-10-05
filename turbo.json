@@ -16,6 +16,9 @@
     "typecheck": {
       "dependsOn": ["^build"]
     },
+    "test": {
+      "cache": false
+    },
     "prisma:generate": {
       "outputs": ["node_modules/.prisma/**", "node_modules/@prisma/client/**"]
     },
