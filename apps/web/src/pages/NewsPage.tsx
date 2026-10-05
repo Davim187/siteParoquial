@@ -25,11 +25,7 @@ export function NewsPage() {
         title="Notícias da Paróquia"
         description="Acompanhe a vida da comunidade. Conteúdos marcados como demonstrativos serão substituídos por publicações oficiais."
       />
-      {campaign ? (
-        <div className="mx-auto max-w-6xl px-4 pt-8 md:px-6">
-          <CampaignBanner article={campaign} />
-        </div>
-      ) : null}
+      {campaign ? <CampaignBanner article={campaign} /> : null}
       <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
         {error && !data ? <ErrorState message={getErrorMessage(error)} /> : null}
         {showSkeleton ? (

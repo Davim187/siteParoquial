@@ -65,18 +65,8 @@ export function HomePage() {
       ) : (
         <Skeleton className="min-h-[min(92vh,52rem)] rounded-none bg-navy-deep/80" />
       )}
-      {(data?.feast?.enabled || campaignNews) ? (
-        <section className="bg-cream">
-          <div
-            className={`mx-auto grid max-w-6xl gap-4 px-4 py-8 md:px-6 ${
-              data?.feast?.enabled && campaignNews ? 'lg:grid-cols-2' : ''
-            }`}
-          >
-            {data?.feast?.enabled ? <PatronFeastBanner feast={data.feast} /> : null}
-            {campaignNews ? <CampaignBanner article={campaignNews} /> : null}
-          </div>
-        </section>
-      ) : null}
+      {data?.feast?.enabled ? <PatronFeastBanner feast={data.feast} /> : null}
+      {campaignNews ? <CampaignBanner article={campaignNews} /> : null}
 
       <section className="mx-auto max-w-6xl px-4 py-12 md:px-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
