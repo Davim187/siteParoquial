@@ -1,5 +1,6 @@
 import { MapPin } from 'lucide-react'
 import { Hero } from '@/components/home/Hero'
+import { PatronFeastBanner } from '@/components/home/PatronFeastBanner'
 import { FeaturedNotice } from '@/components/home/FeaturedNotice'
 import { QuickLinks } from '@/components/home/QuickLinks'
 import { CampaignBanner } from '@/components/home/CampaignBanner'
@@ -64,6 +65,7 @@ export function HomePage() {
       ) : (
         <Skeleton className="min-h-[min(92vh,52rem)] rounded-none bg-navy-deep/80" />
       )}
+      {data?.feast?.enabled ? <PatronFeastBanner feast={data.feast} /> : null}
       {campaignNews ? <CampaignBanner article={campaignNews} /> : null}
 
       <section className="mx-auto max-w-6xl px-4 py-12 md:px-6">

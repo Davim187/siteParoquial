@@ -5,6 +5,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { cardImageUrl } from '@/utils/media'
 import { localPartsFromIso } from '@/utils/dates'
 import { cleanMapsUrl } from '@/utils/maps'
+import { normalizeFeast } from '@/services/feast'
 import type {
   GalleryAlbum,
   Mass,
@@ -13,11 +14,13 @@ import type {
   ParishEvent,
   ParishSettings,
   Pastoral,
+  PatronFeast,
   Person,
 } from '@/types'
 
 export type HomeBootstrap = {
   settings: ParishSettings
+  feast: PatronFeast
   campaign: NewsArticle | null
   notices: Notice[]
   masses: Mass[]
@@ -28,7 +31,7 @@ export type HomeBootstrap = {
   gallery: GalleryAlbum[]
 }
 
-const HOME_CACHE_KEY = 'paroquia.home.v6'
+const HOME_CACHE_KEY = 'paroquia.home.v7'
 
 function mapSettings(s: any): ParishSettings {
   return {
@@ -212,6 +215,7 @@ function mapAlbum(item: any): GalleryAlbum {
 export function mapHomePayload(raw: any): HomeBootstrap {
   return {
     settings: mapSettings(raw.settings),
+    feast: normalizeFeast(raw.feast ?? raw.settings?.feast),
     campaign: raw.campaign ? mapNews(raw.campaign) : null,
     notices: (raw.notices ?? []).map(mapNotice),
     masses: (raw.masses ?? []).map(mapMass),
@@ -252,6 +256,7 @@ export function seedQueryCachesFromHome(data: HomeBootstrap, opts?: { overwriteS
   ) {
     queryClient.setQueryData(queryKeys.settings, data.settings)
   }
+  queryClient.setQueryData(queryKeys.feast, data.feast)
   queryClient.setQueryData(queryKeys.news.campaign, data.campaign)
   queryClient.setQueryData(queryKeys.notices.featured, data.notices)
   queryClient.setQueryData(queryKeys.masses.upcoming(4), data.masses)

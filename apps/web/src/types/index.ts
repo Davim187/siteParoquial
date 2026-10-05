@@ -223,6 +223,7 @@ export interface PatronFeast {
   title: string
   dateLabel: string
   description: string
+  image: string
   program: FeastProgramItem[]
 }
 

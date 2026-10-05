@@ -159,17 +159,25 @@ export async function getHomeBootstrap() {
     .slice(0, 4)
 
   const patroness = settings?.patroness as { image?: string } | null | undefined
+  const feastRaw = settings?.feast as { image?: string } | null | undefined
   const settingsOut = settings
     ? {
         ...settings,
         patroness: patroness
           ? { ...patroness, image: toPublicMediaPath(patroness.image) ?? patroness.image ?? '' }
           : settings.patroness,
+        feast: feastRaw
+          ? {
+              ...feastRaw,
+              image: toPublicMediaPath(feastRaw.image) ?? feastRaw.image ?? '',
+            }
+          : settings.feast,
       }
     : settings
 
   return {
     settings: settingsOut,
+    feast: settingsOut && 'feast' in settingsOut ? settingsOut.feast : null,
     campaign: campaign ? mapNewsLite(campaign) : null,
     notices: notices.map((item) => ({
       ...item,

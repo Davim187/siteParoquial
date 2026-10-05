@@ -21,6 +21,7 @@ const feastSchema = z.object({
   title: z.string(),
   dateLabel: z.string(),
   description: z.string(),
+  image: z.string().optional(),
   program: z.array(feastProgramSchema),
 })
 

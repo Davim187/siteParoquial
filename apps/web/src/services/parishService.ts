@@ -5,6 +5,7 @@ import type { ParishSettings, Person, PatronFeast } from '@/types'
 import { cleanMapsUrl } from '@/utils/maps'
 import { queryClient } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
+import { feastForSave, normalizeFeast } from '@/services/feast'
 import { writeHomeCache, type HomeBootstrap } from '@/services/homeService'
 
 function mapPatroness(raw: any): ParishSettings['patroness'] {
@@ -105,11 +106,20 @@ export async function saveSettings(settings: ParishSettings) {
 
 export async function getFeast(): Promise<PatronFeast> {
   const s = await apiRequest<any>('/api/settings', { auth: false })
-  return s.feast
+  return normalizeFeast(s?.feast)
 }
 
 export async function saveFeast(feast: PatronFeast) {
-  return apiRequest('/api/settings', { method: 'PUT', json: { feast } })
+  const payload = feastForSave(feast)
+  await apiRequest('/api/settings', { method: 'PUT', json: { feast: payload } })
+  queryClient.setQueryData(queryKeys.feast, payload)
+  const home = queryClient.getQueryData<HomeBootstrap>(queryKeys.home)
+  if (home) {
+    const nextHome = { ...home, feast: payload }
+    queryClient.setQueryData(queryKeys.home, nextHome)
+    writeHomeCache(nextHome)
+  }
+  return payload
 }
 
 export async function listPeople(options?: { includeInactive?: boolean }): Promise<Person[]> {
