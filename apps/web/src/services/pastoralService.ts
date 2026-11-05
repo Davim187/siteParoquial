@@ -1,6 +1,6 @@
 import { apiRequest } from '@/lib/api-client'
 import { pastoralCover } from '@/constants/placeholders'
-import { fullImageUrl } from '@/utils/media'
+import { cardImageUrl, fullImageUrl } from '@/utils/media'
 import type { Pastoral, PastoralKind } from '@/types'
 
 function mapKind(value: unknown): PastoralKind {
@@ -10,8 +10,14 @@ function mapKind(value: unknown): PastoralKind {
   return 'pastoral'
 }
 
-function mapPastoral(item: any): Pastoral & { imageId?: string | null } {
-  const src = fullImageUrl(item.imageUrl, item.imageThumbUrl)
+function mapPastoral(
+  item: any,
+  image: 'card' | 'full' = 'card',
+): Pastoral & { imageId?: string | null } {
+  const src =
+    image === 'full'
+      ? fullImageUrl(item.imageUrl, item.imageThumbUrl)
+      : cardImageUrl(item.imageUrl, item.imageThumbUrl)
   return {
     id: item.id,
     slug: item.slug,
@@ -39,7 +45,7 @@ export async function listPastorals(options?: { includeInactive?: boolean }): Pr
 
 export async function getPastoralBySlug(slug: string) {
   const item = await apiRequest<any>(`/api/pastorals/${slug}`, { auth: false })
-  return mapPastoral(item)
+  return mapPastoral(item, 'full')
 }
 
 export async function savePastoral(input: any) {

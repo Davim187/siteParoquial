@@ -12,7 +12,7 @@ export function PastoralCard({ pastoral }: { pastoral: Pastoral }) {
       <img
         src={pastoralCover(pastoral.image)}
         alt=""
-        className="h-auto w-full bg-cream"
+        className="h-40 w-full object-cover"
         loading="lazy"
         decoding="async"
       />
