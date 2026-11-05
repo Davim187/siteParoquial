@@ -5,7 +5,7 @@ const items = [
   { to: '/missas', label: 'Horários das Missas', icon: Church },
   { to: '/agenda', label: 'Agenda', icon: CalendarDays },
   { to: '/noticias', label: 'Notícias', icon: Newspaper },
-  { to: '/pastorais', label: 'Pastorais', icon: Users },
+  { to: '/pastorais', label: 'Pastorais e movimentos', icon: Users },
   { to: '/contato', label: 'Contato', icon: HeartHandshake },
 ]
 

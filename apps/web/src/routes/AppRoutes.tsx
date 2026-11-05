@@ -49,6 +49,12 @@ const NotFoundPage = lazy(() =>
 const AdminLoginPage = lazy(() =>
   import('@/pages/admin/AdminLoginPage').then((m) => ({ default: m.AdminLoginPage })),
 )
+const AdminForgotPasswordPage = lazy(() =>
+  import('@/pages/admin/AdminForgotPasswordPage').then((m) => ({ default: m.AdminForgotPasswordPage })),
+)
+const AdminResetPasswordPage = lazy(() =>
+  import('@/pages/admin/AdminResetPasswordPage').then((m) => ({ default: m.AdminResetPasswordPage })),
+)
 const AdminDashboardPage = lazy(() =>
   import('@/pages/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })),
 )
@@ -292,6 +298,22 @@ export function AppRoutes() {
         element={
           <Suspend>
             <AdminLoginPage />
+          </Suspend>
+        }
+      />
+      <Route
+        path="/admin/esqueci-senha"
+        element={
+          <Suspend>
+            <AdminForgotPasswordPage />
+          </Suspend>
+        }
+      />
+      <Route
+        path="/admin/redefinir-senha"
+        element={
+          <Suspend>
+            <AdminResetPasswordPage />
           </Suspend>
         }
       />

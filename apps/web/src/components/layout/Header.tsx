@@ -126,7 +126,7 @@ export function Header() {
             <Logo compact />
           </div>
 
-          <nav className="hidden items-center gap-1 xl:flex" aria-label="Principal">
+          <nav className="hidden shrink-0 items-center gap-1 xl:flex" aria-label="Principal">
             {links.map((link) => (
               <NavLink
                 key={link.to}
@@ -135,7 +135,7 @@ export function Header() {
                 onFocus={() => prefetchPublicRoute(link.to)}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-full px-2.5 py-1.5 text-[13px] font-medium text-navy/80 transition hover:text-marian',
+                    'whitespace-nowrap rounded-full px-2.5 py-1.5 text-[13px] font-medium text-navy/80 transition hover:text-marian',
                     isActive && 'bg-white text-marian shadow-sm',
                   )
                 }

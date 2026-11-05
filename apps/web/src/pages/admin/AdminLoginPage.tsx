@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { BrandMark } from '@/components/layout/Logo'
 import { BRAND } from '@/config/brand'
@@ -68,6 +68,11 @@ export function AdminLoginPage() {
         <Button type="submit" className="mt-6 w-full" disabled={loading}>
           {loading ? 'Entrando...' : 'Entrar'}
         </Button>
+        <p className="mt-4 text-center text-sm">
+          <Link to="/admin/esqueci-senha" className="text-marian underline-offset-4 hover:underline">
+            Esqueci a senha
+          </Link>
+        </p>
       </form>
     </div>
   )

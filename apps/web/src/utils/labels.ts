@@ -1,4 +1,19 @@
-import type { ContactMessage, EventCategory, GalleryCategory, NoticeCategory, PrayerRequest } from '@/types'
+import type {
+  ContactMessage,
+  EventCategory,
+  GalleryCategory,
+  NoticeCategory,
+  PastoralKind,
+  PrayerRequest,
+} from '@/types'
+
+export const pastoralKindLabels: Record<PastoralKind, { singular: string; plural: string }> = {
+  pastoral: { singular: 'Pastoral', plural: 'Pastorais' },
+  movimento: { singular: 'Movimento', plural: 'Movimentos' },
+  comissao: { singular: 'Comissão', plural: 'Comissões' },
+}
+
+export const pastoralKindOrder: PastoralKind[] = ['pastoral', 'movimento', 'comissao']
 
 export const noticeLabels: Record<NoticeCategory, string> = {
   informativo: 'Informativo',

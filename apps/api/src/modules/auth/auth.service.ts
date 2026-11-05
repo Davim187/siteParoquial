@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify'
 import { env } from '../../config/env.js'
 import { AppError } from '../../lib/http.js'
 import { loadAuthUser } from '../../middlewares/authorize.js'
-import type { LoginInput, LogoutInput, RefreshInput } from './auth.schema.js'
+import type { ForgotPasswordInput, LoginInput, LogoutInput, RefreshInput, ResetPasswordInput } from './auth.schema.js'
 import * as authRepository from './auth.repository.js'
 
 function hashToken(token: string) {
@@ -55,4 +55,40 @@ export async function logout(data: LogoutInput) {
     await authRepository.revokeRefreshToken(hashToken(data.refreshToken))
   }
   return { ok: true }
+}
+
+const resetMessage =
+  'Se o e-mail estiver cadastrado, o link para criar uma nova senha aparece abaixo. Ele vale por 30 minutos e só pode ser usado uma vez.'
+
+export async function requestPasswordReset(data: ForgotPasswordInput) {
+  const user = await authRepository.findUserByEmail(data.email.toLowerCase())
+  if (!user || !user.active) return { message: resetMessage }
+
+  await authRepository.invalidatePasswordResetTokens(user.id)
+  const token = randomBytes(32).toString('hex')
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000)
+  await authRepository.createPasswordResetToken({
+    userId: user.id,
+    tokenHash: hashToken(token),
+    expiresAt,
+  })
+
+  return { message: resetMessage, resetToken: token }
+}
+
+export async function confirmPasswordReset(data: ResetPasswordInput) {
+  const stored = await authRepository.findPasswordResetToken(hashToken(data.token))
+  if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
+    throw new AppError(400, 'Este link expirou ou já foi usado. Peça outro em Esqueci a senha.')
+  }
+
+  const user = await authRepository.findUserById(stored.userId)
+  if (!user.active) {
+    throw new AppError(400, 'Esta conta está desativada. Peça a um administrador para reativá-la.')
+  }
+
+  await authRepository.updatePasswordHash(user.id, await argon2.hash(data.password))
+  await authRepository.revokeUserRefreshTokens(user.id)
+  await authRepository.markPasswordResetUsed(stored.id)
+  return { message: 'Senha redefinida. Entre novamente com a nova senha.' }
 }

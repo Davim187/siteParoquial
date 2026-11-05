@@ -176,7 +176,7 @@ export function HomePage() {
       <section className="bg-white py-16">
         <div className="mx-auto max-w-6xl px-4 md:px-6">
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <SectionTitle eyebrow="Serviço" title="Pastorais" />
+            <SectionTitle eyebrow="Serviço" title="Pastorais e movimentos" />
             <Button href="/pastorais" variant="outline">
               Ver todas
             </Button>

@@ -16,7 +16,8 @@ import { usePageMeta } from '@/hooks/usePageMeta'
 import { useInvalidateQueries } from '@/hooks/queries/useAdminQueries'
 import { usePastoralsQuery } from '@/hooks/queries/usePublicQueries'
 import { deletePastoral, savePastoral } from '@/services/pastoralService'
-import type { Pastoral } from '@/types'
+import type { Pastoral, PastoralKind } from '@/types'
+import { pastoralKindLabels, pastoralKindOrder } from '@/utils/labels'
 
 type PastoralForm = Omit<Pastoral, 'id' | 'slug'> & {
   id?: string
@@ -25,7 +26,7 @@ type PastoralForm = Omit<Pastoral, 'id' | 'slug'> & {
 }
 
 export function AdminPastoralsPage() {
-  usePageMeta('Pastorais | Admin')
+  usePageMeta('Pastorais e movimentos | Admin')
   const toast = useToast()
   const invalidate = useInvalidateQueries()
   const { data, isLoading, error } = usePastoralsQuery({ includeInactive: true })
@@ -36,10 +37,11 @@ export function AdminPastoralsPage() {
 
   return (
     <AdminCrudShell
-      title="Pastorais"
+      title="Pastorais e movimentos"
       onCreate={() =>
         setEditing({
           name: '',
+          kind: 'pastoral',
           description: '<p></p>',
           image: '',
           imageId: null,
@@ -54,9 +56,10 @@ export function AdminPastoralsPage() {
       error={error instanceof Error ? error.message : null}
     >
       <AdminTable
-        headers={['Nome', 'Ativa', 'Ações']}
+        headers={['Nome', 'Tipo', 'Ativa', 'Ações']}
         rows={data?.map((item) => [
           item.name,
+          pastoralKindLabels[item.kind ?? 'pastoral'].singular,
           item.active ? 'Sim' : 'Não',
           <RowActions
             key={item.id}
@@ -94,6 +97,20 @@ export function AdminPastoralsPage() {
             }}
           >
             <AdminInput label="Nome" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-slate-700">Tipo</span>
+              <select
+                value={editing.kind}
+                onChange={(event) => setEditing({ ...editing, kind: event.target.value as PastoralKind })}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm outline-none focus:border-marian/40 focus:ring-2 focus:ring-marian/20"
+              >
+                {pastoralKindOrder.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {pastoralKindLabels[kind].singular}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div>
               <p className="mb-1.5 text-sm font-medium text-slate-700">Descrição</p>
               <p className="mb-2 text-xs text-slate-500">
@@ -109,7 +126,7 @@ export function AdminPastoralsPage() {
               <p className="text-sm font-medium text-slate-700">Imagem</p>
               <div className="flex flex-wrap items-center gap-3">
                 {editing.image ? (
-                  <img src={editing.image} alt="" className="h-20 w-28 rounded-lg object-cover" />
+                  <img src={editing.image} alt="" className="h-auto max-h-40 w-auto max-w-full rounded-lg" />
                 ) : null}
                 <div className="flex flex-wrap gap-2">
                   <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-navy hover:bg-cream">

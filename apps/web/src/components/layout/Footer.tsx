@@ -68,7 +68,7 @@ export function Footer() {
             </li>
             <li>
               <Link to="/pastorais" className="hover:text-gold">
-                Pastorais
+                Pastorais e movimentos
               </Link>
             </li>
           </ul>

@@ -139,6 +139,7 @@ model User {
   news         News[]         @relation("NewsAuthor")
   media        Media[]
   refreshTokens RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
   activities   ActivityLog[]
   permissionOverrides UserPermission[]
 }
@@ -154,6 +155,18 @@ model RefreshToken {
 
   @@index([userId])
   @@index([tokenHash])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Media {
@@ -306,10 +319,17 @@ model MassSchedule {
   @@index([date, active])
 }
 
+enum PastoralKind {
+  PASTORAL
+  MOVIMENTO
+  COMISSAO
+}
+
 model Pastoral {
-  id           String   @id @default(cuid())
+  id           String       @id @default(cuid())
   name         String
-  slug         String   @unique
+  slug         String       @unique
+  kind         PastoralKind @default(PASTORAL)
   description  String
   imageId      String?
   image        Media?   @relation(fields: [imageId], references: [id], onDelete: SetNull)

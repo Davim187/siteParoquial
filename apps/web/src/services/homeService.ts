@@ -2,7 +2,7 @@ import { apiRequest, mediaUrl } from '@/lib/api-client'
 import { PLACEHOLDER_IMAGES, pastoralCover } from '@/constants/placeholders'
 import { queryClient, STALE_TIME, GC_TIME } from '@/lib/query-client'
 import { queryKeys } from '@/lib/query-keys'
-import { cardImageUrl } from '@/utils/media'
+import { cardImageUrl, fullImageUrl } from '@/utils/media'
 import { localPartsFromIso } from '@/utils/dates'
 import { cleanMapsUrl } from '@/utils/maps'
 import { normalizeFeast } from '@/services/feast'
@@ -185,8 +185,13 @@ function mapPastoral(item: any): Pastoral {
     id: item.id,
     slug: item.slug,
     name: item.name,
+    kind: item.kind === 'MOVIMENTO' || item.kind === 'movimento'
+      ? 'movimento'
+      : item.kind === 'COMISSAO' || item.kind === 'comissao'
+        ? 'comissao'
+        : 'pastoral',
     description: item.description,
-    image: pastoralCover(cardImageUrl(item.imageUrl, item.imageThumbUrl) || item.image),
+    image: pastoralCover(fullImageUrl(item.imageUrl, item.imageThumbUrl) || item.image),
     responsible: item.responsible,
     contact: item.phone || item.email || '[CONTATO]',
     meetingTime: item.meetingTime || '[HORÁRIO]',

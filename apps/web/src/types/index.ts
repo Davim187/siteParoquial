@@ -109,10 +109,13 @@ export interface Person {
   type: 'padre' | 'diacono' | 'coordenacao'
 }
 
+export type PastoralKind = 'pastoral' | 'movimento' | 'comissao'
+
 export interface Pastoral {
   id: string
   slug: string
   name: string
+  kind: PastoralKind
   description: string
   image: string
   responsible: string

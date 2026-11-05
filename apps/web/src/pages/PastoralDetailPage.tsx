@@ -9,11 +9,16 @@ import { getErrorMessage } from '@/lib/api-error'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { stripHtml } from '@/utils/html'
 import { pastoralCover } from '@/constants/placeholders'
+import { pastoralKindLabels } from '@/utils/labels'
 
 export function PastoralDetailPage() {
   const { slug = '' } = useParams()
   const { data, isLoading, error } = usePastoralDetailQuery(slug)
-  usePageMeta(data ? `${data.name} | Pastorais` : 'Pastoral', data ? stripHtml(data.description) : undefined)
+  const kindLabel = pastoralKindLabels[data?.kind ?? 'pastoral']
+  usePageMeta(
+    data ? `${data.name} | ${kindLabel.plural}` : 'Pastorais e movimentos',
+    data ? stripHtml(data.description) : undefined,
+  )
 
   if (isLoading && !data) return <Loading />
   if (error) return <ErrorState message={getErrorMessage(error)} />
@@ -21,10 +26,10 @@ export function PastoralDetailPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Pastorais" title={data.name} />
+      <PageHeader eyebrow={kindLabel.plural} title={data.name} />
       <div className="mx-auto max-w-5xl px-4 py-14 md:px-6">
         <div className="grid gap-8 md:grid-cols-[1.15fr_0.85fr] md:items-start">
-          <img src={pastoralCover(data.image)} alt="" className="h-80 w-full rounded-2xl object-cover" />
+          <img src={pastoralCover(data.image)} alt="" className="h-auto w-full rounded-2xl bg-cream" />
           <aside className="rounded-2xl border border-line bg-white p-6 shadow-sm">
             <h2 className="font-serif text-2xl text-navy">Informações</h2>
             <ul className="mt-4 space-y-3 text-sm text-muted">
@@ -62,7 +67,7 @@ export function PastoralDetailPage() {
           <ProseHtml html={data.description} />
         </div>
         <Link to="/pastorais" className="mt-8 inline-block font-semibold text-marian">
-          ← Todas as pastorais
+          ← Pastorais e movimentos
         </Link>
       </div>
     </div>
