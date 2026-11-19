@@ -85,11 +85,10 @@ export async function createNews(data: NewsInput, authorId: string) {
     progressCurrent: data.progressCurrent ?? 0,
     progressGoal: data.progressGoal ?? 0,
     authorId,
-    publishedAt:
-      data.status === 'PUBLISHED'
-        ? data.publishedAt
-          ? new Date(data.publishedAt)
-          : new Date()
+    publishedAt: data.publishedAt
+      ? new Date(data.publishedAt)
+      : data.status === 'PUBLISHED'
+        ? new Date()
         : null,
   })
   await newsRepository.replaceGallery(item.id, data.galleryMediaIds)
@@ -111,11 +110,10 @@ export async function updateNews(id: string, data: NewsUpdate, userId: string) {
   const item = await newsRepository.updateNews(id, {
     ...newsData,
     slug,
-    publishedAt:
-      status === 'PUBLISHED'
-        ? publishedAtInput
-          ? new Date(publishedAtInput)
-          : current.publishedAt ?? new Date()
+    publishedAt: publishedAtInput
+      ? new Date(publishedAtInput)
+      : status === 'PUBLISHED'
+        ? current.publishedAt ?? new Date()
         : current.publishedAt,
   })
   await newsRepository.replaceGallery(id, galleryMediaIds)
@@ -125,9 +123,12 @@ export async function updateNews(id: string, data: NewsUpdate, userId: string) {
 }
 
 export async function updateNewsStatus(id: string, data: NewsStatusInput, userId: string) {
+  const current = await newsRepository.findNewsRecordById(id)
+  if (!current) throw new AppError(404, 'Notícia não encontrada.')
+  // Mantém a data já definida (inclusive retroativa) ao republicar.
   const item = await newsRepository.updateNews(id, {
     status: data.status,
-    publishedAt: data.status === 'PUBLISHED' ? new Date() : undefined,
+    publishedAt: data.status === 'PUBLISHED' ? current.publishedAt ?? new Date() : undefined,
   })
   await logActivity({ userId, action: `status:${data.status}`, entity: 'news', entityId: id })
   return mapNews(item)

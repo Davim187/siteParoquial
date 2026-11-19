@@ -21,7 +21,7 @@ import { useNewsQuery } from '@/hooks/queries/usePublicQueries'
 import { formatValidationSummary, getErrorMessage, getFieldErrors } from '@/lib/api-error'
 import { deleteNews, duplicateNews, getAdminNews, saveNews, setNewsStatus } from '@/services/newsService'
 import type { NewsArticle } from '@/types'
-import { formatDate } from '@/utils/dates'
+import { formatDate, toISODate } from '@/utils/dates'
 
 type NewsForm = Omit<NewsArticle, 'id'> & {
   id?: string
@@ -79,10 +79,17 @@ export function AdminNewsPage() {
     setFormErrors({})
     try {
       const selectedCategory = categories.find((item) => item.id === editing.categoryId)
+      // Só envia a data de publicação quando ela foi alterada no formulário,
+      // para não mexer no horário de notícias já publicadas.
+      const originalDate = editing.id
+        ? data?.find((item) => item.id === editing.id)?.date
+        : toISODate(new Date())
       const saved = await saveNews({
         ...editing,
         categoryId: editing.categoryId ?? null,
         category: selectedCategory?.name ?? editing.category,
+        publishedAt:
+          editing.date && editing.date !== originalDate ? `${editing.date}T12:00:00.000Z` : undefined,
       })
       toast.push('Notícia salva com sucesso.')
       setEditing(null)
@@ -104,6 +111,7 @@ export function AdminNewsPage() {
         setFormErrors({})
         setEditing({
           ...empty,
+          date: toISODate(new Date()),
           categoryId: categories[0]?.id ?? null,
           category: categories[0]?.name ?? empty.category,
         })

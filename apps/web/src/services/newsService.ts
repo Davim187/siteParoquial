@@ -111,8 +111,9 @@ export async function getRelatedNews(article: NewsArticle) {
   return all.filter((item) => item.category === article.category && item.id !== article.id).slice(0, 3)
 }
 
-export async function saveNews(input: Partial<NewsArticle> & { title: string; excerpt: string; content: string; coverMediaId?: string | null; categoryId?: string | null }) {
+export async function saveNews(input: Partial<NewsArticle> & { title: string; excerpt: string; content: string; coverMediaId?: string | null; categoryId?: string | null; publishedAt?: string }) {
   const payload = {
+    ...(input.publishedAt ? { publishedAt: input.publishedAt } : {}),
     title: input.title,
     subtitle: input.subtitle,
     excerpt: input.excerpt,
