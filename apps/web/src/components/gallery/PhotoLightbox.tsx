@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Loader2, X } from 'lucide-react'
 import type { GalleryPhoto } from '@/types'
 
 function GalleryImg({
@@ -37,6 +37,32 @@ function preload(url?: string) {
   image.src = url
 }
 
+function downloadFileName(photo: GalleryPhoto) {
+  const extension = photo.url.split('?')[0]?.match(/\.[a-z0-9]{2,5}$/i)?.[0] ?? '.jpg'
+  const base = (photo.originalName ?? photo.title ?? `foto-${photo.id}`).replace(/\.[a-z0-9]{2,5}$/i, '')
+  const safe = base.replace(/[\\/:*?"<>|]+/g, '-').trim() || `foto-${photo.id}`
+  return `${safe}${extension}`
+}
+
+async function downloadPhoto(photo: GalleryPhoto) {
+  try {
+    const response = await fetch(photo.url)
+    if (!response.ok) throw new Error(String(response.status))
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = downloadFileName(photo)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+  } catch {
+    // Sem acesso ao arquivo (ex.: CORS): abre a imagem para salvar manualmente.
+    window.open(photo.url, '_blank', 'noopener')
+  }
+}
+
 export function PhotoLightbox({
   photos,
   initialIndex = 0,
@@ -52,6 +78,7 @@ export function PhotoLightbox({
   const pending = photos[index]
   const pendingUrl = pending?.url
   const touchStartX = useRef<number | null>(null)
+  const [downloading, setDownloading] = useState(false)
 
   const goPrev = useCallback(() => {
     setIndex((value) => (value === 0 ? photos.length - 1 : value - 1))
@@ -111,14 +138,30 @@ export function PhotoLightbox({
         else goNext()
       }}
     >
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
-        aria-label="Fechar"
-      >
-        <X className="h-6 w-6" />
-      </button>
+      <div className="absolute top-4 right-4 flex gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (downloading) return
+            setDownloading(true)
+            void downloadPhoto(shown).finally(() => setDownloading(false))
+          }}
+          disabled={downloading}
+          className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 disabled:opacity-60"
+          aria-label="Baixar foto"
+          title="Baixar foto"
+        >
+          {downloading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Download className="h-6 w-6" />}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+          aria-label="Fechar"
+        >
+          <X className="h-6 w-6" />
+        </button>
+      </div>
 
       {photos.length > 1 ? (
         <>
