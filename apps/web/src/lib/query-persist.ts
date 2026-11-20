@@ -27,39 +27,39 @@ const SPECS: PersistSpec[] = [
   {
     storageKey: 'news-list',
     matches: (key) => key[0] === 'news' && key[1] === 'list' && !asParams(key[2])?.includeDrafts,
-    restore: (data) => queryClient.setQueryData(queryKeys.news.list(), data),
+    restore: (data) => restoreStale(queryKeys.news.list(), data),
   },
   {
     storageKey: 'news-admin',
     matches: (key) => key[0] === 'news' && key[1] === 'list' && Boolean(asParams(key[2])?.includeDrafts),
-    restore: (data) => queryClient.setQueryData(queryKeys.news.list({ includeDrafts: true }), data),
+    restore: (data) => restoreStale(queryKeys.news.list({ includeDrafts: true }), data),
   },
   {
     storageKey: 'notices-list',
     matches: (key) => key[0] === 'notices' && key[1] === 'list' && !asParams(key[2])?.includeDrafts,
-    restore: (data) => queryClient.setQueryData(queryKeys.notices.list(), data),
+    restore: (data) => restoreStale(queryKeys.notices.list(), data),
   },
   {
     storageKey: 'notices-admin',
     matches: (key) => key[0] === 'notices' && key[1] === 'list' && Boolean(asParams(key[2])?.includeDrafts),
-    restore: (data) => queryClient.setQueryData(queryKeys.notices.list({ includeDrafts: true }), data),
+    restore: (data) => restoreStale(queryKeys.notices.list({ includeDrafts: true }), data),
   },
   {
     storageKey: 'events-todos',
     matches: (key) =>
       key[0] === 'events' && key[1] === 'list' && key[2] === 'todos' && !asParams(key[3])?.admin,
-    restore: (data) => queryClient.setQueryData(queryKeys.events.list('todos'), data),
+    restore: (data) => restoreStale(queryKeys.events.list('todos'), data),
   },
   {
     storageKey: 'events-admin',
     matches: (key) =>
       key[0] === 'events' && key[1] === 'list' && key[2] === 'todos' && Boolean(asParams(key[3])?.admin),
-    restore: (data) => queryClient.setQueryData(queryKeys.events.list('todos', { admin: true }), data),
+    restore: (data) => restoreStale(queryKeys.events.list('todos', { admin: true }), data),
   },
   {
     storageKey: 'masses-upcoming-4',
     matches: (key) => key[0] === 'masses' && key[1] === 'upcoming' && key[2] === 4,
-    restore: (data) => queryClient.setQueryData(queryKeys.masses.upcoming(4), data),
+    restore: (data) => restoreStale(queryKeys.masses.upcoming(4), data),
   },
   {
     storageKey: 'pastorals-v2',
@@ -70,23 +70,23 @@ const SPECS: PersistSpec[] = [
     storageKey: 'pastorals-admin',
     matches: (key) =>
       key[0] === 'pastorals' && key[1] === 'list' && Boolean(asParams(key[2])?.includeInactive),
-    restore: (data) => queryClient.setQueryData(queryKeys.pastorals.list({ includeInactive: true }), data),
+    restore: (data) => restoreStale(queryKeys.pastorals.list({ includeInactive: true }), data),
   },
   {
     storageKey: 'people',
     matches: (key) => key[0] === 'people' && key[1] === 'list' && !asParams(key[2])?.includeInactive,
-    restore: (data) => queryClient.setQueryData(queryKeys.people.list(), data),
+    restore: (data) => restoreStale(queryKeys.people.list(), data),
   },
   {
     storageKey: 'people-admin',
     matches: (key) =>
       key[0] === 'people' && key[1] === 'list' && Boolean(asParams(key[2])?.includeInactive),
-    restore: (data) => queryClient.setQueryData(queryKeys.people.list({ includeInactive: true }), data),
+    restore: (data) => restoreStale(queryKeys.people.list({ includeInactive: true }), data),
   },
   {
     storageKey: 'sacraments',
     matches: (key) => key[0] === 'sacraments' && key[1] === 'list',
-    restore: (data) => queryClient.setQueryData(queryKeys.sacraments.list, data),
+    restore: (data) => restoreStale(queryKeys.sacraments.list, data),
   },
   {
     storageKey: 'gallery-100',
@@ -102,47 +102,47 @@ const SPECS: PersistSpec[] = [
       const params = asParams(key[2])
       return key[0] === 'gallery' && key[1] === 'albums' && Boolean(params?.all)
     },
-    restore: (data) => queryClient.setQueryData(queryKeys.gallery.albums({ all: true, limit: 100 }), data),
+    restore: (data) => restoreStale(queryKeys.gallery.albums({ all: true, limit: 100 }), data),
   },
   {
     storageKey: 'dashboard',
     matches: (key) => key[0] === 'dashboard',
-    restore: (data) => queryClient.setQueryData(queryKeys.dashboard, data),
+    restore: (data) => restoreStale(queryKeys.dashboard, data),
   },
   {
     storageKey: 'prayers',
     matches: (key) => key[0] === 'prayers',
-    restore: (data) => queryClient.setQueryData(queryKeys.prayers, data),
+    restore: (data) => restoreStale(queryKeys.prayers, data),
   },
   {
     storageKey: 'messages',
     matches: (key) => key[0] === 'messages',
-    restore: (data) => queryClient.setQueryData(queryKeys.messages, data),
+    restore: (data) => restoreStale(queryKeys.messages, data),
   },
   {
     storageKey: 'feast',
     matches: (key) => key[0] === 'feast',
-    restore: (data) => queryClient.setQueryData(queryKeys.feast, data),
+    restore: (data) => restoreStale(queryKeys.feast, data),
   },
   {
     storageKey: 'users',
     matches: (key) => key[0] === 'users' && key[1] === 'list',
-    restore: (data) => queryClient.setQueryData(queryKeys.users.list, data),
+    restore: (data) => restoreStale(queryKeys.users.list, data),
   },
   {
     storageKey: 'roles',
     matches: (key) => key[0] === 'roles' && key[1] === 'list',
-    restore: (data) => queryClient.setQueryData(queryKeys.roles.list, data),
+    restore: (data) => restoreStale(queryKeys.roles.list, data),
   },
   {
     storageKey: 'permissions',
     matches: (key) => key[0] === 'permissions',
-    restore: (data) => queryClient.setQueryData(queryKeys.permissions, data),
+    restore: (data) => restoreStale(queryKeys.permissions, data),
   },
   {
     storageKey: 'profile',
     matches: (key) => key[0] === 'profile',
-    restore: (data) => queryClient.setQueryData(queryKeys.profile, data),
+    restore: (data) => restoreStale(queryKeys.profile, data),
   },
 ]
 
