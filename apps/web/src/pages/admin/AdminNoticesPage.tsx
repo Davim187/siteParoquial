@@ -9,6 +9,7 @@ import {
   RowActions,
 } from '@/components/admin/AdminUi'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { MediaPicker } from '@/components/admin/MediaPicker'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { useAuth } from '@/contexts/AuthContext'
 import { useInvalidateQueries } from '@/hooks/queries/useAdminQueries'
@@ -32,6 +33,7 @@ export function AdminNoticesPage() {
   const { data, isLoading, error } = useNoticesQuery({ includeDrafts: true })
   const [editing, setEditing] = useState<(Omit<Notice, 'id'> & { id?: string }) | null>(null)
   const [toDelete, setToDelete] = useState<Notice | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
@@ -75,6 +77,27 @@ export function AdminNoticesPage() {
               value={editing.description}
               onChange={(description) => setEditing({ ...editing, description })}
             />
+            <div className="text-sm">
+              <p>Imagem</p>
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                {editing.image ? (
+                  <img src={editing.image} alt="" className="h-20 w-28 rounded-lg object-cover" />
+                ) : null}
+                <Button type="button" variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
+                  {editing.image ? 'Trocar imagem' : 'Escolher imagem'}
+                </Button>
+                {editing.image ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setEditing({ ...editing, image: undefined, imageFull: undefined, imageId: null })}
+                  >
+                    Remover
+                  </Button>
+                ) : null}
+              </div>
+            </div>
             <AdminInput label="Data" type="date" value={editing.date} onChange={(date) => setEditing({ ...editing, date })} />
             <label className="text-sm">
               Categoria
@@ -118,6 +141,16 @@ export function AdminNoticesPage() {
           </form>
         ) : null}
       </Modal>
+      <MediaPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(media) => {
+          if (editing) {
+            setEditing({ ...editing, image: media.thumbnailUrl || media.url, imageFull: media.url, imageId: media.id })
+          }
+          setPickerOpen(false)
+        }}
+      />
       <ConfirmDialog
         open={Boolean(toDelete)}
         title="Excluir aviso?"

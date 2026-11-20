@@ -1,5 +1,5 @@
 import { apiRequest } from '@/lib/api-client'
-import { cardImageUrl } from '@/utils/media'
+import { cardImageUrl, fullImageUrl } from '@/utils/media'
 import type { Notice } from '@/types'
 
 function mapNotice(item: any): Notice {
@@ -9,6 +9,8 @@ function mapNotice(item: any): Notice {
     description: item.description,
     date: String(item.startsAt).slice(0, 10),
     image: cardImageUrl(item.imageUrl, item.imageThumbUrl) || undefined,
+    imageFull: fullImageUrl(item.imageUrl, item.imageThumbUrl) || undefined,
+    imageId: item.imageId ?? null,
     category:
       item.category === 'URGENTE'
         ? 'urgente'
@@ -31,6 +33,10 @@ export async function listNotices(options?: { includeDrafts?: boolean }): Promis
     auth: Boolean(options?.includeDrafts),
   })
   return result.data.map(mapNotice)
+}
+
+export async function getNoticeById(id: string) {
+  return mapNotice(await apiRequest(`/api/notices/${id}`, { auth: false }))
 }
 
 export async function getFeaturedNotices() {
@@ -61,6 +67,7 @@ export async function saveNotice(input: any) {
               ? 'IMPORTANTE'
               : 'COMUNICADO',
     featured: Boolean(input.featured),
+    imageId: input.imageId ?? null,
     active: input.status !== 'draft',
     startsAt: new Date(input.date || Date.now()).toISOString(),
     endsAt: null,

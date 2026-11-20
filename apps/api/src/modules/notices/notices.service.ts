@@ -1,5 +1,5 @@
 import type { NoticeCategory, Prisma } from '@prisma/client'
-import { paginated, parsePagination } from '../../lib/http.js'
+import { AppError, paginated, parsePagination } from '../../lib/http.js'
 import { logActivity } from '../../lib/activity.js'
 import type { NoticeInput, NoticeUpdate } from './notices.schema.js'
 import * as noticesRepository from './notices.repository.js'
@@ -27,6 +27,17 @@ export async function listNotices(query: Record<string, unknown>, hasAuthorizati
     noticesRepository.findNotices({ where, skip, take: limit }),
   ])
   return paginated(rows.map(mapNotice), total, page, limit)
+}
+
+export async function getNotice(id: string, publicOnly: boolean) {
+  const item = await noticesRepository.findNoticeById(id)
+  const now = new Date()
+  const visible =
+    item && item.active && item.startsAt <= now && (!item.endsAt || item.endsAt >= now)
+  if (!item || (publicOnly && !visible)) {
+    throw new AppError(404, 'Aviso não encontrado.')
+  }
+  return mapNotice(item)
 }
 
 export async function createNotice(data: NoticeInput, userId: string) {

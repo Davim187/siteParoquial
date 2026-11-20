@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { Notice } from '@/types'
 import { noticeLabels } from '@/utils/labels'
 import { formatDate } from '@/utils/dates'
@@ -6,9 +7,10 @@ import { Badge } from '@/components/ui/PageHeader'
 
 export function NoticeCard({ notice }: { notice: Notice }) {
   return (
-    <Card className="p-5">
+    <Link to={`/avisos/${notice.id}`} className="block h-full rounded-lg focus-visible:outline-2 focus-visible:outline-gold">
+    <Card className="h-full p-5">
       {notice.image ? (
-        <img src={notice.image} alt="" className="-mx-5 -mt-5 mb-4 h-36 w-[calc(100%+2.5rem)] object-cover" loading="lazy" decoding="async" />
+        <img src={notice.image} alt="" className="-mx-5 -mt-5 mb-4 h-48 w-[calc(100%+2.5rem)] object-cover" loading="lazy" decoding="async" />
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={notice.category === 'urgente' ? 'urgent' : 'marian'}>{noticeLabels[notice.category]}</Badge>
@@ -18,7 +20,9 @@ export function NoticeCard({ notice }: { notice: Notice }) {
       <time className="mt-1 block text-sm text-muted" dateTime={notice.date}>
         {formatDate(notice.date)}
       </time>
-      <p className="mt-3 text-sm leading-relaxed text-muted">{notice.description}</p>
+      <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-muted">{notice.description}</p>
+      <span className="mt-3 inline-block text-sm font-semibold text-marian">Ver aviso →</span>
     </Card>
+    </Link>
   )
 }

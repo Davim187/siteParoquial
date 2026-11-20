@@ -16,4 +16,5 @@ export async function noticesRouter(app: FastifyInstance) {
   }, noticesController.update)
   app.delete('/notices/:id', { preHandler: [authorize('NOTICES_MANAGE')] }, noticesController.remove)
   app.get('/notices/featured', noticesController.featured)
+  app.get('/notices/:id', noticesController.getById)
 }

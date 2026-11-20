@@ -21,6 +21,10 @@ export function findNotices(args: {
   })
 }
 
+export function findNoticeById(id: string) {
+  return prisma.notice.findUnique({ where: { id }, include })
+}
+
 export function createNotice(data: Prisma.NoticeUncheckedCreateInput) {
   return prisma.notice.create({ data, include })
 }

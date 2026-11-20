@@ -12,6 +12,7 @@ export const queryKeys = {
     all: ['notices'] as const,
     list: (params?: { includeDrafts?: boolean }) => ['notices', 'list', params] as const,
     featured: ['notices', 'featured'] as const,
+    detail: (id: string) => ['notices', 'detail', id] as const,
   },
   events: {
     all: ['events'] as const,

@@ -34,6 +34,8 @@ export interface Notice {
   description: string
   date: string
   image?: string
+  imageFull?: string
+  imageId?: string | null
   category: NoticeCategory
   featured: boolean
   status: ContentStatus

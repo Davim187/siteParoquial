@@ -7,6 +7,11 @@ export async function list(request: FastifyRequest, reply: FastifyReply) {
   return reply.send(await noticesService.listNotices(request.query as Record<string, unknown>, hasAuthorization))
 }
 
+export async function getById(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = request.params as { id: string }
+  return reply.send(await noticesService.getNotice(id, !request.headers.authorization))
+}
+
 export async function create(request: FastifyRequest, reply: FastifyReply) {
   return reply.status(201).send(await noticesService.createNotice(request.body as NoticeInput, request.authUser!.id))
 }

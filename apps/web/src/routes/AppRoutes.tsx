@@ -14,6 +14,9 @@ const NewsDetailPage = lazy(() =>
   import('@/pages/NewsDetailPage').then((m) => ({ default: m.NewsDetailPage })),
 )
 const NoticesPage = lazy(() => import('@/pages/NoticesPage').then((m) => ({ default: m.NoticesPage })))
+const NoticeDetailPage = lazy(() =>
+  import('@/pages/NoticeDetailPage').then((m) => ({ default: m.NoticeDetailPage })),
+)
 const MassesPage = lazy(() => import('@/pages/MassesPage').then((m) => ({ default: m.MassesPage })))
 const AgendaPage = lazy(() => import('@/pages/AgendaPage').then((m) => ({ default: m.AgendaPage })))
 const EventDetailPage = lazy(() =>
@@ -168,6 +171,14 @@ export function AppRoutes() {
           element={
             <Suspend>
               <NoticesPage />
+            </Suspend>
+          }
+        />
+        <Route
+          path="avisos/:id"
+          element={
+            <Suspend>
+              <NoticeDetailPage />
             </Suspend>
           }
         />

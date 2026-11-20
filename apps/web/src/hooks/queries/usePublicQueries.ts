@@ -4,7 +4,7 @@ import { queryKeys } from '@/lib/query-keys'
 import type { EventCategory, NewsArticle, Notice, ParishEvent, Mass, Pastoral, Person, Sacrament, ParishSettings } from '@/types'
 import { getSettings, listPeople } from '@/services/parishService'
 import { getCampaignNews, getNewsBySlug, listNews, readCampaignCache } from '@/services/newsService'
-import { getFeaturedNotices, listNotices } from '@/services/noticesService'
+import { getFeaturedNotices, getNoticeById, listNotices } from '@/services/noticesService'
 import { listEvents, listUpcomingEvents, getEventBySlug } from '@/services/eventsService'
 import { listMasses, listUpcomingMasses } from '@/services/massesService'
 import { listPastorals, getPastoralBySlug } from '@/services/pastoralService'
@@ -73,6 +73,15 @@ export function useNoticesQuery(params?: { includeDrafts?: boolean }) {
     queryFn: () => listNotices(params),
     staleTime: STALE_TIME.notices,
     placeholderData: (previous) => previous,
+  })
+}
+
+export function useNoticeDetailQuery(id: string) {
+  return useQuery<Notice>({
+    queryKey: queryKeys.notices.detail(id),
+    queryFn: () => getNoticeById(id),
+    staleTime: STALE_TIME.notices,
+    enabled: Boolean(id),
   })
 }
 

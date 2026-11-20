@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Link2, Share2, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { NewsCard } from '@/components/news/NewsCard'
 import { Badge, PageHeader } from '@/components/ui/PageHeader'
@@ -7,7 +7,7 @@ import { Loading, ErrorState, EmptyState } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
 import { ProseHtml } from '@/components/ui/ProseHtml'
 import { ProgressBar } from '@/components/ui/ProgressBar'
-import { useToast } from '@/components/ui/Toast'
+import { ShareButtons } from '@/components/ui/ShareButtons'
 import { useQuery } from '@tanstack/react-query'
 import { useNewsDetailQuery } from '@/hooks/queries/usePublicQueries'
 import { getErrorMessage } from '@/lib/api-error'
@@ -18,26 +18,8 @@ import { queryKeys } from '@/lib/query-keys'
 import { STALE_TIME } from '@/lib/query-client'
 import { formatDate } from '@/utils/dates'
 
-async function copyToClipboard(text: string) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text)
-    return true
-  }
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.style.position = 'fixed'
-  textarea.style.left = '-9999px'
-  document.body.appendChild(textarea)
-  textarea.select()
-  const ok = document.execCommand('copy')
-  document.body.removeChild(textarea)
-  return ok
-}
-
 export function NewsDetailPage() {
   const { slug = '' } = useParams()
-  const toast = useToast()
-  const [copied, setCopied] = useState(false)
   const [lightbox, setLightbox] = useState<string | null>(null)
   const articleQuery = useNewsDetailQuery(slug)
   const relatedQuery = useQuery({
@@ -62,35 +44,7 @@ export function NewsDetailPage() {
   if (!articleQuery.data) return <EmptyState title="Notícia não encontrada" />
 
   const article = articleQuery.data
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
   const gallery = article.gallery ?? []
-
-  async function handleCopyLink() {
-    const ok = await copyToClipboard(shareUrl)
-    if (ok) {
-      setCopied(true)
-      toast.push('Link copiado!')
-      window.setTimeout(() => setCopied(false), 2000)
-    } else {
-      toast.push('Não foi possível copiar o link.', 'error')
-    }
-  }
-
-  async function handleShare() {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: article.title,
-          text: stripHtml(article.excerpt),
-          url: shareUrl,
-        })
-        return
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') return
-      }
-    }
-    await handleCopyLink()
-  }
 
   return (
     <div>
@@ -138,23 +92,11 @@ export function NewsDetailPage() {
             </div>
           </div>
         ) : null}
-        <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-6">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-semibold text-navy hover:border-gold"
-            onClick={() => void handleShare()}
-          >
-            <Share2 size={16} /> Compartilhar
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm hover:border-gold"
-            onClick={() => void handleCopyLink()}
-          >
-            {copied ? <Check size={14} /> : <Link2 size={14} />}
-            {copied ? 'Link copiado' : 'Copiar link'}
-          </button>
-        </div>
+        <ShareButtons
+          title={article.title}
+          text={stripHtml(article.excerpt)}
+          className="mt-10 border-t border-line pt-6"
+        />
         <Link to="/noticias" className="mt-6 inline-block text-sm font-semibold text-marian">
           ← Voltar às notícias
         </Link>
