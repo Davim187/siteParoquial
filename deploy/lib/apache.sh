@@ -20,7 +20,7 @@ fix_apache_ports() {
 
   [ -f "$ports" ] || return 0
 
-  while [ "$(grep -cE '^Listen 443$' "$ports" 2>/dev/null || echo 0)" -gt 0 ] \
+  while grep -qE '^Listen 443$' "$ports" 2>/dev/null \
     && grep -qE '[[:space:]]Listen 443' "$ports"; do
     sed -i '/^Listen 443$/d' "$ports"
   done
@@ -250,8 +250,59 @@ EOF
     fix_apache_ports 1
   fi
 
+  disable_conflicting_sites "$domain"
+
   systemctl enable apache2 >/dev/null 2>&1 || true
-  reload_apache
+  if ensure_event_mpm; then
+    apache2ctl configtest
+    systemctl restart apache2
+  else
+    reload_apache
+  fi
+  log_apache_diagnostics "$domain"
+}
+
+# Outros sites ativos com o mesmo domínio (ex.: *-le-ssl.conf criado pelo
+# certbot) podem carregar antes do nosso e responder no lugar dele.
+disable_conflicting_sites() {
+  local domain="$1" site name
+  for site in /etc/apache2/sites-enabled/*.conf; do
+    [ -e "$site" ] || continue
+    name="$(basename "$site")"
+    [ "$name" = "$APACHE_SITE" ] && continue
+    if grep -qiE "^[[:space:]]*Server(Name|Alias)[[:space:]].*(^|[[:space:].])${domain//./\\.}([[:space:]]|$)" "$site"; then
+      deploy_warn "Desativando site duplicado para ${domain}: ${name} (arquivo mantido em sites-available)"
+      a2dissite "$name" >/dev/null 2>&1 || true
+    fi
+  done
+}
+
+# HTTP/2 não funciona com mpm_prefork. Troca para mpm_event, exceto se houver
+# PHP carregado como módulo (que exige prefork). Retorna 0 se trocou.
+ensure_event_mpm() {
+  local mods
+  mods="$(apache2ctl -M 2>/dev/null || true)"
+  grep -q "mpm_prefork_module" <<<"$mods" || return 1
+  if grep -qE "php[0-9._]*_module" <<<"$mods"; then
+    deploy_warn "Apache em mpm_prefork com PHP; HTTP/2 continuará desativado"
+    return 1
+  fi
+  deploy_log "Trocando Apache de mpm_prefork para mpm_event (necessário para HTTP/2)"
+  a2dismod -q mpm_prefork >/dev/null 2>&1 || true
+  a2enmod -q mpm_event >/dev/null 2>&1 || true
+  return 0
+}
+
+log_apache_diagnostics() {
+  local domain="$1" upload_dir
+  upload_dir="$(resolve_upload_dir "$APP_DIR")"
+  deploy_log "Apache: módulos $(apache2ctl -M 2>/dev/null | grep -oE 'mpm_[a-z]+|http2|deflate' | sort -u | tr '\n' ' ')"
+  deploy_log "Apache: sites ativos $(ls /etc/apache2/sites-enabled 2>/dev/null | tr '\n' ' ')"
+  if apache_can_read_dir "$upload_dir"; then
+    deploy_log "Apache: /uploads servido direto de ${upload_dir}"
+  else
+    deploy_warn "Apache: /uploads via proxy da API (www-data não lê ${upload_dir})"
+  fi
 }
 
 configure_ssl() {
