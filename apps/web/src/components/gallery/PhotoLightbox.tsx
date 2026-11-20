@@ -7,11 +7,13 @@ function GalleryImg({
   fallback,
   alt,
   className,
+  lazy = false,
 }: {
   src: string
   fallback?: string
   alt: string
   className?: string
+  lazy?: boolean
 }) {
   const [current, setCurrent] = useState(src)
 
@@ -24,6 +26,8 @@ function GalleryImg({
       src={current}
       alt={alt}
       className={className}
+      loading={lazy ? 'lazy' : undefined}
+      decoding="async"
       onError={() => {
         if (fallback && current !== fallback) setCurrent(fallback)
       }}
@@ -223,6 +227,7 @@ export function PhotoGrid({
               fallback={photo.url}
               alt={photo.title ?? photo.originalName ?? 'Foto'}
               className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105"
+              lazy
             />
           </button>
         </li>

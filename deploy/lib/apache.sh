@@ -54,7 +54,46 @@ write_apache_config() {
   local domain="$2"
   local ssl_enabled="${3:-0}"
 
-  local app_block proxy_http proxy_https logs
+  local app_block proxy_http proxy_https logs perf_block uploads_block upload_dir
+
+  # /uploads servido direto pelo Apache (mais rápido que passar pelo Node).
+  # Se o www-data não conseguir ler a pasta, mantém o proxy para a API.
+  upload_dir="$(resolve_upload_dir "$app_dir")"
+  if apache_can_read_dir "$upload_dir"; then
+    uploads_block="$(cat <<UPLOADS
+    Alias /uploads ${upload_dir}
+    <Directory ${upload_dir}>
+        Options -Indexes -ExecCGI
+        AllowOverride None
+        Require all granted
+        Header set Cache-Control "public, max-age=31536000, immutable"
+        Header set X-Content-Type-Options "nosniff"
+    </Directory>
+UPLOADS
+)"
+  else
+    uploads_block="$(cat <<'UPLOADS'
+    ProxyPass /uploads http://127.0.0.1:3333/uploads connectiontimeout=30 timeout=600
+    ProxyPassReverse /uploads http://127.0.0.1:3333/uploads
+    <Location /uploads>
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </Location>
+UPLOADS
+)"
+  fi
+
+  perf_block="$(cat <<'PERF'
+    <IfModule http2_module>
+        Protocols h2 http/1.1
+    </IfModule>
+    <IfModule deflate_module>
+        AddOutputFilterByType DEFLATE text/html text/css text/plain text/javascript application/javascript application/json image/svg+xml
+    </IfModule>
+    <LocationMatch "^/assets/">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </LocationMatch>
+PERF
+)"
 
   app_block="$(cat <<EOF
     DocumentRoot ${app_dir}/apps/web/dist
@@ -72,6 +111,9 @@ write_apache_config() {
         RewriteCond %{REQUEST_FILENAME} !-f
         RewriteCond %{REQUEST_FILENAME} !-d
         RewriteRule . /index.html [L]
+        <Files "index.html">
+            Header set Cache-Control "no-cache"
+        </Files>
     </Directory>
 EOF
 )"
@@ -85,11 +127,6 @@ EOF
     </Location>
     ProxyPass /api http://127.0.0.1:3333/api connectiontimeout=30 timeout=600
     ProxyPassReverse /api http://127.0.0.1:3333/api
-    ProxyPass /uploads http://127.0.0.1:3333/uploads connectiontimeout=30 timeout=600
-    ProxyPassReverse /uploads http://127.0.0.1:3333/uploads
-    <Location /uploads>
-        Header set Cache-Control "public, max-age=31536000, immutable"
-    </Location>
 EOF
 )"
 
@@ -102,11 +139,6 @@ EOF
     </Location>
     ProxyPass /api http://127.0.0.1:3333/api connectiontimeout=30 timeout=600
     ProxyPassReverse /api http://127.0.0.1:3333/api
-    ProxyPass /uploads http://127.0.0.1:3333/uploads connectiontimeout=30 timeout=600
-    ProxyPassReverse /uploads http://127.0.0.1:3333/uploads
-    <Location /uploads>
-        Header set Cache-Control "public, max-age=31536000, immutable"
-    </Location>
 EOF
 )"
 
@@ -135,7 +167,9 @@ ${logs}
     SSLCertificateKeyFile /etc/letsencrypt/live/${domain}/privkey.pem
     Include /etc/letsencrypt/options-ssl-apache.conf
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+${perf_block}
 ${app_block}
+${uploads_block}
 ${proxy_https}
 ${logs}
 </VirtualHost>
@@ -145,7 +179,9 @@ EOF
 <VirtualHost *:80>
     ServerName ${domain}
     ServerAlias www.${domain}
+${perf_block}
 ${app_block}
+${uploads_block}
 ${proxy_http}
 ${logs}
 </VirtualHost>
@@ -156,7 +192,28 @@ EOF
 ensure_apache_modules() {
   export DEBIAN_FRONTEND=noninteractive
   apt-get install -y apache2 >/dev/null 2>&1 || apt-get install -y apache2
-  a2enmod proxy proxy_http rewrite headers ssl >/dev/null 2>&1 || true
+  a2enmod proxy proxy_http rewrite headers ssl deflate >/dev/null 2>&1 || true
+  # HTTP/2 só é usado com mpm_event/worker; com prefork o Apache ignora o h2.
+  a2enmod http2 >/dev/null 2>&1 || true
+}
+
+# Mesma regra do server.ts: UPLOAD_DIR relativo ao cwd da API (apps/api).
+resolve_upload_dir() {
+  local app_dir="$1" upload_dir
+  upload_dir="$(read_env_value UPLOAD_DIR "$ENV_FILE" 2>/dev/null || true)"
+  upload_dir="${upload_dir:-uploads}"
+  case "$upload_dir" in
+    /*) printf '%s\n' "$upload_dir" ;;
+    *) printf '%s\n' "${app_dir}/apps/api/${upload_dir}" ;;
+  esac
+}
+
+apache_can_read_dir() {
+  local dir="$1"
+  [ -d "$dir" ] || return 1
+  id www-data >/dev/null 2>&1 || return 1
+  command -v runuser >/dev/null 2>&1 || return 1
+  runuser -u www-data -- test -r "$dir" -a -x "$dir"
 }
 
 resolve_site_domain() {
