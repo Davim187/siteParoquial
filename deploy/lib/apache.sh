@@ -250,7 +250,7 @@ EOF
     fix_apache_ports 1
   fi
 
-  disable_conflicting_sites "$domain"
+  restore_wrongly_disabled_sites
 
   systemctl enable apache2 >/dev/null 2>&1 || true
   if ensure_event_mpm; then
@@ -262,17 +262,14 @@ EOF
   log_apache_diagnostics "$domain"
 }
 
-# Outros sites ativos com o mesmo domínio (ex.: *-le-ssl.conf criado pelo
-# certbot) podem carregar antes do nosso e responder no lugar dele.
-disable_conflicting_sites() {
-  local domain="$1" site name
-  for site in /etc/apache2/sites-enabled/*.conf; do
-    [ -e "$site" ] || continue
-    name="$(basename "$site")"
-    [ "$name" = "$APACHE_SITE" ] && continue
-    if grep -qiE "^[[:space:]]*Server(Name|Alias)[[:space:]].*(^|[[:space:].])${domain//./\\.}([[:space:]]|$)" "$site"; then
-      deploy_warn "Desativando site duplicado para ${domain}: ${name} (arquivo mantido em sites-available)"
-      a2dissite "$name" >/dev/null 2>&1 || true
+# Um deploy anterior desativou por engano sites de subdomínios (coroinhas).
+# Reativa se ainda existirem em sites-available e estiverem desativados.
+restore_wrongly_disabled_sites() {
+  local name
+  for name in coroinhas.conf coroinhas-le-ssl.conf; do
+    if [ -f "/etc/apache2/sites-available/${name}" ] && [ ! -e "/etc/apache2/sites-enabled/${name}" ]; then
+      deploy_log "Reativando site ${name}"
+      a2ensite "$name" >/dev/null 2>&1 || true
     fi
   done
 }
