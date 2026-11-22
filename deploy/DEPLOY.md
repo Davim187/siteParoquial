@@ -83,6 +83,33 @@ Cada push em `master` executa `bash deploy/deploy.sh` no VPS.
 
 ---
 
+## Backup diário (Google Drive)
+
+Todo dia às 03:00 (horário de Brasília) o servidor salva o **banco** (`banco.sql.gz`) e as **fotos** (`fotos.tar`)
+no Google Drive, em `backups-paroquia/AAAA-MM-DD/`. Só os **3 últimos dias** ficam guardados; os mais antigos são apagados.
+
+**Primeira vez** (no VPS, como root):
+
+```bash
+cd /var/www
+bash deploy/backup.sh setup
+```
+
+O servidor não tem navegador, então ele mostra um comando `rclone authorize "drive" ...`.
+No seu PC: `winget install Rclone.Rclone`, rode esse comando, entre na conta Google e cole
+o token que aparecer de volta no servidor. No fim ele já faz o primeiro backup.
+
+| Comando | O que faz |
+|---------|-----------|
+| `bash deploy/backup.sh run` | Backup agora |
+| `bash deploy/backup.sh list` | Lista backups no Drive |
+| `bash deploy/backup.sh status` | Próxima execução + último log |
+| `bash deploy/backup.sh restore 2026-11-22` | Restaura banco + fotos daquele dia |
+
+Opcional no `.env.production`: `BACKUP_KEEP=3`, `BACKUP_TIME=03:00`, `BACKUP_FOLDER=backups-paroquia`, `BACKUP_REMOTE=gdrive`.
+
+---
+
 ## Beekeeper (banco)
 
 ```bash

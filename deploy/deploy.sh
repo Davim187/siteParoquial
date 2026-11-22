@@ -43,6 +43,14 @@ deploy_full() {
     configure_ssl || deploy_warn "SSL não configurado — rode: bash deploy/deploy.sh ssl"
   fi
 
+  # Mantém o timer do backup atualizado (após "bash deploy/backup.sh setup").
+  backup_config
+  if backup_remote_ready; then
+    backup_install_timer || deploy_warn "Timer de backup não instalado"
+  else
+    deploy_warn "Backup no Google Drive não configurado — rode: bash deploy/backup.sh setup"
+  fi
+
   deploy_log "Deploy concluído"
   pm2 status 2>/dev/null || true
 }
