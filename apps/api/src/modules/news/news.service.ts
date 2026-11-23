@@ -155,6 +155,8 @@ export async function duplicateNews(id: string, userId: string) {
     status: 'DRAFT',
     featured: false,
     showProgress: current.showProgress,
+    progressMode: current.progressMode,
+    progressBadge: current.progressBadge,
     progressLabel: current.progressLabel,
     progressCurrent: current.progressCurrent,
     progressGoal: current.progressGoal,
