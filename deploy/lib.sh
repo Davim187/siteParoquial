@@ -13,3 +13,5 @@ source "$DEPLOY_LIB_DIR/postgres.sh"
 source "$DEPLOY_LIB_DIR/pm2.sh"
 # shellcheck source=lib/apache.sh
 source "$DEPLOY_LIB_DIR/apache.sh"
+# shellcheck source=lib/backup.sh
+source "$DEPLOY_LIB_DIR/backup.sh"
