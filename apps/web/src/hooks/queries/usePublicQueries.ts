@@ -20,7 +20,7 @@ export function useHomeQuery() {
     staleTime: STALE_TIME.home,
     gcTime: GC_TIME.long,
     initialData: cached ?? undefined,
-    initialDataUpdatedAt: cached ? Date.now() - 30_000 : undefined,
+    initialDataUpdatedAt: cached ? 1 : undefined,
     placeholderData: (previous) => previous ?? cached ?? undefined,
   })
 }

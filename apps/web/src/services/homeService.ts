@@ -291,6 +291,23 @@ export function hydrateHomeFromSession() {
   if (!cached) return null
   seedQueryCachesFromHome(cached)
   queryClient.setQueryData(queryKeys.home, cached)
+  // O cache da aba serve só para mostrar algo na hora. Marca como desatualizado
+  // para o site buscar o conteúdo novo, mesmo depois de recarregar a página.
+  for (const queryKey of [
+    queryKeys.home,
+    queryKeys.settings,
+    queryKeys.feast,
+    queryKeys.news.campaign,
+    queryKeys.notices.featured,
+    queryKeys.masses.upcoming(4),
+    queryKeys.events.upcoming(3),
+    queryKeys.events.upcoming(6),
+    queryKeys.people.list(),
+    queryKeys.pastorals.list(),
+    queryKeys.gallery.albums({ limit: 3 }),
+  ]) {
+    void queryClient.invalidateQueries({ queryKey, exact: true, refetchType: 'none' })
+  }
   return cached
 }
 
